@@ -17,6 +17,19 @@
 
 https://github.com/shiguredo/zakuro/releases
 
+## セットアップ
+
+### Ubuntu
+
+```
+apt install libnspr4 libnss3
+```
+
+### CentOS
+
+TBD
+
+
 ## コマンドライン
 
 - シグナリング URL
@@ -33,7 +46,7 @@ https://github.com/shiguredo/zakuro/releases
     - 800kbps
 - マルチストリーム
     - 有効
-- フェイク
+- フェイクキャプチャデバイス
 
 ```
 $ ./zakuro wss://example.com/signaling \
