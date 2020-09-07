@@ -57,11 +57,10 @@ $ ./zakuro wss://example.com/signaling \
 ```
 $ ./zakuro --help
 Zakuro - WebRTC Load Testing Tool
-Usage: ./zakuro [OPTIONS] SIGNALING-URL CHANNEL-ID
+Usage: ./zakuro [OPTIONS] SIGNALING-URL
 
 Positionals:
   SIGNALING-URL TEXT REQUIRED Signaling URL
-  CHANNEL-ID TEXT REQUIRED    Channel ID
 
 Options:
   -h,--help                   Print this help message and exit
@@ -69,7 +68,7 @@ Options:
   --vcs INT:INT in [1 - 100]  Virtual Clients
   --no-video-device           Do not use video device
   --no-audio-device           Do not use audio device
-  --fake-video-stream         Fake Video Stream
+  --fake-capture-device       Fake Capture Device
   --fake-video-capture TEXT:FILE
                               Fake Video from File
   --fake-audio-capture TEXT:FILE
@@ -86,12 +85,14 @@ Options:
   --insecure                  Allow insecure server connections when using SSL
   --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
                               Log severity level threshold
+  --openh264 TEXT:FILE        OpenH264 dynamic library path
+  --channel-id TEXT REQUIRED  Channel ID
   --auto                      Connect to Sora automatically
   --video BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send video to sora (default: true)
   --audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send audio to sora (default: true)
-  --video-codec-type TEXT:{,AV1,VP8,VP9}
+  --video-codec-type TEXT:{,AV1,H264,VP8,VP9}
                               Video codec for send
   --audio-codec-type TEXT:{,OPUS}
                               Audio codec for send
@@ -99,8 +100,8 @@ Options:
                               Video bit rate
   --audio-bit-rate INT:INT in [0 - 510]
                               Audio bit rate
-  --role TEXT:{downstream,recvonly,sendonly,sendrecv,upstream}
-                              Role (default: upstream)
+  --role TEXT:{recvonly,sendonly,sendrecv} REQUIRED
+                              Role
   --multistream BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use multistream (default: false)
   --simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
