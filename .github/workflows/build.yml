@@ -1,0 +1,122 @@
+name: build-workflow
+
+on:
+  push:
+    paths-ignore:
+    - 'doc/**'
+    - '**.md'
+    - 'THANKS'
+    - 'LICENSE'
+    - 'NOTICE'
+  pull_request:
+
+jobs:
+  build-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        name:
+          - ubuntu-18.04_x86_64
+          - ubuntu-20.04_x86_64
+          - centos-8_x86_64
+    name: Build zakuro for ${{ matrix.name }}
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get Versions
+        run: |
+          source VERSION
+          echo "::set-output name=boost_version::${BOOST_VERSION}"
+        id: versions
+      - name: Cache Boost ${{ steps.versions.outputs.boost_version }}
+        id: cache-boost
+        uses: actions/cache@v2
+        with:
+          path: _cache/boost
+          key: ${{ matrix.name }}-boost-${{ steps.versions.outputs.boost_version }}.tar.gz.v2
+      - run: ./build.sh --no-tty --no-mount --package ${{ matrix.name }}
+        working-directory: build
+        timeout-minutes: 120
+      - name: Output package name
+        shell: bash
+        run: |
+          source VERSION
+          echo "PACKAGE_NAME=zakuro-${ZAKURO_VERSION}_${{ matrix.name }}.tar.gz" >> ${{ matrix.name }}.env
+          echo "CONTENT_TYPE=application/gzip" >> ${{ matrix.name }}.env
+          echo "::set-output name=name::zakuro-${ZAKURO_VERSION}_${{ matrix.name }}.tar.gz"
+        id: package_name
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ steps.package_name.outputs.name }}
+          path: _package/${{ steps.package_name.outputs.name }}
+      - name: Upload Environment
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ matrix.name }}.env
+          path: ${{ matrix.name }}.env
+  create-release:
+    name: Create Release
+    if: contains(github.ref, 'tags/202')
+    needs:
+      - build-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Output upload url
+        shell: bash
+        run: echo "UPLOAD_URL='${{ steps.create_release.outputs.upload_url }}'" > create-release.env
+      - name: Upload create-release Environment
+        uses: actions/upload-artifact@v1
+        with:
+          name: create-release.env
+          path: create-release.env
+  upload-assets:
+    name: Upload Assets to Release
+    needs:
+      - create-release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        name:
+          - ubuntu-18.04_x86_64
+          - ubuntu-20.04_x86_64
+          - centos-8_x86_64
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: ${{ matrix.name }}.env
+      - uses: actions/download-artifact@v1
+        with:
+          name: create-release.env
+      - name: Env to output
+        shell: bash
+        run: |
+          source ${{ matrix.name }}.env/${{ matrix.name }}.env
+          source create-release.env/create-release.env
+          echo "::set-output name=package_name::$PACKAGE_NAME"
+          echo "::set-output name=content_type::$CONTENT_TYPE"
+          echo "::set-output name=upload_url::$UPLOAD_URL"
+        id: env
+      - uses: actions/download-artifact@v1
+        with:
+          name: ${{ steps.env.outputs.package_name }}
+      - name: Upload ${{ matrix.name }} Release Asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.env.outputs.upload_url }}
+          asset_path: ${{ steps.env.outputs.package_name }}/${{ steps.env.outputs.package_name }}
+          asset_name: ${{ steps.env.outputs.package_name }}
+          asset_content_type: ${{ steps.env.outputs.content_type }}
