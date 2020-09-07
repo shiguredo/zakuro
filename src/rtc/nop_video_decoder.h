@@ -5,6 +5,8 @@
 #include <api/video/i420_buffer.h>
 #include <api/video_codecs/video_decoder.h>
 #include <api/video_codecs/video_decoder_factory.h>
+#include <modules/video_coding/codecs/av1/libaom_av1_encoder.h>
+#include <modules/video_coding/codecs/h264/include/h264.h>
 #include <modules/video_coding/codecs/vp8/include/vp8.h>
 #include <modules/video_coding/codecs/vp9/include/vp9.h>
 
@@ -60,9 +62,21 @@ class NopVideoDecoderFactory : public webrtc::VideoDecoderFactory {
 
   std::vector<webrtc::SdpVideoFormat> GetSupportedFormats() const override {
     std::vector<webrtc::SdpVideoFormat> supported_codecs;
-    // VP8 と VP9
     supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kVp8CodecName));
     for (const webrtc::SdpVideoFormat& format : webrtc::SupportedVP9Codecs()) {
+      supported_codecs.push_back(format);
+    }
+    supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kAv1CodecName));
+    std::vector<webrtc::SdpVideoFormat> h264_codecs = {
+        CreateH264Format(webrtc::H264::kProfileBaseline,
+                         webrtc::H264::kLevel3_1, "1"),
+        CreateH264Format(webrtc::H264::kProfileBaseline,
+                         webrtc::H264::kLevel3_1, "0"),
+        CreateH264Format(webrtc::H264::kProfileConstrainedBaseline,
+                         webrtc::H264::kLevel3_1, "1"),
+        CreateH264Format(webrtc::H264::kProfileConstrainedBaseline,
+                         webrtc::H264::kLevel3_1, "0")};
+    for (const webrtc::SdpVideoFormat& format : h264_codecs) {
       supported_codecs.push_back(format);
     }
     return supported_codecs;
@@ -72,6 +86,21 @@ class NopVideoDecoderFactory : public webrtc::VideoDecoderFactory {
       const webrtc::SdpVideoFormat& format) override {
     return std::unique_ptr<webrtc::VideoDecoder>(
         absl::make_unique<NopVideoDecoder>());
+  }
+
+ private:
+  static webrtc::SdpVideoFormat CreateH264Format(
+      webrtc::H264::Profile profile,
+      webrtc::H264::Level level,
+      const std::string& packetization_mode) {
+    const absl::optional<std::string> profile_string =
+        webrtc::H264::ProfileLevelIdToString(
+            webrtc::H264::ProfileLevelId(profile, level));
+    return webrtc::SdpVideoFormat(
+        cricket::kH264CodecName,
+        {{cricket::kH264FmtpProfileLevelId, *profile_string},
+         {cricket::kH264FmtpLevelAsymmetryAllowed, "1"},
+         {cricket::kH264FmtpPacketizationMode, packetization_mode}});
   }
 };
 
