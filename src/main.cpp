@@ -16,7 +16,7 @@
 #if defined(__APPLE__)
 #include "mac_helper/mac_capturer.h"
 #else
-#include "rtc/device_video_capturer.h"
+#include "v4l2_video_capturer/v4l2_video_capturer.h"
 #endif
 
 #include <blend2d.h>
@@ -88,8 +88,12 @@ int main(int argc, char* argv[]) {
       return MacCapturer::Create(size.width, size.height, args.framerate,
                                  args.video_device);
 #else
-      return DeviceVideoCapturer::Create(size.width, size.height,
-                                         args.framerate, args.video_device);
+      V4L2VideoCapturerConfig config;
+      config.video_device = args.video_device;
+      config.width = size.width;
+      config.height = size.height;
+      config.framerate = args.framerate;
+      return V4L2VideoCapturer::Create(std::move(config));
 #endif
     }
   })();

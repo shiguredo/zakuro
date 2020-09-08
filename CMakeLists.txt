@@ -130,6 +130,7 @@ target_sources(zakuro
     src/sora/sora_session.cpp
     src/ssl_verifier.cpp
     src/util.cpp
+    src/v4l2_video_capturer/v4l2_video_capturer.cpp
     src/watchdog.cpp
     src/websocket.cpp
     src/zakuro_version.cpp
