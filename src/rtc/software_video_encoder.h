@@ -23,8 +23,13 @@
 
 class SoftwareVideoEncoderFactory : public webrtc::VideoEncoderFactory {
  public:
-  explicit SoftwareVideoEncoderFactory(std::string openh264)
-      : openh264_(std::move(openh264)) {}
+  explicit SoftwareVideoEncoderFactory(std::string openh264, bool simulcast)
+      : openh264_(std::move(openh264)) {
+    if (simulcast) {
+      internal_encoder_factory_.reset(
+          new SoftwareVideoEncoderFactory(openh264_, false));
+    }
+  }
 
   std::vector<webrtc::SdpVideoFormat> GetSupportedFormats() const override {
     std::vector<webrtc::SdpVideoFormat> supported_codecs;
@@ -50,20 +55,29 @@ class SoftwareVideoEncoderFactory : public webrtc::VideoEncoderFactory {
   std::unique_ptr<webrtc::VideoEncoder> CreateVideoEncoder(
       const webrtc::SdpVideoFormat& format) override {
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName)) {
-      return webrtc::VP8Encoder::Create();
+      return WithSimulcast(format, [](const webrtc::SdpVideoFormat& format) {
+        return webrtc::VP8Encoder::Create();
+      });
     }
 
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName)) {
-      return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
+      return WithSimulcast(format, [](const webrtc::SdpVideoFormat& format) {
+        return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
+      });
     }
 
     if (absl::EqualsIgnoreCase(format.name, cricket::kAv1CodecName)) {
-      return webrtc::CreateLibaomAv1Encoder();
+      return WithSimulcast(format, [](const webrtc::SdpVideoFormat& format) {
+        return webrtc::CreateLibaomAv1Encoder();
+      });
     }
 
     if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName)) {
-      return webrtc::DynamicH264VideoEncoder::Create(
-          cricket::VideoCodec(format), openh264_);
+      return WithSimulcast(format, [this](
+                                       const webrtc::SdpVideoFormat& format) {
+        return webrtc::DynamicH264VideoEncoder::Create(
+            cricket::VideoCodec(format), openh264_);
+      });
     }
 
     RTC_LOG(LS_ERROR) << "Trying to created encoder of unsupported format "
@@ -85,8 +99,21 @@ class SoftwareVideoEncoderFactory : public webrtc::VideoEncoderFactory {
          {cricket::kH264FmtpLevelAsymmetryAllowed, "1"},
          {cricket::kH264FmtpPacketizationMode, packetization_mode}});
   }
+  std::unique_ptr<webrtc::VideoEncoder> WithSimulcast(
+      const webrtc::SdpVideoFormat& format,
+      std::function<std::unique_ptr<webrtc::VideoEncoder>(
+          const webrtc::SdpVideoFormat&)> create) {
+    if (internal_encoder_factory_) {
+      return std::unique_ptr<webrtc::VideoEncoder>(
+          new webrtc::SimulcastEncoderAdapter(internal_encoder_factory_.get(),
+                                              format));
+    } else {
+      return create(format);
+    }
+  }
 
  private:
+  std::unique_ptr<SoftwareVideoEncoderFactory> internal_encoder_factory_;
   std::string openh264_;
 };
 

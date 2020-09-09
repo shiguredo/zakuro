@@ -91,7 +91,7 @@ RTCManager::RTCManager(
       webrtc::CreateBuiltinAudioDecoderFactory();
 
   media_dependencies.video_encoder_factory.reset(
-      new SoftwareVideoEncoderFactory(config_.openh264));
+      new SoftwareVideoEncoderFactory(config_.openh264, config_.simulcast));
   media_dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
 
   media_dependencies.audio_mixer = nullptr;
