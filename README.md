@@ -33,17 +33,9 @@ https://github.com/shiguredo/zakuro/releases
 - Ubuntu 18.04 x86_64
 - CentOS 8 x86_64
 
-## 使ってみる
+## ドキュメント
 
-[USE.md](doc/USE.md) をお読みください。
-
-## ビルドする
-
-[BUILD.md](doc/BUILD.md) をお読みください。
-
-## FAQ
-
-[FAQ.md](doc/FAQ.md) をお読みください。
+[WebRTC Load Testing Tool Zakuro ドキュメント — WebRTC Load Testing Tool Zakuro](https://zakuro.shiguredo.jp/)
 
 ## バージョン番号について
 
