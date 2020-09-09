@@ -17,25 +17,9 @@ In other languages, we won't be able to deal with them. Thank you for your under
 
 WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora 向けの WebRTC 負荷試験ツールです。
 
-## 実験的機能
-
-**現在、すべての機能が実験的機能です。今後、積極的な破壊的変更があります。**
-
-## バイナリ提供について
-
-以下からダウンロードが可能です。
-
-https://github.com/shiguredo/zakuro/releases
-
-## 動作環境
-
-- Ubuntu 20.04 x86_64
-- Ubuntu 18.04 x86_64
-- CentOS 8 x86_64
-
 ## ドキュメント
 
-[WebRTC Load Testing Tool Zakuro ドキュメント — WebRTC Load Testing Tool Zakuro](https://zakuro.shiguredo.jp/)
+[WebRTC Load Testing Tool Zakuro ドキュメント](https://zakuro.shiguredo.jp/)
 
 ## バージョン番号について
 
@@ -70,11 +54,11 @@ limitations under the License.
 
 ## サポートについて
 
-### Discord
-
 - **サポートしません**
 - **アドバイスしません**
 - フィードバックは歓迎します
+
+### Discord
 
 最新の状況などは Discord で共有しています。
 
@@ -83,9 +67,3 @@ limitations under the License.
 Discord へお願いします。
 
 https://discord.gg/eEUZf6j
-
-### 有料でのテクニカルサポートについて
-
-`WebRTC Load Testing Tool Zakuro` に対する有料でのテクニカルサポート契約については WebRTC SFU Sora ライセンス契約をしているお客様が前提となります。
-
-- Zakuro のテクニカルサポート
