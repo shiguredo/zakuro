@@ -21,16 +21,6 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 
 [WebRTC Load Testing Tool Zakuro ドキュメント](https://zakuro.shiguredo.jp/)
 
-## バージョン番号について
-
-```
-YYYY.RELEASE[.FIX]
-```
-
-- YYYY は年
-- RELEASE はその年にリリースした回数
-- FIX はオプションでバグフィックス対応のみのアップデートに利用
-
 ## ライセンス
 
 Apache License 2.0
