@@ -11,6 +11,31 @@ on:
   pull_request:
 
 jobs:
+  build-macos:
+    name: Build zakuro for macOS
+    if: "!contains(github.ref, 'tags/202')"
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get Versions
+        run: |
+          source VERSION
+          echo "::set-output name=boost_version::${BOOST_VERSION}"
+        id: versions
+      - name: Cache Boost ${{ steps.versions.outputs.boost_version }}
+        id: cache-boost
+        uses: actions/cache@v2
+        with:
+          path: _cache/boost
+          key: macos-boost-${{ steps.versions.outputs.boost_version }}.tar.gz.v2
+      - run: ./build.sh --package macos
+        working-directory: build
+        timeout-minutes: 120
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ steps.package_name.outputs.name }}
+          path: _package/${{ steps.package_name.outputs.name }}
   build-linux:
     strategy:
       fail-fast: false
