@@ -36,7 +36,7 @@ jobs:
         run: |
           source VERSION
           MACOS_VERSION=`sw_vers -productVersion | cut -d '.' -f-2`
-          echo "::set-output name=name::momo-${MOMO_VERSION}_macos-${MACOS_VERSION}.tar.gz"
+          echo "::set-output name=name::zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}.tar.gz"
         id: package_name
       - name: Upload Artifact
         uses: actions/upload-artifact@v1
