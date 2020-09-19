@@ -177,6 +177,7 @@ std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
     RTCMessageSender* sender) {
   rtc_config.enable_dtls_srtp = true;
   rtc_config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
+  rtc_config.turn_port_prune_policy = webrtc::PortPrunePolicy::PRUNE_BASED_ON_PRIORITY;
   std::unique_ptr<PeerConnectionObserver> observer(
       new PeerConnectionObserver(sender, receiver_, data_manager_));
   webrtc::PeerConnectionDependencies dependencies(observer.get());
