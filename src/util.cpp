@@ -49,6 +49,9 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
 
   app.add_option("--vcs", args.vcs, "Virtual Clients")
       ->check(CLI::Range(1, 100));
+  app.add_option("--hatch-rate", args.hatch_rate,
+                 "Spawned virtual clients per seconds")
+      ->check(CLI::Range(0.1, 100.0));
 
   app.add_flag("--no-video-device", args.no_video_device,
                "Do not use video device");
