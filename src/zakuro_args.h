@@ -25,7 +25,7 @@ struct ZakuroArgs {
   std::string fake_audio_capture = "";
   std::string openh264 = "";
 
-  std::string sora_signaling_host = "wss://example.com/signaling";
+  std::string sora_signaling_host = "";
   std::string sora_channel_id;
   bool sora_video = true;
   bool sora_audio = true;
@@ -38,8 +38,7 @@ struct ZakuroArgs {
   bool sora_auto_connect = false;
   nlohmann::json sora_metadata;
   nlohmann::json sora_signaling_notify_metadata;
-  // upstream or downstream
-  std::string sora_role = "upstream";
+  std::string sora_role = "";
   bool sora_multistream = false;
   bool sora_spotlight = false;
   int sora_spotlight_number = 0;

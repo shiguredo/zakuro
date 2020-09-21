@@ -97,10 +97,8 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
   app.add_option("--openh264", args.openh264, "OpenH264 dynamic library path")
       ->check(CLI::ExistingFile);
 
-  app.add_option("SIGNALING-URL", args.sora_signaling_host, "Signaling URL")
-      ->required();
-  app.add_option("--channel-id", args.sora_channel_id, "Channel ID")
-      ->required();
+  app.add_option("SIGNALING-URL", args.sora_signaling_host, "Signaling URL");
+  app.add_option("--channel-id", args.sora_channel_id, "Channel ID");
   app.add_flag("--auto", args.sora_auto_connect,
                "Connect to Sora automatically");
 
@@ -121,8 +119,7 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
   app.add_option("--audio-bit-rate", args.sora_audio_bit_rate, "Audio bit rate")
       ->check(CLI::Range(0, 510));
   app.add_set("--role", args.sora_role, {"sendonly", "recvonly", "sendrecv"},
-              "Role")
-      ->required();
+              "Role");
   app.add_option("--multistream", args.sora_multistream,
                  "Use multistream (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
@@ -163,6 +160,30 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
     exit(app.exit(e));
   }
 
+  if (version) {
+    std::cout << ZakuroVersion::GetClientName() << std::endl;
+    std::cout << std::endl;
+    std::cout << "WebRTC: " << ZakuroVersion::GetLibwebrtcName() << std::endl;
+    std::cout << "Environment: " << ZakuroVersion::GetEnvironmentName()
+              << std::endl;
+    exit(0);
+  }
+
+  if (args.sora_signaling_host.empty()) {
+    std::cerr << "SIGNALING-HOST is required" << std::endl;
+    exit(1);
+  }
+
+  if (args.sora_channel_id.empty()) {
+    std::cerr << "--channel-id is required" << std::endl;
+    exit(1);
+  }
+
+  if (args.sora_role.empty()) {
+    std::cerr << "--role is required" << std::endl;
+    exit(1);
+  }
+
   // サイマルキャストは VP8 か H264 のみで動作する
   if (args.sora_simulcast && args.sora_video_codec_type != "VP8" &&
       args.sora_video_codec_type != "H264") {
@@ -189,15 +210,6 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
   if (!sora_signaling_notify_metadata.empty()) {
     args.sora_signaling_notify_metadata =
         json::parse(sora_signaling_notify_metadata);
-  }
-
-  if (version) {
-    std::cout << ZakuroVersion::GetClientName() << std::endl;
-    std::cout << std::endl;
-    std::cout << "WebRTC: " << ZakuroVersion::GetLibwebrtcName() << std::endl;
-    std::cout << "Environment: " << ZakuroVersion::GetEnvironmentName()
-              << std::endl;
-    exit(0);
   }
 }
 
