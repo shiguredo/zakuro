@@ -119,29 +119,29 @@ target_sources(zakuro
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
     src/main.cpp
-    src/url_parts.cpp
-    src/xorshift.cpp
-    src/virtual_client.cpp
-    src/wav_reader.cpp
-    src/y4m_reader.cpp
     src/rtc/device_video_capturer.cpp
+    src/rtc/dynamic_h264_video_encoder.cpp
+    src/rtc/h264_format.cpp
+    src/rtc/nop_video_decoder.cpp
     src/rtc/peer_connection_observer.cpp
     src/rtc/rtc_connection.cpp
     src/rtc/rtc_manager.cpp
     src/rtc/rtc_ssl_verifier.cpp
     src/rtc/scalable_track_source.cpp
-    src/rtc/dynamic_h264_video_encoder.cpp
-    src/rtc/nop_video_decoder.cpp
     src/rtc/software_video_encoder.cpp
-    src/rtc/h264_format.cpp
     src/rtc/zakuro_audio_device_module.cpp
     src/sora/sora_client.cpp
     src/sora/sora_server.cpp
     src/sora/sora_session.cpp
     src/ssl_verifier.cpp
+    src/url_parts.cpp
     src/util.cpp
+    src/virtual_client.cpp
     src/watchdog.cpp
+    src/wav_reader.cpp
     src/websocket.cpp
+    src/xorshift.cpp
+    src/y4m_reader.cpp
     src/zakuro_version.cpp
 )
 
