@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
 
     SoraClientConfig sorac_config;
     sorac_config.insecure = args.insecure;
-    sorac_config.signaling_host = args.sora_signaling_host;
+    sorac_config.signaling_url = args.sora_signaling_url;
     sorac_config.channel_id = args.sora_channel_id;
     sorac_config.video = args.sora_video;
     sorac_config.audio = args.sora_audio;
@@ -160,33 +160,51 @@ int main(int argc, char* argv[]) {
     sorac_config.port = args.sora_port;
     sorac_config.simulcast = args.sora_simulcast;
 
-    for (int i = 0; i < args.vcs; i++) {
-      vcs.push_back(std::unique_ptr<VirtualClient>(
-          new VirtualClient(ioc, capturer, rtcm_config, sorac_config)));
-    }
-    capturer = nullptr;
+    std::atomic_bool stopped{false};
+    std::thread th([&ioc, &stopped, &args, &rtcm_config, &sorac_config, &vcs,
+                    capturer = std::move(capturer)]() {
+      for (int i = 0; i < args.vcs; i++) {
+        auto next = std::chrono::system_clock::now() +
+                    std::chrono::milliseconds((int)(1000 / args.hatch_rate));
 
-    //auto sora_client =
-    //    SoraClient::Create(ioc, rtc_manager.get(), std::move(sorac_config));
+        auto vc = std::unique_ptr<VirtualClient>(
+            new VirtualClient(ioc, capturer, rtcm_config, sorac_config));
+        // SoraServer を起動しない場合と、SoraServer を起動して --auto が指定されている場合は即座に接続する。
+        // SoraServer を起動するけど --auto が指定されていない場合、SoraServer の API が呼ばれるまで接続しない。
+        if (args.sora_port < 0 ||
+            args.sora_port >= 0 && args.sora_auto_connect) {
+          vc->Connect();
+        }
+        vcs.push_back(std::move(vc));
 
-    // SoraServer を起動しない場合と、SoraServer を起動して --auto が指定されている場合は即座に接続する。
-    // SoraServer を起動するけど --auto が指定されていない場合、SoraServer の API が呼ばれるまで接続しない。
-    if (args.sora_port < 0 || args.sora_port >= 0 && args.sora_auto_connect) {
-      //sora_client->Connect();
-      for (auto& vc : vcs) {
-        vc->Connect();
+        // 次の生成時間になるまで待って、終了フラグが立ってたら終了する。
+        // cond var 使うのが面倒なので atomic_bool で定期的にフラグを見る。
+        while (next > std::chrono::system_clock::now()) {
+          if (stopped) {
+            return;
+          }
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        if (stopped) {
+          return;
+        }
       }
-    }
+    });
 
     if (args.sora_port >= 0) {
       SoraServerConfig config;
       const boost::asio::ip::tcp::endpoint endpoint{
           boost::asio::ip::make_address("127.0.0.1"),
           static_cast<unsigned short>(args.sora_port)};
+      // TODO: vcs をスレッドセーフにする（VC 生成スレッドと競合するので）
       SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
     }
 
     ioc.run();
+
+    stopped = true;
+    th.join();
 
     for (auto& vc : vcs) {
       vc->Clear();

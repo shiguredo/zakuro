@@ -11,8 +11,8 @@
 // Blend2D
 #include <blend2d.h>
 
-#include "random.h"
 #include "rtc/scalable_track_source.h"
+#include "xorshift.h"
 #include "y4m_reader.h"
 
 struct FakeVideoCapturerConfig {
