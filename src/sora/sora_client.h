@@ -22,7 +22,7 @@
 #include "websocket.h"
 
 struct SoraClientConfig {
-  std::string signaling_host = "wss://example.com/signaling";
+  std::string signaling_url;
   std::string channel_id;
 
   bool insecure = false;

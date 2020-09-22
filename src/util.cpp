@@ -97,7 +97,7 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
   app.add_option("--openh264", args.openh264, "OpenH264 dynamic library path")
       ->check(CLI::ExistingFile);
 
-  app.add_option("SIGNALING-URL", args.sora_signaling_host, "Signaling URL");
+  app.add_option("SIGNALING-URL", args.sora_signaling_url, "Signaling URL");
   app.add_option("--channel-id", args.sora_channel_id, "Channel ID");
   app.add_flag("--auto", args.sora_auto_connect,
                "Connect to Sora automatically");
@@ -169,8 +169,8 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
     exit(0);
   }
 
-  if (args.sora_signaling_host.empty()) {
-    std::cerr << "SIGNALING-HOST is required" << std::endl;
+  if (args.sora_signaling_url.empty()) {
+    std::cerr << "SIGNALING-URL is required" << std::endl;
     exit(1);
   }
 

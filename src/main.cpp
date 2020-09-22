@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
 
     SoraClientConfig sorac_config;
     sorac_config.insecure = args.insecure;
-    sorac_config.signaling_host = args.sora_signaling_host;
+    sorac_config.signaling_url = args.sora_signaling_url;
     sorac_config.channel_id = args.sora_channel_id;
     sorac_config.video = args.sora_video;
     sorac_config.audio = args.sora_audio;
