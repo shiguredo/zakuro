@@ -23,9 +23,13 @@ struct FakeVideoCapturerConfig {
     Safari,
     Sandstorm,
     Y4MFile,
+    External,
   };
   Type type = Type::Safari;
   std::string y4m_path;
+  std::function<void(BLContext&,
+                     std::chrono::high_resolution_clock::time_point)>
+      render;
 };
 
 class FakeVideoCapturer : public ScalableVideoTrackSource {

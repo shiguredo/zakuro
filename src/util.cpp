@@ -96,6 +96,7 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
   app.add_option("--openh264", args.openh264, "OpenH264 dynamic library path")
       ->check(CLI::ExistingFile);
+  app.add_set("--game", args.game, {"kuzushi"}, "Play game");
 
   app.add_option("SIGNALING-URL", args.sora_signaling_url, "Signaling URL");
   app.add_option("--channel-id", args.sora_channel_id, "Channel ID");

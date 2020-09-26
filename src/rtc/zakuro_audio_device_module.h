@@ -21,11 +21,29 @@ struct FakeAudioData {
   std::vector<int16_t> data;
 };
 
+struct ZakuroAudioDeviceModuleConfig {
+  enum class Type {
+    ADM,
+    Safari,
+    FakeAudio,
+    External,
+  };
+  Type type;
+  // ADM
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> adm;
+  // FakeAudio
+  std::shared_ptr<FakeAudioData> fake_audio;
+  // External
+  std::function<void(std::vector<int16_t>&)> render;
+  int sample_rate;
+  int channels;
+
+  webrtc::TaskQueueFactory* task_queue_factory;
+};
+
 class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
  public:
-  ZakuroAudioDeviceModule(rtc::scoped_refptr<webrtc::AudioDeviceModule> adm,
-                          webrtc::TaskQueueFactory* task_queue_factory,
-                          std::shared_ptr<FakeAudioData> fake_audio);
+  ZakuroAudioDeviceModule(ZakuroAudioDeviceModuleConfig config);
   ~ZakuroAudioDeviceModule() override;
 
   // adm != nullptr の場合 -> デバイスを使って録音する
@@ -33,11 +51,9 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
   // adm == nullptr && fake_audio == nullptr の場合 -> 特定のダミーデータを作って録音する
   // （録音を無効にしたい場合は webrtc::AudioDeviceModule::kDummyAudio で ADM を作って渡せば良い）
   static rtc::scoped_refptr<ZakuroAudioDeviceModule> Create(
-      rtc::scoped_refptr<webrtc::AudioDeviceModule> adm,
-      webrtc::TaskQueueFactory* task_queue_factory,
-      std::shared_ptr<FakeAudioData> fake_audio) {
+      ZakuroAudioDeviceModuleConfig config) {
     return new rtc::RefCountedObject<ZakuroAudioDeviceModule>(
-        adm, task_queue_factory, std::move(fake_audio));
+        std::move(config));
   }
 
   void StartAudioThread();
@@ -67,7 +83,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
   // Main initialization and termination
   virtual int32_t Init() override {
     device_buffer_ =
-        std::make_unique<webrtc::AudioDeviceBuffer>(task_queue_factory_);
+        std::make_unique<webrtc::AudioDeviceBuffer>(config_.task_queue_factory);
     initialized_ = true;
     if (adm_) {
       return adm_->Init();
@@ -142,9 +158,15 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
       return adm_->InitRecording();
     } else {
       recording_initialized_ = true;
-      if (fake_audio_) {
-        device_buffer_->SetRecordingSampleRate(fake_audio_->sample_rate);
-        device_buffer_->SetRecordingChannels(fake_audio_->channels);
+      switch (config_.type) {
+        case ZakuroAudioDeviceModuleConfig::Type::Safari:
+        case ZakuroAudioDeviceModuleConfig::Type::FakeAudio:
+        case ZakuroAudioDeviceModuleConfig::Type::External:
+          device_buffer_->SetRecordingSampleRate(config_.sample_rate);
+          device_buffer_->SetRecordingChannels(config_.channels);
+          break;
+        default:
+          break;
       }
       return 0;
     }
@@ -315,8 +337,8 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 #endif  // WEBRTC_IOS
 
  private:
+  ZakuroAudioDeviceModuleConfig config_;
   rtc::scoped_refptr<webrtc::AudioDeviceModule> adm_;
-  webrtc::TaskQueueFactory* task_queue_factory_;
   std::unique_ptr<std::thread> audio_thread_;
   std::atomic_bool audio_thread_stopped_ = {false};
   std::unique_ptr<webrtc::AudioDeviceBuffer> device_buffer_;

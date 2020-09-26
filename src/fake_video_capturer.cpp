@@ -54,7 +54,8 @@ void FakeVideoCapturer::StartCapture() {
       rtc::scoped_refptr<webrtc::I420Buffer> buffer;
 
       if (config_.type == FakeVideoCapturerConfig::Type::Safari ||
-          config_.type == FakeVideoCapturerConfig::Type::Sandstorm) {
+          config_.type == FakeVideoCapturerConfig::Type::Sandstorm ||
+          config_.type == FakeVideoCapturerConfig::Type::External) {
         UpdateImage(now);
 
         BLImageData data;
@@ -71,7 +72,7 @@ void FakeVideoCapturer::StartCapture() {
                            buffer->MutableDataU(), buffer->StrideU(),
                            buffer->MutableDataV(), buffer->StrideV(),
                            config_.width, config_.height);
-      } else {  // y4m
+      } else if (config_.type == FakeVideoCapturerConfig::Type::Y4MFile) {
         bool updated = false;
         int r = y4m_reader_.GetFrame(
             std::chrono::duration_cast<std::chrono::milliseconds>(now -
@@ -156,6 +157,10 @@ void FakeVideoCapturer::UpdateImage(
     //                        now2 - now)
     //                        .count()
     //                 << " ms";
+  } else if (config_.type == FakeVideoCapturerConfig::Type::External) {
+    BLContext ctx(image_);
+
+    config_.render(ctx, now);
   }
 }
 void FakeVideoCapturer::DrawTexts(

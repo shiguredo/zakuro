@@ -57,33 +57,39 @@ RTCManager::RTCManager(
   media_dependencies.task_queue_factory = dependencies.task_queue_factory.get();
   media_dependencies.adm = worker_thread_->Invoke<
       rtc::scoped_refptr<webrtc::AudioDeviceModule> >(RTC_FROM_HERE, [&] {
+    ZakuroAudioDeviceModuleConfig admconfig;
+    admconfig.task_queue_factory = dependencies.task_queue_factory.get();
     if (config_.audio_type == RTCManagerConfig::AudioType::Device) {
 #if defined(__linux__)
       webrtc::AudioDeviceModule::AudioLayer audio_layer =
           webrtc::AudioDeviceModule::kLinuxAlsaAudio;
 #else
-        webrtc::AudioDeviceModule::AudioLayer audio_layer =
-            webrtc::AudioDeviceModule::kPlatformDefaultAudio;
+      webrtc::AudioDeviceModule::AudioLayer audio_layer =
+          webrtc::AudioDeviceModule::kPlatformDefaultAudio;
 #endif
-      auto adm = webrtc::AudioDeviceModule::Create(
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+      admconfig.adm = webrtc::AudioDeviceModule::Create(
           audio_layer, dependencies.task_queue_factory.get());
-      return ZakuroAudioDeviceModule::Create(
-          adm, dependencies.task_queue_factory.get(), nullptr);
     } else if (config_.audio_type == RTCManagerConfig::AudioType::NoAudio) {
       webrtc::AudioDeviceModule::AudioLayer audio_layer =
           webrtc::AudioDeviceModule::kDummyAudio;
-      auto adm = webrtc::AudioDeviceModule::Create(
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+      admconfig.adm = webrtc::AudioDeviceModule::Create(
           audio_layer, dependencies.task_queue_factory.get());
-      return ZakuroAudioDeviceModule::Create(
-          adm, dependencies.task_queue_factory.get(), nullptr);
     } else if (config_.audio_type ==
                RTCManagerConfig::AudioType::SpecifiedFakeAudio) {
-      return ZakuroAudioDeviceModule::Create(
-          nullptr, dependencies.task_queue_factory.get(), config_.fake_audio);
-    } else {  // config_.audio_type == RTCManagerConfig::AudioType::AutoGenerateFakeAudio
-      return ZakuroAudioDeviceModule::Create(
-          nullptr, dependencies.task_queue_factory.get(), nullptr);
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
+      admconfig.fake_audio = config_.fake_audio;
+    } else if (config_.audio_type ==
+               RTCManagerConfig::AudioType::AutoGenerateFakeAudio) {
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
+    } else if (config_.audio_type == RTCManagerConfig::AudioType::External) {
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
+      admconfig.render = config_.render_audio;
+      admconfig.sample_rate = config_.sample_rate;
+      admconfig.channels = config_.channels;
     }
+    return ZakuroAudioDeviceModule::Create(std::move(admconfig));
   });
   media_dependencies.audio_encoder_factory =
       webrtc::CreateBuiltinAudioEncoderFactory();
