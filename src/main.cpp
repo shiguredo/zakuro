@@ -22,6 +22,7 @@
 #include <blend2d.h>
 
 #include "fake_video_capturer.h"
+#include "game/game_kuzushi.h"
 #include "sora/sora_server.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -64,6 +65,14 @@ int main(int argc, char* argv[]) {
   }
   rtc::LogMessage::AddLogToStream(log_sink.get(), rtc::LS_INFO);
 
+  std::unique_ptr<GameAudioManager> gam;
+  std::unique_ptr<GameKuzushi> kuzushi;
+  if (args.game == "kuzushi") {
+    auto size = args.GetSize();
+    gam.reset(new GameAudioManager());
+    kuzushi.reset(new GameKuzushi(size.width, size.height, gam.get()));
+  }
+
   auto capturer = ([&]() -> rtc::scoped_refptr<ScalableVideoTrackSource> {
     if (args.no_video_device) {
       return nullptr;
@@ -75,7 +84,14 @@ int main(int argc, char* argv[]) {
       config.width = size.width;
       config.height = size.height;
       config.fps = args.framerate;
-      if (args.fake_video_capture.empty()) {
+      if (!args.game.empty()) {
+        config.type = FakeVideoCapturerConfig::Type::External;
+        config.render =
+            [&kuzushi](BLContext& ctx,
+                       std::chrono::high_resolution_clock::time_point now) {
+              kuzushi->Render(ctx, now);
+            };
+      } else if (args.fake_video_capture.empty()) {
         config.type = args.sandstorm ? FakeVideoCapturerConfig::Type::Sandstorm
                                      : FakeVideoCapturerConfig::Type::Safari;
       } else {
@@ -112,6 +128,8 @@ int main(int argc, char* argv[]) {
   rtcm_config.openh264 = args.openh264;
   if (args.no_audio_device) {
     rtcm_config.audio_type = RTCManagerConfig::AudioType::NoAudio;
+  } else if (!args.game.empty()) {
+    rtcm_config.audio_type = RTCManagerConfig::AudioType::External;
   } else if (!args.fake_audio_capture.empty()) {
     WavReader wav_reader;
     int r = wav_reader.Load(args.fake_audio_capture);
@@ -127,6 +145,16 @@ int main(int argc, char* argv[]) {
     rtcm_config.fake_audio->data = std::move(wav_reader.data);
   } else {
     rtcm_config.audio_type = RTCManagerConfig::AudioType::AutoGenerateFakeAudio;
+  }
+  std::vector<RTCManagerConfig> rtcm_configs;
+  for (int i = 0; i < args.vcs; i++) {
+    RTCManagerConfig config = rtcm_config;
+    if (config.audio_type == RTCManagerConfig::AudioType::External) {
+      config.render_audio = gam->AddGameAudio(48000);
+      config.sample_rate = 48000;
+      config.channels = 1;
+    }
+    rtcm_configs.push_back(std::move(config));
   }
 
   std::vector<std::unique_ptr<VirtualClient>> vcs;
@@ -161,14 +189,14 @@ int main(int argc, char* argv[]) {
     sorac_config.simulcast = args.sora_simulcast;
 
     std::atomic_bool stopped{false};
-    std::thread th([&ioc, &stopped, &args, &rtcm_config, &sorac_config, &vcs,
+    std::thread th([&ioc, &stopped, &args, &rtcm_configs, &sorac_config, &vcs,
                     capturer = std::move(capturer)]() {
       for (int i = 0; i < args.vcs; i++) {
         auto next = std::chrono::system_clock::now() +
                     std::chrono::milliseconds((int)(1000 / args.hatch_rate));
 
-        auto vc = std::unique_ptr<VirtualClient>(
-            new VirtualClient(ioc, capturer, rtcm_config, sorac_config));
+        auto vc = std::unique_ptr<VirtualClient>(new VirtualClient(
+            ioc, capturer, std::move(rtcm_configs[i]), sorac_config));
         // SoraServer を起動しない場合と、SoraServer を起動して --auto が指定されている場合は即座に接続する。
         // SoraServer を起動するけど --auto が指定されていない場合、SoraServer の API が呼ばれるまで接続しない。
         if (args.sora_port < 0 ||
