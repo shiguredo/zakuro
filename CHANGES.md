@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] `libwebrtc` を `M86.4240@{#10}` に上げる
+    - @voluntas
 
 ## 2020.1
 
