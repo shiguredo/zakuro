@@ -11,3 +11,5 @@
 
 ## develop
 
+- [ADD] `--game=kuzushi` を実装
+    - @melpon
