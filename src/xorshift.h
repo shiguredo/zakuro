@@ -5,6 +5,9 @@
 
 class Xorshift {
  public:
+  Xorshift() {}
+  Xorshift(uint32_t x, uint32_t y, uint32_t z, uint32_t w)
+      : x(x), y(y), z(z), w(w) {}
   uint32_t Get();
 
  private:

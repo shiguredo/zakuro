@@ -13,6 +13,7 @@
 #include "embedded_binary.h"
 #include "game_audio.h"
 #include "game_key.h"
+#include "xorshift.h"
 
 class GameKuzushi {
  public:
@@ -73,10 +74,16 @@ class GameKuzushi {
         block.h = block_h;
 
         BLRgba32 rgb;
-        const double D = 10;
+        const double D = 14;
         srand(time(nullptr));
+        Xorshift xorshift((rand() << 16) | rand(), (rand() << 16) | rand(),
+                          (rand() << 16) | rand(), (rand() << 16) | rand());
+        for (int i = 0; i < 100; i++) {
+          xorshift.Get();
+        }
+
         while (true) {
-          rgb = BLRgba32(rand() % 255, rand() % 255, rand() % 255);
+          rgb = BLRgba32(xorshift.Get(), xorshift.Get(), xorshift.Get());
           //std::cout << "x=" << x << ", y=" << y << std::endl;
           //std::cout << "RGB(" << rgb.r << "," << rgb.g << "," << rgb.b << ")"
           //          << std::endl;
