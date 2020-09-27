@@ -22,9 +22,13 @@ struct RTCManagerConfig {
     SpecifiedFakeAudio,
     AutoGenerateFakeAudio,
     Device,
+    External,
   };
   AudioType audio_type = AudioType::AutoGenerateFakeAudio;
   std::shared_ptr<FakeAudioData> fake_audio;
+  std::function<void(std::vector<int16_t>&)> render_audio;
+  int sample_rate;
+  int channels;
 
   bool fixed_resolution = false;
   bool show_me = false;
