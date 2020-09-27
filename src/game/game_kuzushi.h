@@ -195,10 +195,7 @@ class GameKuzushi {
       ball_.y += ball_.speed * sin(ball_.angle) * aspect;
       // 左右に当たる
       if (ball_.x - ball_.rx < 0 || ball_.x + ball_.rx > 1.0) {
-        double ra = M_PI / 2;
-        double tx = cos(ball_.angle - ra);
-        double ty = sin(ball_.angle - ra);
-        ball_.angle = atan2(-ty, tx) + ra;
+        ball_.angle = Reflect(ball_.angle, M_PI / 2);
         if (ball_.x - ball_.rx < 0) {
           ball_.x = ball_.rx;
         } else {
@@ -207,10 +204,7 @@ class GameKuzushi {
       }
       // 上に当たる
       if (ball_.y - ball_.ry < 0) {
-        double ra = 0;
-        double tx = cos(ball_.angle - ra);
-        double ty = sin(ball_.angle - ra);
-        ball_.angle = atan2(-ty, tx) + ra;
+        ball_.angle = Reflect(ball_.angle, 0);
         ball_.y = ball_.ry;
       }
 
@@ -269,10 +263,7 @@ class GameKuzushi {
           double h = std::min(h1, h2);
           if (w > h) {
             // 横軸に反射
-            double ra = 0;
-            double tx = cos(ball_.angle - ra);
-            double ty = sin(ball_.angle - ra);
-            ball_.angle = atan2(-ty, tx) + ra;
+            ball_.angle = Reflect(ball_.angle, 0);
             if (h1 < h2) {
               // 上から当たってる
               ball_.y = block.y - ball_.ry;
@@ -282,10 +273,7 @@ class GameKuzushi {
             }
           } else {
             // 縦軸に反射
-            double ra = M_PI / 2;
-            double tx = cos(ball_.angle - ra);
-            double ty = sin(ball_.angle - ra);
-            ball_.angle = atan2(-ty, tx) + ra;
+            ball_.angle = Reflect(ball_.angle, M_PI / 2);
             if (w1 < w2) {
               // 左から当たってる
               ball_.x = block.x - ball_.rx;
@@ -302,20 +290,14 @@ class GameKuzushi {
           ball_.x - ball_.rx < paddle_.x + paddle_.w &&
           ball_.y + ball_.ry > paddle_.y &&
           ball_.y - ball_.ry < paddle_.y + paddle_.h) {
-        double ra = 0;
-        double tx = cos(ball_.angle - ra);
-        double ty = sin(ball_.angle - ra);
-        ball_.angle = atan2(-ty, tx) + ra;
+        ball_.angle = Reflect(ball_.angle, 0);
         ball_.y = paddle_.y - ball_.ry;
         gam_->PlayAny(220, 0.04, 0.1);
       }
 
       // 落ちる
       if (ball_.y - ball_.ry > 1.0) {
-        double ra = 0;
-        double tx = cos(ball_.angle - ra);
-        double ty = sin(ball_.angle - ra);
-        double angle = atan2(-ty, tx) + ra;
+        double angle = Reflect(ball_.angle, 0);
         InitBall(angle);
       }
     }
@@ -402,10 +384,7 @@ class GameKuzushi {
     if (layers_.empty()) {
       double angle = ball_.angle;
       if (sin(ball_.angle) > 0.0) {
-        double ra = 0;
-        double tx = cos(ball_.angle - ra);
-        double ty = sin(ball_.angle - ra);
-        angle = atan2(-ty, tx) + ra;
+        angle = Reflect(angle, 0);
       }
 
       InitBall(angle);
@@ -669,6 +648,11 @@ class GameKuzushi {
 
     return 3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 +
            t * t * t;
+  }
+  static double Reflect(double angle, double reflector_angle) {
+    double tx = cos(angle - reflector_angle);
+    double ty = sin(angle - reflector_angle);
+    return atan2(-ty, tx) + reflector_angle;
   }
 
  private:
