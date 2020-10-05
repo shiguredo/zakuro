@@ -94,7 +94,8 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
-  app.add_option("--openh264", args.openh264, "OpenH264 dynamic library path")
+  app.add_option("--openh264", args.openh264,
+                 "OpenH264 Video Codec provided by Cisco Systems, Inc.")
       ->check(CLI::ExistingFile);
   app.add_set("--game", args.game, {"kuzushi"}, "Play game");
 
