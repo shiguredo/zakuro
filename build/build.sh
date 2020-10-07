@@ -127,7 +127,12 @@ case "$PACKAGE" in
         cp    LICENSE             _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/
         cp    NOTICE              _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/
         cat   _build/macos/NOTICE >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
-        curl -fLo _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/BINARY_LICENSE.txt http://www.openh264.org/BINARY_LICENSE.txt
+        curl -fLO http://www.openh264.org/BINARY_LICENSE.txt
+        echo  "# OpenH264"        >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        echo  '```'               >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        cat   BINARY_LICENSE.txt  >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        echo  '```'               >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        rm    BINARY_LICENSE.txt
         pushd _package
           tar czf zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}.tar.gz zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}
         popd
@@ -200,7 +205,12 @@ case "$PACKAGE" in
         cp    LICENSE                  _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/
         cp    NOTICE                   _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/
         cat   _build/${PACKAGE}/NOTICE >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
-        curl -fLo _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/BINARY_LICENSE.txt http://www.openh264.org/BINARY_LICENSE.txt
+        curl -fLO http://www.openh264.org/BINARY_LICENSE.txt
+        echo  "# OpenH264"             >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        echo  '```'                    >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        cat   BINARY_LICENSE.txt       >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        echo  '```'                    >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        rm    BINARY_LICENSE.txt
         pushd _package
           tar czf zakuro-${ZAKURO_VERSION}_${PACKAGE}.tar.gz zakuro-${ZAKURO_VERSION}_${PACKAGE}
         popd
