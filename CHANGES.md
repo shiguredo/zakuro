@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] `libwebrtc` を `M87.4280@{#10}` に上げる
+    - @voluntas
+
 ## 2020.2
 
 - [ADD] `--game=kuzushi` を実装
