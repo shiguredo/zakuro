@@ -9,11 +9,11 @@
  *
  */
 
-// modules/video_coding/codecs/h264/h264_encoder_impl.{h,cpp} の
+// modules/video_coding/codecs/h264/h264_encoder_impl.{h,cc} の
 // OpenH264 の関数を動的に読むようにしただけ
 
-#ifndef RTC_DYNAMIC_VIDEO_ENCODER_H_
-#define RTC_DYNAMIC_VIDEO_ENCODER_H_
+#ifndef RTC_DYNAMIC_H264_VIDEO_ENCODER_H_
+#define RTC_DYNAMIC_H264_VIDEO_ENCODER_H_
 
 #include <memory>
 #include <vector>
@@ -22,8 +22,7 @@
 #include <api/video/i420_buffer.h>
 #include <api/video_codecs/video_encoder.h>
 #include <common_video/h264/h264_bitstream_parser.h>
-#include <media/base/codec.h>
-#include <modules/video_coding/include/video_codec_interface.h>
+#include <modules/video_coding/codecs/h264/include/h264.h>
 #include <modules/video_coding/utility/quality_scaler.h>
 
 // OpenH264
@@ -33,7 +32,7 @@ class ISVCEncoder;
 
 namespace webrtc {
 
-class DynamicH264VideoEncoder : public VideoEncoder {
+class DynamicH264VideoEncoder : public H264Encoder {
  public:
   static std::unique_ptr<VideoEncoder> Create(const cricket::VideoCodec& codec,
                                               std::string openh264) {
@@ -59,8 +58,8 @@ class DynamicH264VideoEncoder : public VideoEncoder {
   };
 
  public:
-  DynamicH264VideoEncoder(const cricket::VideoCodec& codec,
-                          std::string openh264);
+  explicit DynamicH264VideoEncoder(const cricket::VideoCodec& codec,
+                                   std::string openh264);
   ~DynamicH264VideoEncoder() override;
 
   // |settings.max_payload_size| is ignored.
@@ -93,7 +92,7 @@ class DynamicH264VideoEncoder : public VideoEncoder {
  private:
   SEncParamExt CreateEncoderParams(size_t i) const;
 
-  H264BitstreamParser h264_bitstream_parser_;
+  webrtc::H264BitstreamParser h264_bitstream_parser_;
   // Reports statistics with histograms.
   void ReportInit();
   void ReportError();
@@ -129,4 +128,4 @@ class DynamicH264VideoEncoder : public VideoEncoder {
 
 }  // namespace webrtc
 
-#endif
+#endif  // RTC_DYNAMIC_H264_VIDEO_ENCODER_H_
