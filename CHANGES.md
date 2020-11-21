@@ -11,6 +11,10 @@
 
 ## develop
 
+- [UPDATE] blend2d を 40f172 に上げる
+    - @voluntas
+- [UPDATE] asmjit を 4b13f7 に上げる
+    - @voluntas
 - [UPDATE] `libwebrtc` を `M87.4280@{#10}` に上げる
     - @voluntas
 
