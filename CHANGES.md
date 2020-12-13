@@ -11,11 +11,13 @@
 
 ## develop
 
-- [UPDATE] blend2d を 40f172 に上げる
+- [UPDATE] blend2d を 40f1721aa4a57a37f937e267eaf64f4667e900f3 に上げる
     - @voluntas
-- [UPDATE] asmjit を 4b13f7 に上げる
+- [UPDATE] asmjit を 3b886c8b7b40afa3a5a02f123981dcdd7d3ea643 に上げる
     - @voluntas
-- [UPDATE] `libwebrtc` を `M87.4280@{#10}` に上げる
+- [UPDATE] `libwebrtc` を `M88.4324@{#2}` に上げる
+    - @voluntas
+- [UPDATE] `cmake` を `3.19.1` に上げる
     - @voluntas
 
 ## 2020.2
