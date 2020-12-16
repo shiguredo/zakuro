@@ -186,6 +186,7 @@ if (TARGET_OS STREQUAL "macos")
     PRIVATE
       "-framework Foundation"
       "-framework AVFoundation"
+      "-framework QuartzCore"
       "-framework CoreServices"
       "-framework CoreFoundation"
       "-framework AudioUnit"
