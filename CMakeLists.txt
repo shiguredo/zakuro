@@ -34,6 +34,7 @@ if(ZAKURO_PACKAGE_NAME STREQUAL "macos")
   set(CLI11_ROOT_DIR ${_INSTALL_DIR}/CLI11)
   set(BLEND2D_ROOT_DIR ${_INSTALL_DIR}/blend2d)
   set(OPENH264_ROOT_DIR ${_INSTALL_DIR}/openh264)
+  set(YAML_CPP_ROOT_DIR ${_INSTALL_DIR}/yaml-cpp)
   set(WEBRTC_INCLUDE_DIR ${_INSTALL_DIR}/webrtc/include)
   set(WEBRTC_LIBRARY_DIR ${_INSTALL_DIR}/webrtc/lib)
   set(CLANG_ROOT ${_INSTALL_DIR}/llvm/clang)
@@ -49,6 +50,7 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "ubuntu-18.04_x86_64")
   set(CLI11_ROOT_DIR /root/CLI11)
   set(BLEND2D_ROOT_DIR /root/blend2d)
   set(OPENH264_ROOT_DIR /root/openh264)
+  set(YAML_CPP_ROOT_DIR /root/yaml-cpp)
   set(WEBRTC_INCLUDE_DIR /root/webrtc/include)
   set(WEBRTC_LIBRARY_DIR /root/webrtc/lib)
 
@@ -64,6 +66,7 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "ubuntu-20.04_x86_64")
   set(CLI11_ROOT_DIR /root/CLI11)
   set(BLEND2D_ROOT_DIR /root/blend2d)
   set(OPENH264_ROOT_DIR /root/openh264)
+  set(YAML_CPP_ROOT_DIR /root/yaml-cpp)
   set(WEBRTC_INCLUDE_DIR /root/webrtc/include)
   set(WEBRTC_LIBRARY_DIR /root/webrtc/lib)
 
@@ -79,6 +82,7 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "centos-8_x86_64")
   set(CLI11_ROOT_DIR /root/CLI11)
   set(BLEND2D_ROOT_DIR /root/blend2d)
   set(OPENH264_ROOT_DIR /root/openh264)
+  set(YAML_CPP_ROOT_DIR /root/yaml-cpp)
   set(WEBRTC_INCLUDE_DIR /root/webrtc/include)
   set(WEBRTC_LIBRARY_DIR /root/webrtc/lib)
 
@@ -92,7 +96,7 @@ set(CMAKE_C_COMPILER ${CLANG_ROOT}/bin/clang)
 set(CMAKE_CXX_COMPILER ${CLANG_ROOT}/bin/clang++)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-list(APPEND CMAKE_PREFIX_PATH ${BOOST_ROOT_DIR})
+list(APPEND CMAKE_PREFIX_PATH ${BOOST_ROOT_DIR} ${YAML_CPP_ROOT_DIR})
 
 project(zakuro C CXX)
 
@@ -104,6 +108,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(JSON REQUIRED)
 find_package(CLI11 REQUIRED)
 find_package(Blend2D REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 add_executable(zakuro)
 
@@ -155,6 +160,7 @@ target_link_libraries(zakuro
     JSON::JSON
     CLI11::CLI11
     Blend2D::Blend2D
+    yaml-cpp
 )
 
 target_compile_definitions(zakuro

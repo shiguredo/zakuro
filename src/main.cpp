@@ -13,13 +13,14 @@
 #include <rtc_base/log_sinks.h>
 #include <rtc_base/string_utils.h>
 
+#include <blend2d.h>
+#include <yaml-cpp/yaml.h>
+
 #if defined(__APPLE__)
 #include "mac_helper/mac_capturer.h"
 #else
 #include "v4l2_video_capturer/v4l2_video_capturer.h"
 #endif
-
-#include <blend2d.h>
 
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
@@ -32,6 +33,9 @@
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
 
 int main(int argc, char* argv[]) {
+  YAML::Node config = YAML::LoadFile("config.yaml");
+  std::cout << config;
+
   rlimit lim;
   if (::getrlimit(RLIMIT_NOFILE, &lim) != 0) {
     std::cerr << "getrlimit 失敗" << std::endl;

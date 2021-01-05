@@ -162,3 +162,30 @@ if [ $OPENH264_CHANGED -eq 1 -o ! -e $INSTALL_DIR/openh264/include/wels/codec_ap
   popd
 fi
 echo "$OPENH264_VERSION" > $OPENH264_VERSION_FILE
+
+# yaml-cpp
+YAML_CPP_VERSION_FILE="$INSTALL_DIR/yaml-cpp.version"
+YAML_CPP_CHANGED=0
+if [ ! -e $YAML_CPP_VERSION_FILE -o "$YAML_CPP_VERSION" != "`cat $YAML_CPP_VERSION_FILE`" ]; then
+  BLEND2D_CHANGED=1
+fi
+if [ $YAML_CPP_CHANGED -eq 1 -o ! -e $INSTALL_DIR/yaml-cpp/lib/libyaml-cpp.a ]; then
+  rm -rf $SOURCE_DIR/yaml-cpp
+  rm -rf $INSTALL_DIR/yaml-cpp
+  rm -rf $BUILD_DIR/yaml-cpp
+
+  pushd $SOURCE_DIR
+    git clone --branch yaml-cpp-$YAML_CPP_VERSION --depth 1 https://github.com/jbeder/yaml-cpp.git
+  popd
+
+  mkdir -p $BUILD_DIR/yaml-cpp
+  pushd $BUILD_DIR/yaml-cpp
+    cmake $SOURCE_DIR/yaml-cpp \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR/yaml-cpp \
+      -DYAML_CPP_BUILD_TESTS=OFF \
+      -DYAML_CPP_BUILD_TOOLS=OFF
+    cmake --build .
+    cmake --build . --target install
+  popd
+fi
