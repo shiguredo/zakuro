@@ -22,6 +22,7 @@
 #include "v4l2_video_capturer/v4l2_video_capturer.h"
 #endif
 
+#include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "sora/sora_server.h"
@@ -75,6 +76,13 @@ int main(int argc, char* argv[]) {
     auto size = args.GetSize();
     gam.reset(new GameAudioManager());
     kuzushi.reset(new GameKuzushi(size.width, size.height, gam.get()));
+  }
+
+  bool fake_audio_key_trigger = true;
+  std::unique_ptr<FakeAudioKeyTrigger> trigger;
+  if (fake_audio_key_trigger) {
+    gam.reset(new GameAudioManager());
+    trigger.reset(new FakeAudioKeyTrigger(gam.get()));
   }
 
   auto capturer = ([&]() -> rtc::scoped_refptr<ScalableVideoTrackSource> {
@@ -134,6 +142,8 @@ int main(int argc, char* argv[]) {
     rtcm_config.audio_type = RTCManagerConfig::AudioType::NoAudio;
   } else if (!args.game.empty()) {
     rtcm_config.audio_type = RTCManagerConfig::AudioType::External;
+  } else if (fake_audio_key_trigger) {
+    rtcm_config.audio_type = RTCManagerConfig::AudioType::External;
   } else if (!args.fake_audio_capture.empty()) {
     WavReader wav_reader;
     int r = wav_reader.Load(args.fake_audio_capture);
@@ -154,8 +164,8 @@ int main(int argc, char* argv[]) {
   for (int i = 0; i < args.vcs; i++) {
     RTCManagerConfig config = rtcm_config;
     if (config.audio_type == RTCManagerConfig::AudioType::External) {
-      config.render_audio = gam->AddGameAudio(48000);
-      config.sample_rate = 48000;
+      config.render_audio = gam->AddGameAudio(16000);
+      config.sample_rate = 16000;
       config.channels = 1;
     }
     rtcm_configs.push_back(std::move(config));

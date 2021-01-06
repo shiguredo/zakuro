@@ -177,6 +177,50 @@ target_compile_options(zakuro
 # リソースファイルを作る
 list(APPEND RESOURCE_FILES
   Kosugi-Regular.ttf
+  num000_01.wav
+  num001_01.wav
+  num002_01.wav
+  num003_01.wav
+  num004_01.wav
+  num005_01.wav
+  num006_01.wav
+  num007_01.wav
+  num008_01.wav
+  num009_01.wav
+  num010_01.wav
+  num011_01.wav
+  num012_01.wav
+  num013_01.wav
+  num014_01.wav
+  num015_01.wav
+  num016_01.wav
+  num017_01.wav
+  num018_01.wav
+  num019_01.wav
+  num020_01.wav
+  num021_01.wav
+  num022_01.wav
+  num023_01.wav
+  num024_01.wav
+  num025_01.wav
+  num026_01.wav
+  num027_01.wav
+  num028_01.wav
+  num029_01.wav
+  num030_01.wav
+  num030_02.wav
+  num040_01.wav
+  num040_02.wav
+  num050_01.wav
+  num050_02.wav
+  num060_01.wav
+  num060_02.wav
+  num070_01.wav
+  num070_02.wav
+  num080_01.wav
+  num080_02.wav
+  num090_01.wav
+  num090_02.wav
 )
 list(LENGTH RESOURCE_FILES RESOURCE_FILES_LENGTH)
 math(EXPR RESOURCE_FILES_LENGTH_MINUS_ONE "${RESOURCE_FILES_LENGTH} - 1")
@@ -190,9 +234,10 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   string(REGEX REPLACE "[-.]" "_" file_id "${file_id}")
 
   # macOS のセクション名(15文字以内)
-  # Kosugi-Regular.ttf → Kosugi-Regular.
-  # num_030_2.wav → num_030_2.wav
-  string(SUBSTRING "${file}" 0 15 file_name_macos)
+  # Kosugi-Regular.ttf → Kosugi_Regular_
+  # num_030_2.wav → num_030_2_wav
+  string(REGEX REPLACE "[-.]" "_" file_name_macos "${file}")
+  string(SUBSTRING "${file_name_macos}" 0 15 file_name_macos)
 
   # Linux の外部宣言の名前のベース
   # Kosugi-Regular.ttf → Kosugi_Regular_ttf
@@ -201,7 +246,7 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
 
   # バイナリの組み込み
   if (TARGET_OS STREQUAL "macos")
-    target_link_options(zakuro PRIVATE -sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file})
+    target_link_options(zakuro PRIVATE "SHELL:-sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file}")
   elseif (TARGET_OS STREQUAL "linux")
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
