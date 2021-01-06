@@ -5,17 +5,18 @@
 #include <mach-o/ldsyms.h>
 #endif
 
-EmbeddedBinaryContent EmbeddedBinary::kosugi_ttf() {
+#include "embedded_binary.generated.priv.h"
+
+EmbeddedBinaryContent EmbeddedBinary::Get(int id) {
 #ifdef __APPLE__
   size_t size;
   const void* ptr =
-      getsectiondata(&_mh_execute_header, "__DATA", "__kosugi_ttf", &size);
+      getsectiondata(&_mh_execute_header, "__DATA",
+                     EMBEDDED_BINARY_RESOURCE_NAMES_MACOS[id], &size);
 #else
-  extern const unsigned char _binary_Kosugi_Regular_ttf_start[];
-  extern const unsigned char _binary_Kosugi_Regular_ttf_end[];
-  const void* ptr = _binary_Kosugi_Regular_ttf_start;
-  size_t size =
-      _binary_Kosugi_Regular_ttf_end - _binary_Kosugi_Regular_ttf_start;
+  const void* ptr = EMBEDDED_BINARY_RESOURCE_STARTS_LINUX[id];
+  size_t size = EMBEDDED_BINARY_RESOURCE_ENDS_LINUX[id] -
+                EMBEDDED_BINARY_RESOURCE_STARTS_LINUX[id];
 #endif
   EmbeddedBinaryContent content;
   content.ptr = ptr;

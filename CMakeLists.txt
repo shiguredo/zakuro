@@ -174,6 +174,66 @@ target_compile_options(zakuro
     "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
 )
 
+# リソースファイルを作る
+list(APPEND RESOURCE_FILES
+  Kosugi-Regular.ttf
+)
+list(LENGTH RESOURCE_FILES RESOURCE_FILES_LENGTH)
+math(EXPR RESOURCE_FILES_LENGTH_MINUS_ONE "${RESOURCE_FILES_LENGTH} - 1")
+foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
+  list(GET RESOURCE_FILES ${n} file)
+
+  # ID として使う名前
+  # Kosugi-Regular.ttf → RESOURCE_KOSUGI_REGULAR_TTF
+  # num_030_2.wav → RESOURCE_NUM_030_2_WAV
+  string(TOUPPER "RESOURCE_${file}" file_id)
+  string(REGEX REPLACE "[-.]" "_" file_id "${file_id}")
+
+  # macOS のセクション名(15文字以内)
+  # Kosugi-Regular.ttf → Kosugi-Regular.
+  # num_030_2.wav → num_030_2.wav
+  string(SUBSTRING "${file}" 0 15 file_name_macos)
+
+  # Linux の外部宣言の名前のベース
+  # Kosugi-Regular.ttf → Kosugi_Regular_ttf
+  # num_030_2.wav → num_030_2_wav
+  string(REGEX REPLACE "[-.]" "_" file_name_linux "${file}")
+
+  # バイナリの組み込み
+  if (TARGET_OS STREQUAL "macos")
+    target_link_options(zakuro PRIVATE -sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file})
+  elseif (TARGET_OS STREQUAL "linux")
+    set(objfile ${file}.o)
+    add_custom_command(OUTPUT ${objfile}
+      COMMAND ld
+      ARGS -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/${objfile} ${file}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
+      MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file})
+    set_source_files_properties(${objfile}
+      PROPERTIES
+        EXTERNAL_OBJECT true
+        GENERATED true
+    )
+    target_sources(zakuro PRIVATE ${objfile})
+  endif()
+
+  string(APPEND RESOURCE_FILE_ID_DEFINES "#define ${file_id} ${n}\n")
+  string(APPEND RESOURCE_FILE_NAME_MACOS_DEFINES "  \"${file_name_macos}\",\n")
+  string(APPEND RESOURCE_FILE_NAME_LINUX_EXTERNS "extern const unsigned char _binary_${file_name_linux}_start[];\n")
+  string(APPEND RESOURCE_FILE_NAME_LINUX_EXTERNS "extern const unsigned char _binary_${file_name_linux}_end[];\n")
+  string(APPEND RESOURCE_FILE_NAME_LINUX_START_DEFINES "  _binary_${file_name_linux}_start,\n")
+  string(APPEND RESOURCE_FILE_NAME_LINUX_END_DEFINES "  _binary_${file_name_linux}_end,\n")
+endforeach()
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/embedded_binary.generated.template.h
+  ${CMAKE_CURRENT_BINARY_DIR}/embedded_binary.generated.h
+  @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/embedded_binary.generated.priv.template.h
+  ${CMAKE_CURRENT_BINARY_DIR}/embedded_binary.generated.priv.h
+  @ONLY)
+
 if (TARGET_OS STREQUAL "macos")
   target_sources(zakuro
     PRIVATE
@@ -184,9 +244,6 @@ if (TARGET_OS STREQUAL "macos")
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
-
-  # バイナリの組み込み
-  target_link_options(zakuro PRIVATE -sectcreate __DATA __kosugi_ttf ${CMAKE_CURRENT_SOURCE_DIR}/resource/Kosugi-Regular.ttf)
 
   target_link_libraries(zakuro
     PRIVATE
@@ -226,19 +283,6 @@ elseif (TARGET_OS STREQUAL "linux")
     PRIVATE
       src/v4l2_video_capturer/v4l2_video_capturer.cpp
   )
-
-  # バイナリの組み込み
-  add_custom_command(OUTPUT kosugi_ttf.o
-    COMMAND ld
-    ARGS -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/kosugi_ttf.o Kosugi-Regular.ttf
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
-    MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/resource/Kosugi-Regular.ttf)
-  set_source_files_properties(kosugi_ttf.o
-    PROPERTIES
-      EXTERNAL_OBJECT true
-      GENERATED true
-  )
-  target_sources(zakuro PRIVATE kosugi_ttf.o)
 
   set_target_properties(zakuro PROPERTIES POSITION_INDEPENDENT_CODE ON)
   target_link_libraries(zakuro
