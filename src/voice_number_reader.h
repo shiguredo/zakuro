@@ -19,87 +19,40 @@ public:
 
     // 0-29
     if (0 <= n && n <= 29) {
-      switch (n) {
-        case 0:
-          return Get(RESOURCE_NUM000_01_WAV);
-        case 1:
-          return Get(RESOURCE_NUM001_01_WAV);
-        case 2:
-          return Get(RESOURCE_NUM002_01_WAV);
-        case 3:
-          return Get(RESOURCE_NUM003_01_WAV);
-        case 4:
-          return Get(RESOURCE_NUM004_01_WAV);
-        case 5:
-          return Get(RESOURCE_NUM005_01_WAV);
-        case 6:
-          return Get(RESOURCE_NUM006_01_WAV);
-        case 7:
-          return Get(RESOURCE_NUM007_01_WAV);
-        case 8:
-          return Get(RESOURCE_NUM008_01_WAV);
-        case 9:
-          return Get(RESOURCE_NUM009_01_WAV);
-        case 10:
-          return Get(RESOURCE_NUM010_01_WAV);
-        case 11:
-          return Get(RESOURCE_NUM011_01_WAV);
-        case 12:
-          return Get(RESOURCE_NUM012_01_WAV);
-        case 13:
-          return Get(RESOURCE_NUM013_01_WAV);
-        case 14:
-          return Get(RESOURCE_NUM014_01_WAV);
-        case 15:
-          return Get(RESOURCE_NUM015_01_WAV);
-        case 16:
-          return Get(RESOURCE_NUM016_01_WAV);
-        case 17:
-          return Get(RESOURCE_NUM017_01_WAV);
-        case 18:
-          return Get(RESOURCE_NUM018_01_WAV);
-        case 19:
-          return Get(RESOURCE_NUM019_01_WAV);
-        case 20:
-          return Get(RESOURCE_NUM020_01_WAV);
-        case 21:
-          return Get(RESOURCE_NUM021_01_WAV);
-        case 22:
-          return Get(RESOURCE_NUM022_01_WAV);
-        case 23:
-          return Get(RESOURCE_NUM023_01_WAV);
-        case 24:
-          return Get(RESOURCE_NUM024_01_WAV);
-        case 25:
-          return Get(RESOURCE_NUM025_01_WAV);
-        case 26:
-          return Get(RESOURCE_NUM026_01_WAV);
-        case 27:
-          return Get(RESOURCE_NUM027_01_WAV);
-        case 28:
-          return Get(RESOURCE_NUM028_01_WAV);
-        case 29:
-          return Get(RESOURCE_NUM029_01_WAV);
-      }
+      const int res1[] = {
+          RESOURCE_NUM000_01_WAV, RESOURCE_NUM001_01_WAV,
+          RESOURCE_NUM002_01_WAV, RESOURCE_NUM003_01_WAV,
+          RESOURCE_NUM004_01_WAV, RESOURCE_NUM005_01_WAV,
+          RESOURCE_NUM006_01_WAV, RESOURCE_NUM007_01_WAV,
+          RESOURCE_NUM008_01_WAV, RESOURCE_NUM009_01_WAV,
+          RESOURCE_NUM010_01_WAV, RESOURCE_NUM011_01_WAV,
+          RESOURCE_NUM012_01_WAV, RESOURCE_NUM013_01_WAV,
+          RESOURCE_NUM014_01_WAV, RESOURCE_NUM015_01_WAV,
+          RESOURCE_NUM016_01_WAV, RESOURCE_NUM017_01_WAV,
+          RESOURCE_NUM018_01_WAV, RESOURCE_NUM019_01_WAV,
+          RESOURCE_NUM020_01_WAV, RESOURCE_NUM021_01_WAV,
+          RESOURCE_NUM022_01_WAV, RESOURCE_NUM023_01_WAV,
+          RESOURCE_NUM024_01_WAV, RESOURCE_NUM025_01_WAV,
+          RESOURCE_NUM026_01_WAV, RESOURCE_NUM027_01_WAV,
+          RESOURCE_NUM028_01_WAV, RESOURCE_NUM029_01_WAV,
+      };
+      return res1[n];
     }
     // 30,40,50,...,90
     if (n % 10 == 0) {
-      switch (n / 10) {
-        case 3:
-          return Get(RESOURCE_NUM030_01_WAV);
-        case 4:
-          return Get(RESOURCE_NUM040_01_WAV);
-        case 5:
-          return Get(RESOURCE_NUM050_01_WAV);
-        case 6:
-          return Get(RESOURCE_NUM060_01_WAV);
-        case 7:
-          return Get(RESOURCE_NUM070_01_WAV);
-        case 8:
-          return Get(RESOURCE_NUM080_01_WAV);
-        case 9:
-          return Get(RESOURCE_NUM090_01_WAV);
-      }
+      const int res10[] = {
+          -1,
+          -1,
+          -1,
+          RESOURCE_NUM030_01_WAV,
+          RESOURCE_NUM040_01_WAV,
+          RESOURCE_NUM050_01_WAV,
+          RESOURCE_NUM060_01_WAV,
+          RESOURCE_NUM070_01_WAV,
+          RESOURCE_NUM080_01_WAV,
+          RESOURCE_NUM090_01_WAV,
+      };
+      return Get(res10[n / 10]);
     }
     // 31,32,...,39
     // 41,42,...,49
