@@ -35,7 +35,7 @@ const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
 
 int main(int argc, char* argv[]) {
   YAML::Node config = YAML::LoadFile("config.yaml");
-  std::cout << config;
+  std::cout << config << std::endl;
 
   rlimit lim;
   if (::getrlimit(RLIMIT_NOFILE, &lim) != 0) {
@@ -82,7 +82,6 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<FakeAudioKeyTrigger> trigger;
   if (fake_audio_key_trigger) {
     gam.reset(new GameAudioManager());
-    trigger.reset(new FakeAudioKeyTrigger(gam.get()));
   }
 
   auto capturer = ([&]() -> rtc::scoped_refptr<ScalableVideoTrackSource> {
@@ -202,22 +201,28 @@ int main(int argc, char* argv[]) {
     sorac_config.port = args.sora_port;
     sorac_config.simulcast = args.sora_simulcast;
 
+    for (int i = 0; i < args.vcs; i++) {
+      auto vc = std::unique_ptr<VirtualClient>(
+          new VirtualClient(ioc, capturer, rtcm_configs[i], sorac_config));
+      vcs.push_back(std::move(vc));
+    }
+
+    if (fake_audio_key_trigger) {
+      trigger.reset(new FakeAudioKeyTrigger(gam.get(), vcs));
+    }
+
     std::atomic_bool stopped{false};
-    std::thread th([&ioc, &stopped, &args, &rtcm_configs, &sorac_config, &vcs,
-                    capturer = std::move(capturer)]() {
+    std::thread th([&ioc, &stopped, &args, &vcs]() {
       for (int i = 0; i < args.vcs; i++) {
         auto next = std::chrono::system_clock::now() +
                     std::chrono::milliseconds((int)(1000 / args.hatch_rate));
 
-        auto vc = std::unique_ptr<VirtualClient>(new VirtualClient(
-            ioc, capturer, std::move(rtcm_configs[i]), sorac_config));
         // SoraServer を起動しない場合と、SoraServer を起動して --auto が指定されている場合は即座に接続する。
         // SoraServer を起動するけど --auto が指定されていない場合、SoraServer の API が呼ばれるまで接続しない。
         if (args.sora_port < 0 ||
             args.sora_port >= 0 && args.sora_auto_connect) {
-          vc->Connect();
+          vcs[i]->Connect();
         }
-        vcs.push_back(std::move(vc));
 
         // 次の生成時間になるまで待って、終了フラグが立ってたら終了する。
         // cond var 使うのが面倒なので atomic_bool で定期的にフラグを見る。
@@ -225,7 +230,7 @@ int main(int argc, char* argv[]) {
           if (stopped) {
             return;
           }
-          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         if (stopped) {

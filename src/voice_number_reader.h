@@ -36,7 +36,7 @@ public:
           RESOURCE_NUM026_01_WAV, RESOURCE_NUM027_01_WAV,
           RESOURCE_NUM028_01_WAV, RESOURCE_NUM029_01_WAV,
       };
-      return res1[n];
+      return Get(res1[n]);
     }
     // 30,40,50,...,90
     if (n % 10 == 0) {

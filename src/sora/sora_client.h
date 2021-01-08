@@ -59,7 +59,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
   void Reset();
   void Connect();
-  void Close();
+  void Close(std::function<void()> on_close);
 
   webrtc::PeerConnectionInterface::IceConnectionState GetRTCConnectionState()
       const;
@@ -80,7 +80,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
  private:
   void OnConnect(boost::system::error_code ec);
-  void OnClose(boost::system::error_code ec);
+  void OnClose(std::function<void()> on_close, boost::system::error_code ec);
   void OnRead(boost::system::error_code ec,
               std::size_t bytes_transferred,
               std::string text);

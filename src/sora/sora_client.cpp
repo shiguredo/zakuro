@@ -219,12 +219,16 @@ void SoraClient::CreatePeerFromConfig(json jconfig) {
   connection_ = manager_->CreateConnection(rtc_config, this);
 }
 
-void SoraClient::Close() {
-  ws_->Close(std::bind(&SoraClient::OnClose, shared_from_this(),
+void SoraClient::Close(std::function<void()> on_close) {
+  connection_ = nullptr;
+  ws_->Close(std::bind(&SoraClient::OnClose, shared_from_this(), on_close,
                        std::placeholders::_1));
 }
 
-void SoraClient::OnClose(boost::system::error_code ec) {
+void SoraClient::OnClose(std::function<void()> on_close,
+                         boost::system::error_code ec) {
+  on_close();
+
   if (ec)
     return ZAKURO_BOOST_ERROR(ec, "close");
 }

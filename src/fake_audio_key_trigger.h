@@ -8,26 +8,61 @@
 
 #include "game/game_audio.h"
 #include "game/game_key.h"
+#include "virtual_client.h"
 #include "voice_number_reader.h"
 
 class FakeAudioKeyTrigger {
  public:
-  FakeAudioKeyTrigger(GameAudioManager* gam) : gam_(gam) {
+  FakeAudioKeyTrigger(GameAudioManager* gam,
+                      std::vector<std::unique_ptr<VirtualClient>>& vcs)
+      : gam_(gam), vcs_(vcs) {
     key_.Init();
     th_.reset(new std::thread([this]() {
+      std::string seq;
+      std::chrono::system_clock::time_point seq_time;
+
       while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         if (stopped_) {
           return;
         }
 
+        auto now = std::chrono::system_clock::now();
+        if (now > seq_time + std::chrono::milliseconds(1000)) {
+          seq = "";
+          seq_time = now;
+        }
+
         int n = key_.PopKey();
         if (n < 0) {
           continue;
         }
-        if ('0' <= n && n <= '9') {
-          std::vector<int16_t> buf = voice_reader_.Read(n - '0');
-          gam_->Play(n - '0', buf);
+        if ('a' <= n && n <= 'z' || 'A' <= n && n <= 'Z') {
+          seq += (char)n;
+          seq_time = now;
+        } else if ('0' <= n && n <= '9') {
+          // '1'->0, '2'->1, '3'->2, ..., '0'->9
+          int m = n == '0' ? 9 : n - '1';
+
+          // <num> → 音声再生
+          if (seq.empty()) {
+            std::vector<int16_t> buf = voice_reader_.Read(m + 1);
+            gam_->Play(m, buf);
+          }
+          // q+<num> → 切断
+          if (seq.size() == 1 && seq[0] == 'q') {
+            if (m < vcs_.size()) {
+              vcs_[m]->Close();
+            }
+          }
+          // Q+<num> → 再接続
+          if (seq.size() == 1 && seq[0] == 'Q') {
+            if (m < vcs_.size()) {
+              vcs_[m]->Connect();
+            }
+          }
+          seq.clear();
+          seq_time = now;
         }
       }
     }));
@@ -49,6 +84,7 @@ class FakeAudioKeyTrigger {
   VoiceNumberReader voice_reader_;
   GameKey key_;
   GameAudioManager* gam_;
+  std::vector<std::unique_ptr<VirtualClient>>& vcs_;
 };
 
 #endif
