@@ -19,6 +19,8 @@
     - @voluntas
 - [UPDATE] `cmake` を `3.19.1` に上げる
     - @voluntas
+- [ADD] サイマルキャストの active と adaptivePtime に対応
+    - @melpon
 
 ## 2020.2
 
