@@ -8,7 +8,6 @@ cmake_policy(SET CMP0091 NEW)
 set(ZAKURO_PACKAGE_NAME "" CACHE STRING "ビルド設定を自動化するパッケージ名")
 set(TARGET_OS "" CACHE STRING "ビルド対象の動作する OS。\n有効な値は macos, linux")
 set(BOOST_ROOT_DIR "" CACHE PATH "Boost のインストール先ディレクトリ\n空文字だった場合はデフォルト検索パスの Boost を利用する")
-set(JSON_ROOT_DIR "" CACHE PATH "nlohmann/json のインストール先ディレクトリ")
 set(CLI11_ROOT_DIR "" CACHE PATH "CLI11 のインストール先ディレクトリ")
 set(BLEND2D_ROOT_DIR "" CACHE PATH "Blend2D のインストール先ディレクトリ")
 set(OPENH264_ROOT_DIR "" CACHE PATH "OpenH264 のインストール先ディレクトリ")
@@ -30,7 +29,6 @@ if(ZAKURO_PACKAGE_NAME STREQUAL "macos")
 
   set(TARGET_OS "macos")
   set(BOOST_ROOT_DIR ${_INSTALL_DIR}/boost)
-  set(JSON_ROOT_DIR ${_INSTALL_DIR}/json)
   set(CLI11_ROOT_DIR ${_INSTALL_DIR}/CLI11)
   set(BLEND2D_ROOT_DIR ${_INSTALL_DIR}/blend2d)
   set(OPENH264_ROOT_DIR ${_INSTALL_DIR}/openh264)
@@ -45,7 +43,6 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "ubuntu-18.04_x86_64")
   set(TARGET_OS "linux")
   set(TARGET_OS_LINUX "ubuntu-18.04")
   set(BOOST_ROOT_DIR /root/boost)
-  set(JSON_ROOT_DIR /root/json)
   set(CLI11_ROOT_DIR /root/CLI11)
   set(BLEND2D_ROOT_DIR /root/blend2d)
   set(OPENH264_ROOT_DIR /root/openh264)
@@ -60,7 +57,6 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "ubuntu-20.04_x86_64")
   set(TARGET_OS "linux")
   set(TARGET_OS_LINUX "ubuntu-20.04")
   set(BOOST_ROOT_DIR /root/boost)
-  set(JSON_ROOT_DIR /root/json)
   set(CLI11_ROOT_DIR /root/CLI11)
   set(BLEND2D_ROOT_DIR /root/blend2d)
   set(OPENH264_ROOT_DIR /root/openh264)
@@ -75,7 +71,6 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "centos-8_x86_64")
   set(TARGET_OS "linux")
   set(TARGET_OS_LINUX "centos-8")
   set(BOOST_ROOT_DIR /root/boost)
-  set(JSON_ROOT_DIR /root/json)
   set(CLI11_ROOT_DIR /root/CLI11)
   set(BLEND2D_ROOT_DIR /root/blend2d)
   set(OPENH264_ROOT_DIR /root/openh264)
@@ -100,8 +95,7 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
 find_package(WebRTC REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem)
-find_package(JSON REQUIRED)
+find_package(Boost REQUIRED COMPONENTS filesystem json)
 find_package(CLI11 REQUIRED)
 find_package(Blend2D REQUIRED)
 
@@ -152,7 +146,7 @@ target_link_libraries(zakuro
   PRIVATE
     WebRTC::WebRTC
     Boost::filesystem
-    JSON::JSON
+    Boost::json
     CLI11::CLI11
     Blend2D::Blend2D
 )
