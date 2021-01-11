@@ -4,8 +4,8 @@
 #include <iostream>
 #include <string>
 
-// nlohmann/json
-#include <nlohmann/json.hpp>
+// Boost
+#include <boost/json.hpp>
 
 struct ZakuroArgs {
   int vcs = 1;
@@ -37,8 +37,8 @@ struct ZakuroArgs {
   int sora_video_bit_rate = 0;
   int sora_audio_bit_rate = 0;
   bool sora_auto_connect = false;
-  nlohmann::json sora_metadata;
-  nlohmann::json sora_signaling_notify_metadata;
+  boost::json::value sora_metadata;
+  boost::json::value sora_signaling_notify_metadata;
   std::string sora_role = "";
   bool sora_multistream = false;
   bool sora_spotlight = false;

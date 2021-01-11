@@ -21,6 +21,8 @@
     - @voluntas
 - [ADD] サイマルキャストの active と adaptivePtime に対応
     - @melpon
+- [UPDATE] nlohmann/json を Boost.JSON に変更
+    - @melpon
 
 ## 2020.2
 

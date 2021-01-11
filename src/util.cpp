@@ -9,17 +9,13 @@
 #include <boost/beast/version.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/json.hpp>
 #include <boost/preprocessor/stringize.hpp>
 
 // WebRTC
 #include <rtc_base/helpers.h>
 
-// nlohamnn/json
-#include <nlohmann/json.hpp>
-
 #include "zakuro_version.h"
-
-using json = nlohmann::json;
 
 void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
   CLI::App app("Zakuro - WebRTC Load Testing Tool");
@@ -140,12 +136,12 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
 
   auto is_json = CLI::Validator(
       [](std::string input) -> std::string {
-        try {
-          auto _ = json::parse(input);
-          return std::string();
-        } catch (json::parse_error& e) {
+        boost::json::error_code ec;
+        boost::json::parse(input, ec);
+        if (ec) {
           return "Value " + input + " is not JSON Value";
         }
+        return std::string();
       },
       "JSON Value");
   std::string sora_metadata;
@@ -208,11 +204,11 @@ void Util::ParseArgs(int argc, char* argv[], int& log_level, ZakuroArgs& args) {
 
   // メタデータのパース
   if (!sora_metadata.empty()) {
-    args.sora_metadata = json::parse(sora_metadata);
+    args.sora_metadata = boost::json::parse(sora_metadata);
   }
   if (!sora_signaling_notify_metadata.empty()) {
     args.sora_signaling_notify_metadata =
-        json::parse(sora_signaling_notify_metadata);
+        boost::json::parse(sora_signaling_notify_metadata);
   }
 }
 
