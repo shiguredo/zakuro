@@ -11,14 +11,18 @@
 
 ## develop
 
-- [UPDATE] blend2d を 40f1721aa4a57a37f937e267eaf64f4667e900f3 に上げる
+- [UPDATE] blend2d を a48108b7efde01ab7e11d1110db9d5a87cc2fbe6 に上げる
     - @voluntas
-- [UPDATE] asmjit を 3b886c8b7b40afa3a5a02f123981dcdd7d3ea643 に上げる
+- [UPDATE] asmjit を 70e80b18a5cc05d566e6c90dde200472c9325113 に上げる
     - @voluntas
 - [UPDATE] `libwebrtc` を `M88.4324@{#2}` に上げる
     - @voluntas
 - [UPDATE] `cmake` を `3.19.1` に上げる
     - @voluntas
+- [ADD] サイマルキャストの active と adaptivePtime に対応
+    - @melpon
+- [UPDATE] nlohmann/json を Boost.JSON に変更
+    - @melpon
 
 ## 2020.2
 

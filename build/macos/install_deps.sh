@@ -38,21 +38,6 @@ if [ $CLI11_CHANGED -eq 1 -o ! -e $INSTALL_DIR/CLI11/include/CLI/Version.hpp ]; 
 fi
 echo $CLI11_VERSION > $CLI11_VERSION_FILE
 
-# nlohmann/json
-JSON_VERSION_FILE="$INSTALL_DIR/json.version"
-JSON_CHANGED=0
-if [ ! -e $JSON_VERSION_FILE -o "$JSON_VERSION" != "`cat $JSON_VERSION_FILE`" ]; then
-  JSON_CHANGED=1
-fi
-
-if [ $JSON_CHANGED -eq 1 -o ! -e $INSTALL_DIR/json/include/nlohmann/json.hpp ]; then
-  pushd $INSTALL_DIR
-    rm -rf json
-    git clone --branch v$JSON_VERSION --depth 1 https://github.com/nlohmann/json.git
-  popd
-fi
-echo $JSON_VERSION > $JSON_VERSION_FILE
-
 # WebRTC
 WEBRTC_VERSION_FILE="$INSTALL_DIR/webrtc.version"
 WEBRTC_CHANGED=0
@@ -62,7 +47,7 @@ fi
 
 if [ $WEBRTC_CHANGED -eq 1 -o ! -e $INSTALL_DIR/webrtc/lib/libwebrtc.a ]; then
   rm -rf $INSTALL_DIR/webrtc
-  ../../script/get_webrtc.sh $WEBRTC_BUILD_VERSION macos $INSTALL_DIR $SOURCE_DIR
+  ../../script/get_webrtc.sh $WEBRTC_BUILD_VERSION macos_x86_64 $INSTALL_DIR $SOURCE_DIR
 fi
 echo $WEBRTC_BUILD_VERSION > $WEBRTC_VERSION_FILE
 
@@ -105,7 +90,8 @@ if [ $BOOST_CHANGED -eq 1 -o ! -e $INSTALL_DIR/boost/lib/libboost_filesystem.a ]
       --build-dir=$BUILD_DIR/boost \
       --prefix=$INSTALL_DIR/boost \
       --ignore-site-config \
-      --with-filesystem
+      --with-filesystem \
+      --with-json
   popd
 fi
 echo $BOOST_VERSION > $BOOST_VERSION_FILE
