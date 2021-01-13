@@ -26,8 +26,8 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 Apache License 2.0
 
 ```
-Copyright 2020, Wandbox LLC (Original Author)
-Copyright 2020, Shiguredo Inc.
+Copyright 2020-2021, Wandbox LLC (Original Author)
+Copyright 2020-2021, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
