@@ -103,7 +103,7 @@ case "$PACKAGE" in
     mkdir -p ../_build/$PACKAGE
     pushd ../_build/$PACKAGE
       cmake \
-        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_BUILD_TYPE=Release \
         -DZAKURO_PACKAGE_NAME="macos" \
         -DZAKURO_VERSION="$ZAKURO_VERSION" \
         -DZAKURO_COMMIT="$ZAKURO_COMMIT" \

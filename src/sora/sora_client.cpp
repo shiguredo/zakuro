@@ -179,17 +179,23 @@ void SoraClient::DoSendConnect() {
     }
   }
 
-  ws_->WriteText(boost::json::serialize(json_message));
+  ws_->WriteText(boost::json::serialize(json_message),
+                 [self = shared_from_this()](boost::system::error_code ec,
+                                             std::size_t) {});
 }
 void SoraClient::DoSendPong() {
   boost::json::value json_message = {{"type", "pong"}};
-  ws_->WriteText(boost::json::serialize(json_message));
+  ws_->WriteText(boost::json::serialize(json_message),
+                 [self = shared_from_this()](boost::system::error_code ec,
+                                             std::size_t) {});
 }
 void SoraClient::DoSendPong(
     const rtc::scoped_refptr<const webrtc::RTCStatsReport>& report) {
   std::string stats = report->ToJson();
   std::string str = R"({"type":"pong","stats":)" + stats + "}";
-  ws_->WriteText(std::move(str));
+  ws_->WriteText(std::move(str),
+                 [self = shared_from_this()](boost::system::error_code ec,
+                                             std::size_t) {});
 }
 
 void SoraClient::CreatePeerFromConfig(boost::json::value jconfig) {
@@ -219,13 +225,13 @@ void SoraClient::CreatePeerFromConfig(boost::json::value jconfig) {
 }
 
 void SoraClient::Close(std::function<void()> on_close) {
-  connection_ = nullptr;
   ws_->Close(std::bind(&SoraClient::OnClose, shared_from_this(), on_close,
                        std::placeholders::_1));
 }
 
 void SoraClient::OnClose(std::function<void()> on_close,
                          boost::system::error_code ec) {
+  connection_ = nullptr;
   on_close();
 
   if (ec)
@@ -254,12 +260,12 @@ void SoraClient::OnRead(boost::system::error_code ec,
     CreatePeerFromConfig(json_message.at("config"));
     const std::string sdp = json_message.at("sdp").as_string().c_str();
 
-    connection_->SetOffer(sdp, [this, json_message]() {
+    connection_->SetOffer(sdp, [self = shared_from_this(), json_message]() {
       // simulcast では offer の setRemoteDescription が終わった後に
       // トラックを追加する必要があるため、ここで初期化する
-      manager_->InitTracks(connection_.get());
+      self->manager_->InitTracks(self->connection_.get());
 
-      if (config_.simulcast) {
+      if (self->config_.simulcast) {
         std::vector<webrtc::RtpEncodingParameters> encoding_parameters;
 
         // "encodings" キーの各内容を webrtc::RtpEncodingParameters に変換する
@@ -301,31 +307,42 @@ void SoraClient::OnRead(boost::system::error_code ec,
           }
           encoding_parameters.push_back(params);
         }
-        connection_->SetEncodingParameters(std::move(encoding_parameters));
+        self->connection_->SetEncodingParameters(
+            std::move(encoding_parameters));
       }
 
-      connection_->CreateAnswer(
-          [this](webrtc::SessionDescriptionInterface* desc) {
-            std::string sdp;
-            desc->ToString(&sdp);
-            boost::json::value json_message = {{"type", "answer"},
-                                               {"sdp", sdp}};
-            ws_->WriteText(boost::json::serialize(json_message));
-          });
+      self->connection_->CreateAnswer([self](
+                                          webrtc::SessionDescriptionInterface*
+                                              desc) {
+        std::string sdp;
+        desc->ToString(&sdp);
+        boost::json::value json_message = {{"type", "answer"}, {"sdp", sdp}};
+        self->ws_->WriteText(
+            boost::json::serialize(json_message),
+            [self](boost::system::error_code ec, std::size_t) {});
+      });
     });
   } else if (type == "update") {
+    if (connection_ == nullptr) {
+      return;
+    }
     const std::string sdp = json_message.at("sdp").as_string().c_str();
-    connection_->SetOffer(sdp, [this]() {
-      connection_->CreateAnswer(
-          [this](webrtc::SessionDescriptionInterface* desc) {
+    connection_->SetOffer(sdp, [self = shared_from_this()]() {
+      self->connection_->CreateAnswer(
+          [self](webrtc::SessionDescriptionInterface* desc) {
             std::string sdp;
             desc->ToString(&sdp);
             boost::json::value json_message = {{"type", "update"},
                                                {"sdp", sdp}};
-            ws_->WriteText(boost::json::serialize(json_message));
+            self->ws_->WriteText(
+                boost::json::serialize(json_message),
+                [self](boost::system::error_code ec, std::size_t) {});
           });
     });
   } else if (type == "notify") {
+    if (connection_ == nullptr) {
+      return;
+    }
     const std::string event_type =
         json_message.at("event_type").as_string().c_str();
     if (event_type == "connection.created" ||
@@ -345,6 +362,9 @@ void SoraClient::OnRead(boost::system::error_code ec,
                        << ": spotlight_id=" << json_message.at("spotlight_id");
     }
   } else if (type == "ping") {
+    if (connection_ == nullptr) {
+      return;
+    }
     if (rtc_state_ != webrtc::PeerConnectionInterface::IceConnectionState::
                           kIceConnectionConnected) {
       DoRead();
@@ -354,9 +374,9 @@ void SoraClient::OnRead(boost::system::error_code ec,
     auto it = json_message.as_object().find("stats");
     if (it != json_message.as_object().end() && it->value().as_bool()) {
       connection_->GetStats(
-          [this](
+          [self = shared_from_this()](
               const rtc::scoped_refptr<const webrtc::RTCStatsReport>& report) {
-            DoSendPong(report);
+            self->DoSendPong(report);
           });
     } else {
       DoSendPong();
@@ -381,7 +401,9 @@ void SoraClient::OnIceCandidate(const std::string sdp_mid,
                                 const int sdp_mlineindex,
                                 const std::string sdp) {
   boost::json::value json_message = {{"type", "candidate"}, {"candidate", sdp}};
-  ws_->WriteText(boost::json::serialize(json_message));
+  ws_->WriteText(boost::json::serialize(json_message),
+                 [self = shared_from_this()](boost::system::error_code ec,
+                                             std::size_t) {});
 }
 
 void SoraClient::DoIceConnectionStateChange(
