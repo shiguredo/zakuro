@@ -25,6 +25,7 @@
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
+#include "scenario_player.h"
 #include "sora/sora_server.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -211,33 +212,63 @@ int main(int argc, char* argv[]) {
       trigger.reset(new FakeAudioKeyTrigger(gam.get(), vcs));
     }
 
-    std::atomic_bool stopped{false};
-    std::thread th([&ioc, &stopped, &args, &vcs]() {
-      for (int i = 0; i < args.vcs; i++) {
-        auto next = std::chrono::system_clock::now() +
-                    std::chrono::milliseconds((int)(1000 / args.hatch_rate));
+    ScenarioPlayer scenario_player(ioc, gam.get(), vcs);
+    ScenarioData data;
+    data.Reconnect();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    data.PlayVoiceNumberClient();
+    data.Sleep(1000, 5000);
+    for (int i = 0; i < args.vcs; i++) {
+      ScenarioData cdata;
+      int first_wait_ms = (int)(1000 * i / args.hatch_rate);
+      cdata.Sleep(first_wait_ms, first_wait_ms);
+      cdata.ops.insert(cdata.ops.end(), data.ops.begin(), data.ops.end());
+      scenario_player.Play(i, std::move(cdata), 1);
+    }
 
-        // SoraServer を起動しない場合と、SoraServer を起動して --auto が指定されている場合は即座に接続する。
-        // SoraServer を起動するけど --auto が指定されていない場合、SoraServer の API が呼ばれるまで接続しない。
-        if (args.sora_port < 0 ||
-            args.sora_port >= 0 && args.sora_auto_connect) {
-          vcs[i]->Connect();
-        }
+    //std::atomic_bool stopped{false};
+    //std::thread th([&ioc, &stopped, &args, &vcs]() {
+    //  for (int i = 0; i < args.vcs; i++) {
+    //    auto next = std::chrono::system_clock::now() +
+    //                std::chrono::milliseconds((int)(1000 / args.hatch_rate));
 
-        // 次の生成時間になるまで待って、終了フラグが立ってたら終了する。
-        // cond var 使うのが面倒なので atomic_bool で定期的にフラグを見る。
-        while (next > std::chrono::system_clock::now()) {
-          if (stopped) {
-            return;
-          }
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
+    //    // SoraServer を起動しない場合と、SoraServer を起動して --auto が指定されている場合は即座に接続する。
+    //    // SoraServer を起動するけど --auto が指定されていない場合、SoraServer の API が呼ばれるまで接続しない。
+    //    if (args.sora_port < 0 ||
+    //        args.sora_port >= 0 && args.sora_auto_connect) {
+    //      vcs[i]->Connect();
+    //    }
 
-        if (stopped) {
-          return;
-        }
-      }
-    });
+    //    // 次の生成時間になるまで待って、終了フラグが立ってたら終了する。
+    //    // cond var 使うのが面倒なので atomic_bool で定期的にフラグを見る。
+    //    while (next > std::chrono::system_clock::now()) {
+    //      if (stopped) {
+    //        return;
+    //      }
+    //      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //    }
+
+    //    if (stopped) {
+    //      return;
+    //    }
+    //  }
+    //});
 
     if (args.sora_port >= 0) {
       SoraServerConfig config;
@@ -249,9 +280,6 @@ int main(int argc, char* argv[]) {
     }
 
     ioc.run();
-
-    stopped = true;
-    th.join();
 
     for (auto& vc : vcs) {
       vc->Clear();
