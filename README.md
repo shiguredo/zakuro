@@ -57,3 +57,11 @@ limitations under the License.
 Discord へお願いします。
 
 https://discord.gg/eEUZf6j
+
+
+## カスタマイズ
+
+もし WebRTC SFU Sora 以外に負荷をかけたい場合、
+ソースコード非公開でのカスタマイズ対応を検討することが可能です。
+
+Discord にてご連絡ください。
