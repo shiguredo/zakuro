@@ -63,12 +63,29 @@ class ScenarioPlayer {
     client_infos_[client_id].op_index = 0;
     client_infos_[client_id].loop_op_index = loop_op_index;
     client_infos_[client_id].timer.cancel();
+    client_infos_[client_id].paused = false;
     DoNext(client_id);
+  }
+  void PauseAll() {
+    for (auto& info : client_infos_) {
+      info.timer.cancel();
+      info.paused = true;
+    }
+  }
+  void ResumeAll() {
+    for (int i = 0; i < client_infos_.size(); i++) {
+      client_infos_[i].paused = false;
+      DoNext(i);
+    }
   }
 
  private:
   void Next(int client_id) {
     auto& info = client_infos_[client_id];
+    if (info.paused) {
+      return;
+    }
+
     info.op_index += 1;
     if (info.op_index == info.data.ops.size()) {
       info.op_index = info.loop_op_index;
@@ -131,6 +148,7 @@ class ScenarioPlayer {
     int op_index;
     int loop_op_index;
     boost::asio::deadline_timer timer;
+    bool paused;
   };
   std::vector<ClientInfo> client_infos_;
   VoiceNumberReader voice_reader_;

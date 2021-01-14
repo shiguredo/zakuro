@@ -6,16 +6,22 @@
 #include <memory>
 #include <thread>
 
+// Boost
+#include <boost/asio.hpp>
+
 #include "game/game_audio.h"
 #include "game/game_key.h"
+#include "scenario_player.h"
 #include "virtual_client.h"
 #include "voice_number_reader.h"
 
 class FakeAudioKeyTrigger {
  public:
-  FakeAudioKeyTrigger(GameAudioManager* gam,
+  FakeAudioKeyTrigger(boost::asio::io_context& ioc,
+                      GameAudioManager* gam,
+                      ScenarioPlayer* sp,
                       std::vector<std::unique_ptr<VirtualClient>>& vcs)
-      : gam_(gam), vcs_(vcs) {
+      : ioc_(ioc), gam_(gam), sp_(sp), vcs_(vcs) {
     key_.Init();
     th_.reset(new std::thread([this]() {
       std::string seq;
@@ -37,7 +43,13 @@ class FakeAudioKeyTrigger {
         if (n < 0) {
           continue;
         }
-        if ('a' <= n && n <= 'z' || 'A' <= n && n <= 'Z') {
+        if (n == 's') {
+          // 一時停止
+          boost::asio::post(ioc_, [this]() { sp_->PauseAll(); });
+        } else if (n == 'S') {
+          // 再開
+          boost::asio::post(ioc_, [this]() { sp_->ResumeAll(); });
+        } else if ('a' <= n && n <= 'z' || 'A' <= n && n <= 'Z') {
           seq += (char)n;
           seq_time = now;
         } else if ('0' <= n && n <= '9') {
@@ -52,13 +64,13 @@ class FakeAudioKeyTrigger {
           // q+<num> → 切断
           if (seq.size() == 1 && seq[0] == 'q') {
             if (m < vcs_.size()) {
-              vcs_[m]->Close();
+              boost::asio::post(ioc_, [this, m]() { vcs_[m]->Close(); });
             }
           }
           // Q+<num> → 再接続
           if (seq.size() == 1 && seq[0] == 'Q') {
             if (m < vcs_.size()) {
-              vcs_[m]->Connect();
+              boost::asio::post(ioc_, [this, m]() { vcs_[m]->Connect(); });
             }
           }
           seq.clear();
@@ -83,7 +95,9 @@ class FakeAudioKeyTrigger {
   std::atomic_bool stopped_{false};
   VoiceNumberReader voice_reader_;
   GameKey key_;
+  boost::asio::io_context& ioc_;
   GameAudioManager* gam_;
+  ScenarioPlayer* sp_;
   std::vector<std::unique_ptr<VirtualClient>>& vcs_;
 };
 

@@ -208,10 +208,6 @@ int main(int argc, char* argv[]) {
       vcs.push_back(std::move(vc));
     }
 
-    if (fake_audio_key_trigger) {
-      trigger.reset(new FakeAudioKeyTrigger(gam.get(), vcs));
-    }
-
     ScenarioPlayer scenario_player(ioc, gam.get(), vcs);
     ScenarioData data;
     data.Reconnect();
@@ -240,6 +236,11 @@ int main(int argc, char* argv[]) {
       cdata.Sleep(first_wait_ms, first_wait_ms);
       cdata.ops.insert(cdata.ops.end(), data.ops.begin(), data.ops.end());
       scenario_player.Play(i, std::move(cdata), 1);
+    }
+
+    if (fake_audio_key_trigger) {
+      trigger.reset(
+          new FakeAudioKeyTrigger(ioc, gam.get(), &scenario_player, vcs));
     }
 
     //std::atomic_bool stopped{false};
