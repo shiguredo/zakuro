@@ -225,13 +225,16 @@ void SoraClient::CreatePeerFromConfig(boost::json::value jconfig) {
 }
 
 void SoraClient::Close(std::function<void()> on_close) {
+  auto connection = connection_;
+  connection_ = nullptr;
+  connection.reset();
+
   ws_->Close(std::bind(&SoraClient::OnClose, shared_from_this(), on_close,
                        std::placeholders::_1));
 }
 
 void SoraClient::OnClose(std::function<void()> on_close,
                          boost::system::error_code ec) {
-  connection_ = nullptr;
   on_close();
 
   if (ec)
@@ -261,65 +264,77 @@ void SoraClient::OnRead(boost::system::error_code ec,
     const std::string sdp = json_message.at("sdp").as_string().c_str();
 
     connection_->SetOffer(sdp, [self = shared_from_this(), json_message]() {
-      // simulcast では offer の setRemoteDescription が終わった後に
-      // トラックを追加する必要があるため、ここで初期化する
-      self->manager_->InitTracks(self->connection_.get());
-
-      if (self->config_.simulcast) {
-        std::vector<webrtc::RtpEncodingParameters> encoding_parameters;
-
-        // "encodings" キーの各内容を webrtc::RtpEncodingParameters に変換する
-        auto encodings_json = json_message.at("encodings");
-        for (auto v : encodings_json.as_array()) {
-          auto p = v.as_object();
-          webrtc::RtpEncodingParameters params;
-          // absl::optional<uint32_t> ssrc;
-          // double bitrate_priority = kDefaultBitratePriority;
-          // enum class Priority { kVeryLow, kLow, kMedium, kHigh };
-          // Priority network_priority = Priority::kLow;
-          // absl::optional<int> max_bitrate_bps;
-          // absl::optional<int> min_bitrate_bps;
-          // absl::optional<double> max_framerate;
-          // absl::optional<int> num_temporal_layers;
-          // absl::optional<double> scale_resolution_down_by;
-          // bool active = true;
-          // std::string rid;
-          // bool adaptive_ptime = false;
-          params.rid = p.at("rid").as_string().c_str();
-          if (p.count("maxBitrate") != 0) {
-            params.max_bitrate_bps = p.at("maxBitrate").to_number<int>();
-          }
-          if (p.count("minBitrate") != 0) {
-            params.min_bitrate_bps = p.at("minBitrate").to_number<int>();
-          }
-          if (p.count("scaleResolutionDownBy") != 0) {
-            params.scale_resolution_down_by =
-                p.at("scaleResolutionDownBy").to_number<double>();
-          }
-          if (p.count("maxFramerate") != 0) {
-            params.max_framerate = p.at("maxFramerate").to_number<double>();
-          }
-          if (p.count("active") != 0) {
-            params.active = p.at("active").as_bool();
-          }
-          if (p.count("adaptivePtime") != 0) {
-            params.adaptive_ptime = p.at("adaptivePtime").as_bool();
-          }
-          encoding_parameters.push_back(params);
+      boost::asio::post(self->ioc_, [self, json_message]() {
+        if (!self->connection_) {
+          return;
         }
-        self->connection_->SetEncodingParameters(
-            std::move(encoding_parameters));
-      }
 
-      self->connection_->CreateAnswer([self](
-                                          webrtc::SessionDescriptionInterface*
-                                              desc) {
-        std::string sdp;
-        desc->ToString(&sdp);
-        boost::json::value json_message = {{"type", "answer"}, {"sdp", sdp}};
-        self->ws_->WriteText(
-            boost::json::serialize(json_message),
-            [self](boost::system::error_code ec, std::size_t) {});
+        // simulcast では offer の setRemoteDescription が終わった後に
+        // トラックを追加する必要があるため、ここで初期化する
+        self->manager_->InitTracks(self->connection_.get());
+
+        if (self->config_.simulcast) {
+          std::vector<webrtc::RtpEncodingParameters> encoding_parameters;
+
+          // "encodings" キーの各内容を webrtc::RtpEncodingParameters に変換する
+          auto encodings_json = json_message.at("encodings");
+          for (auto v : encodings_json.as_array()) {
+            auto p = v.as_object();
+            webrtc::RtpEncodingParameters params;
+            // absl::optional<uint32_t> ssrc;
+            // double bitrate_priority = kDefaultBitratePriority;
+            // enum class Priority { kVeryLow, kLow, kMedium, kHigh };
+            // Priority network_priority = Priority::kLow;
+            // absl::optional<int> max_bitrate_bps;
+            // absl::optional<int> min_bitrate_bps;
+            // absl::optional<double> max_framerate;
+            // absl::optional<int> num_temporal_layers;
+            // absl::optional<double> scale_resolution_down_by;
+            // bool active = true;
+            // std::string rid;
+            // bool adaptive_ptime = false;
+            params.rid = p.at("rid").as_string().c_str();
+            if (p.count("maxBitrate") != 0) {
+              params.max_bitrate_bps = p.at("maxBitrate").to_number<int>();
+            }
+            if (p.count("minBitrate") != 0) {
+              params.min_bitrate_bps = p.at("minBitrate").to_number<int>();
+            }
+            if (p.count("scaleResolutionDownBy") != 0) {
+              params.scale_resolution_down_by =
+                  p.at("scaleResolutionDownBy").to_number<double>();
+            }
+            if (p.count("maxFramerate") != 0) {
+              params.max_framerate = p.at("maxFramerate").to_number<double>();
+            }
+            if (p.count("active") != 0) {
+              params.active = p.at("active").as_bool();
+            }
+            if (p.count("adaptivePtime") != 0) {
+              params.adaptive_ptime = p.at("adaptivePtime").as_bool();
+            }
+            encoding_parameters.push_back(params);
+          }
+          self->connection_->SetEncodingParameters(
+              std::move(encoding_parameters));
+        }
+
+        self->connection_->CreateAnswer(
+            [self](webrtc::SessionDescriptionInterface* desc) {
+              std::string sdp;
+              desc->ToString(&sdp);
+
+              boost::asio::post(self->ioc_, [self, sdp]() {
+                if (!self->connection_) {
+                  return;
+                }
+                boost::json::value json_message = {{"type", "answer"},
+                                                   {"sdp", sdp}};
+                self->ws_->WriteText(
+                    boost::json::serialize(json_message),
+                    [self](boost::system::error_code ec, std::size_t) {});
+              });
+            });
       });
     });
   } else if (type == "update") {
@@ -328,16 +343,23 @@ void SoraClient::OnRead(boost::system::error_code ec,
     }
     const std::string sdp = json_message.at("sdp").as_string().c_str();
     connection_->SetOffer(sdp, [self = shared_from_this()]() {
-      self->connection_->CreateAnswer(
-          [self](webrtc::SessionDescriptionInterface* desc) {
-            std::string sdp;
-            desc->ToString(&sdp);
-            boost::json::value json_message = {{"type", "update"},
-                                               {"sdp", sdp}};
-            self->ws_->WriteText(
-                boost::json::serialize(json_message),
-                [self](boost::system::error_code ec, std::size_t) {});
-          });
+      boost::asio::post(self->ioc_, [self]() {
+        if (!self->connection_) {
+          return;
+        }
+        self->connection_->CreateAnswer(
+            [self](webrtc::SessionDescriptionInterface* desc) {
+              std::string sdp;
+              desc->ToString(&sdp);
+              boost::asio::post(self->ioc_, [self, sdp]() {
+                boost::json::value json_message = {{"type", "update"},
+                                                   {"sdp", sdp}};
+                self->ws_->WriteText(
+                    boost::json::serialize(json_message),
+                    [self](boost::system::error_code ec, std::size_t) {});
+              });
+            });
+      });
     });
   } else if (type == "notify") {
     if (connection_ == nullptr) {
