@@ -42,27 +42,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
-
-## サポートについて
-
-- **サポートしません**
-- **アドバイスしません**
-- フィードバックは歓迎します
-
-### Discord
-
-最新の状況などは Discord で共有しています。
-
-### バグ報告
-
-Discord へお願いします。
-
-https://discord.gg/eEUZf6j
-
-
-## カスタマイズ
-
-もし WebRTC SFU Sora 以外に負荷をかけたい場合、
-ソースコード非公開でのカスタマイズ対応を検討することが可能です。
-
-Discord にてご連絡ください。
