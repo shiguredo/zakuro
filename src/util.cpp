@@ -35,8 +35,6 @@ void Util::ParseArgs(std::vector<std::string>& args,
   std::reverse(args.begin(), args.end());
 
   CLI::App app("Zakuro - WebRTC Load Testing Tool");
-  app.set_help_all_flag("--help-all",
-                        "Print help message for all modes and exit");
 
   // アプリケーション全体で１個しか存在しない共通オプション
   bool version = false;
@@ -119,6 +117,8 @@ void Util::ParseArgs(std::vector<std::string>& args,
                  "provided by Cisco Systems, Inc.\"")
       ->check(CLI::ExistingFile);
   app.add_set("--game", config.game, {"kuzushi"}, "Play game");
+  app.add_set("--scenario", config.scenario, {"", "reconnect"},
+              "Scenario type");
 
   // Sora 系オプション
   app.add_option("--sora-signaling-url", config.sora_signaling_url,
@@ -310,6 +310,7 @@ std::vector<std::string> Util::NodeToArgs(const YAML::Node& inst) {
   DEF_FLAG(inst, "", "insecure");
   DEF_STRING(inst, "", "openh264");
   DEF_STRING(inst, "", "game");
+  DEF_STRING(inst, "", "scenario");
 
   const YAML::Node& sora = inst["sora"];
   if (sora) {

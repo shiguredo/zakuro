@@ -25,6 +25,7 @@ struct ZakuroConfig {
   std::string fake_audio_capture = "";
   std::string openh264 = "";
   std::string game;
+  std::string scenario;
 
   std::string sora_signaling_url = "";
   std::string sora_channel_id;

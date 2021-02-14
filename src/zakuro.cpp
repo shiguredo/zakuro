@@ -168,32 +168,40 @@ int Zakuro::Run() {
 
     ScenarioPlayer scenario_player(ioc, gam.get(), vcs);
     ScenarioData data;
-    data.Reconnect();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
-    data.PlayVoiceNumberClient();
-    data.Sleep(1000, 5000);
+    int loop_index;
+    if (config_.scenario == "") {
+      data.Reconnect();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      loop_index = 2;
+    } else if (config_.scenario == "reconnect") {
+      data.Reconnect();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      data.PlayVoiceNumberClient();
+      data.Sleep(1000, 5000);
+      loop_index = 1;
+    }
+
     for (int i = 0; i < config_.vcs; i++) {
       ScenarioData cdata;
       int first_wait_ms = (int)(1000 * i / config_.hatch_rate);
       cdata.Sleep(first_wait_ms, first_wait_ms);
       cdata.ops.insert(cdata.ops.end(), data.ops.begin(), data.ops.end());
-      scenario_player.Play(i, std::move(cdata), 1);
+      scenario_player.Play(i, std::move(cdata), loop_index);
     }
 
     if (fake_audio_key_trigger) {
