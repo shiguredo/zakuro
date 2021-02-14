@@ -1,14 +1,15 @@
 #ifndef GAME_KEY_H_
 #define GAME_KEY_H_
 
-#include <sys/select.h>
-#include <termios.h>
-#include <unistd.h>
-
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <queue>
 #include <thread>
+
+#include <sys/select.h>
+#include <termios.h>
+#include <unistd.h>
 
 class GameKey {
  public:
