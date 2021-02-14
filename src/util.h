@@ -5,18 +5,26 @@
 #include <boost/beast/core/string.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/string_body.hpp>
+#include <boost/json.hpp>
 
 // WebRTC
 #include <api/peer_connection_interface.h>
 
+// YAML
+#include <yaml-cpp/yaml.h>
+
+#include "zakuro.h"
 #include "zakuro_args.h"
 
 class Util {
  public:
-  static void ParseArgs(int argc,
-                        char* argv[],
+  static void ParseArgs(std::vector<std::string>& args,
+                        std::string& config_file,
                         int& log_level,
-                        ZakuroArgs& args);
+                        int& port,
+                        ZakuroConfig& config);
+  static std::vector<std::string> NodeToArgs(const YAML::Node& inst);
+  static boost::json::value NodeToJson(const YAML::Node& node);
   static std::string GenerateRandomChars();
   static std::string GenerateRandomChars(size_t length);
   static std::string GenerateRandomNumericChars(size_t length);

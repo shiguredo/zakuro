@@ -36,7 +36,6 @@ struct SoraClientConfig {
   bool multistream = false;
   bool spotlight = false;
   int spotlight_number = 0;
-  int port = -1;
   bool simulcast = false;
 };
 

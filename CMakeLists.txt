@@ -142,6 +142,7 @@ target_sources(zakuro
     src/xorshift.cpp
     src/y4m_reader.cpp
     src/zakuro_version.cpp
+    src/zakuro.cpp
 )
 
 target_include_directories(zakuro PRIVATE src)

@@ -23,6 +23,10 @@
     - @melpon
 - [UPDATE] nlohmann/json を Boost.JSON に変更
     - @melpon
+- [CHANGE] Sora 関連の引数には `--sora-` のプリフィックスを追加
+    - @melpon
+- [ADD] zakuro の引数を YAML ファイルから書けるようにした
+    - @melpon
 
 ## 2020.2
 
