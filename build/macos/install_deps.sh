@@ -47,7 +47,7 @@ fi
 
 if [ $WEBRTC_CHANGED -eq 1 -o ! -e $INSTALL_DIR/webrtc/lib/libwebrtc.a ]; then
   rm -rf $INSTALL_DIR/webrtc
-  ../../script/get_webrtc.sh $WEBRTC_BUILD_VERSION macos_x86_64 $INSTALL_DIR $SOURCE_DIR
+  ../../script/get_webrtc.sh $WEBRTC_BUILD_VERSION macos_`uname -m` $INSTALL_DIR $SOURCE_DIR
 fi
 echo $WEBRTC_BUILD_VERSION > $WEBRTC_VERSION_FILE
 
@@ -70,16 +70,15 @@ if [ $BOOST_CHANGED -eq 1 -o ! -e $INSTALL_DIR/boost/lib/libboost_filesystem.a ]
   rm -rf $INSTALL_DIR/boost
   ../../script/setup_boost.sh $BOOST_VERSION $SOURCE_DIR/boost $CACHE_DIR/boost
   pushd $SOURCE_DIR/boost/source
-    echo "using clang : : $INSTALL_DIR/llvm/clang/bin/clang++ : ;" > project-config.jam
+    echo "using clang : : clang++ : ;" > project-config.jam
     SYSROOT="`xcrun --sdk macosx --show-sdk-path`"
     ./b2 \
       cflags=" \
         --sysroot=$SYSROOT \
       " \
       cxxflags=" \
-        -isystem $INSTALL_DIR/llvm/libcxx/include \
-        -nostdinc++ \
         --sysroot=$SYSROOT \
+        -std=c++14 \
       " \
       toolset=clang \
       visibility=hidden \
@@ -120,10 +119,12 @@ if [ $BLEND2D_CHANGED -eq 1 -o ! -e $INSTALL_DIR/blend2d/lib/libblend2d.a ]; the
 
   mkdir $BUILD_DIR/blend2d
   pushd $BUILD_DIR/blend2d
+    sed -i -e 's/\(blend2d_detect_cflags.*mavx.*\)/#\1/' $SOURCE_DIR/blend2d/CMakeLists.txt
     cmake $SOURCE_DIR/blend2d \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR/blend2d \
-      -DBLEND2D_STATIC=ON
+      -DBLEND2D_STATIC=ON \
+      -DBLEND2D_NO_JIT=ON
     cmake --build .
     cmake --build . --target install
   popd
