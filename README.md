@@ -52,6 +52,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## 音声ファイル
+### 音声ファイルのライセンス
 
 スポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](http://www14.big.or.jp/~amiami/happy/) 様の声素材を使用しています。
+
+[ゲーム等に使えるフリー声素材配布ページ \- あみたろの声素材工房](https://www14.big.or.jp/~amiami/happy/voice.html)
