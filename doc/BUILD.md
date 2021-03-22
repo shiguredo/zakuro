@@ -35,13 +35,3 @@ $ ./build.sh ubuntu-18.04_x86_64
 
 うまくいかない場合は `./build.sh --clean ubuntu-18.04_x86_64 && ./build.sh ubuntu-18.04_x86_64` を試してみてください。
 
-## CentOS 8 (x86_64) 向けバイナリを作成する
-
-build ディレクトリ以下で `./build.sh centos-8_x86_64` と打つことで Zakuro の CentOS 8 x86_64 向けバイナリが生成されます。
-
-```shell
-$ ./build.sh centos-8_x86_64
-```
-
-うまくいかない場合は `./build.sh --clean centos-8_x86_64 && ./build.sh centos-8_x86_64` を試してみてください。
-
