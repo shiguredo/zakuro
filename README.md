@@ -22,15 +22,6 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 
 [WebRTC Load Testing Tool Zakuro ドキュメント](https://zakuro.shiguredo.jp/)
 
-
-## 優先実装
-
-優先実装とは Sora のライセンスを契約頂いているお客様限定で Zakuro の実装予定機能を有償にて前倒しで実装することです。
-
-- YAML によるシナリオ設定
-- 複数チャネルの同時負荷
-- スポットライトでの複雑な負荷
-
 ## ライセンス
 
 Apache License 2.0
