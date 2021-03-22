@@ -100,3 +100,24 @@ RUN \
   && git reset --hard v$OPENH264_VERSION \
   && make PREFIX=/root/openh264 install-headers \
   && rm -rf /root/openh264-source
+
+# yaml-cpp
+ARG YAML_CPP_VERSION
+RUN \
+  set -ex \
+  && cd /root \
+  && git clone --branch yaml-cpp-$YAML_CPP_VERSION --depth 1 https://github.com/jbeder/yaml-cpp.git yaml-cpp_source \
+  && mkdir /root/yaml-cpp_build \
+  && cd /root/yaml-cpp_build \
+  && cmake /root/yaml-cpp_source \
+      -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang \
+      -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ \
+      -DCMAKE_CXX_FLAGS="-D_LIBCPP_ABI_UNSTABLE -nostdinc++ -isystem/root/llvm/libcxx/include" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/root/yaml-cpp \
+      -DYAML_CPP_BUILD_TESTS=OFF \
+      -DYAML_CPP_BUILD_TOOLS=OFF \
+  && cmake --build . \
+  && cmake --build . --target install \
+  && rm -rf /root/yaml-cpp_build \
+  && rm -rf /root/yaml-cpp_source

@@ -18,11 +18,17 @@ class VirtualClient {
                 SoraClientConfig sorac_config);
 
   void Connect();
+  void Close();
   void Clear();
 
  private:
+  boost::asio::io_context* ioc_;
+  rtc::scoped_refptr<ScalableVideoTrackSource> capturer_;
+  RTCManagerConfig rtcm_config_;
+  SoraClientConfig sorac_config_;
   std::unique_ptr<RTCManager> rtc_manager_;
   std::shared_ptr<SoraClient> sora_client_;
+  bool closing_ = false;
 };
 
 #endif

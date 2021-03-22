@@ -26,7 +26,7 @@ void FakeVideoCapturer::StartCapture() {
     {
       BLFontFace face;
       BLFontData data;
-      auto content = EmbeddedBinary::kosugi_ttf();
+      auto content = EmbeddedBinary::Get(RESOURCE_KOSUGI_REGULAR_TTF);
       data.createFromData((const uint8_t*)content.ptr, content.size);
       BLResult err = face.createFromData(data, 0);
 

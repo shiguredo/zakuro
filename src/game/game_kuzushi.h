@@ -119,7 +119,7 @@ class GameKuzushi {
     {
       BLFontFace face;
       BLFontData data;
-      auto content = EmbeddedBinary::kosugi_ttf();
+      auto content = EmbeddedBinary::Get(RESOURCE_KOSUGI_REGULAR_TTF);
       data.createFromData((const uint8_t*)content.ptr, content.size);
       face.createFromData(data, 0);
       font_.createFromFace(face, height_ * 0.03);

@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include "embedded_binary.generated.h"
+
 struct EmbeddedBinaryContent {
   const void* ptr;
   size_t size;
@@ -10,7 +12,7 @@ struct EmbeddedBinaryContent {
 
 class EmbeddedBinary {
  public:
-  static EmbeddedBinaryContent kosugi_ttf();
+  static EmbeddedBinaryContent Get(int id);
 };
 
 #endif

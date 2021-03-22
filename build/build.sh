@@ -176,6 +176,7 @@ case "$PACKAGE" in
       --build-arg BLEND2D_VERSION=$BLEND2D_VERSION \
       --build-arg ASMJIT_VERSION=$ASMJIT_VERSION \
       --build-arg OPENH264_VERSION=$OPENH264_VERSION \
+      --build-arg YAML_CPP_VERSION=$YAML_CPP_VERSION \
       --build-arg PACKAGE_NAME=$PACKAGE \
       $PACKAGE
 
