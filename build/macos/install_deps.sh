@@ -45,7 +45,7 @@ if [ ! -e $WEBRTC_VERSION_FILE -o "$WEBRTC_BUILD_VERSION" != "`cat $WEBRTC_VERSI
   WEBRTC_CHANGED=1
 fi
 
-if [ $WEBRTC_CHANGED -eq 1 -o ! -e $INSTALL_DIR/webrtc/lib/libwebrtc.a ]; then
+if [ $WEBRTC_CHANGED -eq 1 -o ! -e $INSTALL_DIR/webrtc/release/lib/libwebrtc.a ]; then
   rm -rf $INSTALL_DIR/webrtc
   ../../script/get_webrtc.sh $WEBRTC_BUILD_VERSION macos_`uname -m` $INSTALL_DIR $SOURCE_DIR
 fi
@@ -154,7 +154,7 @@ echo "$OPENH264_VERSION" > $OPENH264_VERSION_FILE
 YAML_CPP_VERSION_FILE="$INSTALL_DIR/yaml-cpp.version"
 YAML_CPP_CHANGED=0
 if [ ! -e $YAML_CPP_VERSION_FILE -o "$YAML_CPP_VERSION" != "`cat $YAML_CPP_VERSION_FILE`" ]; then
-  BLEND2D_CHANGED=1
+  YAML_CPP_CHANGED=1
 fi
 if [ $YAML_CPP_CHANGED -eq 1 -o ! -e $INSTALL_DIR/yaml-cpp/lib/libyaml-cpp.a ]; then
   rm -rf $SOURCE_DIR/yaml-cpp
@@ -176,3 +176,4 @@ if [ $YAML_CPP_CHANGED -eq 1 -o ! -e $INSTALL_DIR/yaml-cpp/lib/libyaml-cpp.a ]; 
     cmake --build . --target install
   popd
 fi
+echo "$YAML_CPP_VERSION" > $YAML_CPP_VERSION_FILE
