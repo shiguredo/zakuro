@@ -13,15 +13,16 @@
 
 ## 2021.1
 
+
 - [CHANGE] Sora 関連の引数には `--sora-` の prefix を追加する
     - @melpon
 - [CHANGE] CentOS 8 を削除する
     - @voluntas
-- [UPDATE] blend2d を 1a9c54aa9987f4eb433bff8f90444929a92f58cc に上げる
+- [UPDATE] blend2d を `92ba4eaa2f22331bc9823ddb47f53dd8ce683c8b` に上げる
     - @voluntas
-- [UPDATE] asmjit を 2ab380e0bd242e29f67330a66a3c18da73b3b40a に上げる
+- [UPDATE] asmjit を `a4dd0b2d8b0fdbcda777e4d6dae0e76636080113` に上げる
     - @voluntas
-- [UPDATE] `libwebrtc` を `M89.4389@{#7}` に上げる
+- [UPDATE] `libwebrtc` を `M89.4389@{#5}` に上げる
     - @voluntas
 - [UPDATE] `cmake` を `3.19.4` に上げる
     - @voluntas
