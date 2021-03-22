@@ -10,7 +10,6 @@ _PACKAGES=" \
   macos \
   ubuntu-18.04_x86_64 \
   ubuntu-20.04_x86_64 \
-  centos-8_x86_64 \
 "
 
 function show_help() {

@@ -69,21 +69,6 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "ubuntu-20.04_x86_64")
   set(CLANG_ROOT /root/llvm/clang)
   set(LIBCXX_INCLUDE_DIR /root/llvm/libcxx/include)
 
-elseif(ZAKURO_PACKAGE_NAME STREQUAL "centos-8_x86_64")
-
-  set(TARGET_OS "linux")
-  set(TARGET_OS_LINUX "centos-8")
-  set(BOOST_ROOT_DIR /root/boost)
-  set(CLI11_ROOT_DIR /root/CLI11)
-  set(BLEND2D_ROOT_DIR /root/blend2d)
-  set(OPENH264_ROOT_DIR /root/openh264)
-  set(YAML_CPP_ROOT_DIR /root/yaml-cpp)
-  set(WEBRTC_INCLUDE_DIR /root/webrtc/include)
-  set(WEBRTC_LIBRARY_DIR /root/webrtc/lib)
-
-  set(CLANG_ROOT /root/llvm/clang)
-  set(LIBCXX_INCLUDE_DIR /root/llvm/libcxx/include)
-
 else()
 endif()
 
