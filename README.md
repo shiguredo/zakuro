@@ -18,9 +18,17 @@ Please read https://github.com/shiguredo/oss before use.
 
 WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora 向けの WebRTC 負荷試験ツールです。
 
-## ドキュメント
+## 使ってみる
 
-[WebRTC Load Testing Tool Zakuro ドキュメント](https://zakuro.shiguredo.jp/)
+Zakuro を使ってみたい人は [USE.md](doc/USE.md) をお読みください。
+
+## ビルドする
+
+Zakuro のビルドしたい人は [BUILD.md](doc/BUILD.md) をお読みください
+
+## FAQ
+
+[FAQ.md](doc/FAQ.md) をお読みください。
 
 ## ライセンス
 
