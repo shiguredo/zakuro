@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2021.1
+
 - [UPDATE] blend2d を 1a9c54aa9987f4eb433bff8f90444929a92f58cc に上げる
     - @voluntas
 - [UPDATE] asmjit を 2ab380e0bd242e29f67330a66a3c18da73b3b40a に上げる
