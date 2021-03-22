@@ -11,13 +11,13 @@
 
 ## develop
 
-- [UPDATE] blend2d を a48108b7efde01ab7e11d1110db9d5a87cc2fbe6 に上げる
+- [UPDATE] blend2d を 1a9c54aa9987f4eb433bff8f90444929a92f58cc に上げる
     - @voluntas
-- [UPDATE] asmjit を 70e80b18a5cc05d566e6c90dde200472c9325113 に上げる
+- [UPDATE] asmjit を 2ab380e0bd242e29f67330a66a3c18da73b3b40a に上げる
     - @voluntas
-- [UPDATE] `libwebrtc` を `M88.4324@{#2}` に上げる
+- [UPDATE] `libwebrtc` を `M89.4389@{#4}` に上げる
     - @voluntas
-- [UPDATE] `cmake` を `3.19.1` に上げる
+- [UPDATE] `cmake` を `3.19.4` に上げる
     - @voluntas
 - [ADD] サイマルキャストの active と adaptivePtime に対応
     - @melpon

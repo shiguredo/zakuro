@@ -1,13 +1,14 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m86.4240-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4240)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m89.4389-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4389)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-## About Support
+## About Shiguredo's open source software
 
-We check PRs or Issues only when written in JAPANESE.
-In other languages, we won't be able to deal with them. Thank you for your understanding.
+We will not respond to PRs or issues that have not been discussed on Discord. Also, Discord is only available in Japanese.
+
+Please read https://github.com/shiguredo/oss before use.
 
 ## 時雨堂のオープンソースソフトウェアについて
 
@@ -21,13 +22,22 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 
 [WebRTC Load Testing Tool Zakuro ドキュメント](https://zakuro.shiguredo.jp/)
 
+
+## 優先実装
+
+優先実装とは Sora のライセンスを契約頂いているお客様限定で Zakuro の実装予定機能を有償にて前倒しで実装することです。
+
+- YAML によるシナリオ設定
+- 複数チャネルの同時負荷
+- スポットライトでの複雑な負荷
+
 ## ライセンス
 
 Apache License 2.0
 
 ```
-Copyright 2020, Wandbox LLC (Original Author)
-Copyright 2020, Shiguredo Inc.
+Copyright 2020-2021, Wandbox LLC (Original Author)
+Copyright 2020-2021, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,19 +51,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
-
-## サポートについて
-
-- **サポートしません**
-- **アドバイスしません**
-- フィードバックは歓迎します
-
-### Discord
-
-最新の状況などは Discord で共有しています。
-
-### バグ報告
-
-Discord へお願いします。
-
-https://discord.gg/eEUZf6j

@@ -35,7 +35,7 @@ if(ZAKURO_PACKAGE_NAME STREQUAL "macos")
   set(YAML_CPP_ROOT_DIR ${_INSTALL_DIR}/yaml-cpp)
   set(WEBRTC_INCLUDE_DIR ${_INSTALL_DIR}/webrtc/include)
   set(WEBRTC_LIBRARY_DIR ${_INSTALL_DIR}/webrtc/lib)
-  set(CLANG_ROOT ${_INSTALL_DIR}/llvm/clang)
+  #set(CLANG_ROOT ${_INSTALL_DIR}/llvm/clang)
 
   set(LIBCXX_INCLUDE_DIR ${_INSTALL_DIR}/llvm/libcxx/include)
 
@@ -87,8 +87,10 @@ elseif(ZAKURO_PACKAGE_NAME STREQUAL "centos-8_x86_64")
 else()
 endif()
 
-set(CMAKE_C_COMPILER ${CLANG_ROOT}/bin/clang)
-set(CMAKE_CXX_COMPILER ${CLANG_ROOT}/bin/clang++)
+if (NOT "${CLANG_ROOT}" STREQUAL "")
+  set(CMAKE_C_COMPILER ${CLANG_ROOT}/bin/clang)
+  set(CMAKE_CXX_COMPILER ${CLANG_ROOT}/bin/clang++)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH ${BOOST_ROOT_DIR} ${YAML_CPP_ROOT_DIR})
