@@ -13,7 +13,6 @@
 
 ## 2021.1
 
-
 - [CHANGE] Sora 関連の引数には `--sora-` の prefix を追加する
     - @melpon
 - [CHANGE] CentOS 8 を削除する
