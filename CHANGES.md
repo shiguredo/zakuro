@@ -22,8 +22,8 @@
     - @voluntas
 - [UPDATE] asmjit を `a4dd0b2d8b0fdbcda777e4d6dae0e76636080113` に上げる
     - @voluntas
-- [UPDATE] `libwebrtc` を `M89.4389@{#5}` に上げる
-    - @voluntas
+- [UPDATE] `libwebrtc` を `M89.4389@{#7}` に上げる
+    - @melpon
 - [UPDATE] `cmake` を `3.19.4` に上げる
     - @voluntas
 - [ADD] サイマルキャストの active と adaptivePtime に対応する
