@@ -3,13 +3,9 @@
 // Boost
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/version.hpp>
-
-// nlohman/json
-#include <nlohmann/json.hpp>
+#include <boost/json.hpp>
 
 #include "util.h"
-
-using json = nlohmann::json;
 
 SoraSession::SoraSession(boost::asio::ip::tcp::socket socket,
                          std::vector<std::unique_ptr<VirtualClient>>* vcs,
@@ -139,13 +135,13 @@ void SoraSession::DoClose() {
 boost::beast::http::response<boost::beast::http::string_body>
 SoraSession::CreateOKWithJSON(
     const boost::beast::http::request<boost::beast::http::string_body>& req,
-    json json_message) {
+    boost::json::value json_message) {
   boost::beast::http::response<boost::beast::http::string_body> res{
       boost::beast::http::status::ok, 11};
   res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
   res.set(boost::beast::http::field::content_type, "application/json");
   res.keep_alive(req.keep_alive());
-  res.body() = json_message.dump();
+  res.body() = boost::json::serialize(json_message);
   res.prepare_payload();
 
   return res;

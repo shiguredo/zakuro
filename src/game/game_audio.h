@@ -17,6 +17,11 @@ class GameAudio {
       buf_[i] += (int16_t)(volume * sin(i * 2 * M_PI / period) * 32767);
     }
   }
+  void Play(const std::vector<int16_t>& buf) {
+    std::lock_guard<std::mutex> guard(mutex_);
+
+    buf_.assign(buf.begin(), buf.end());
+  }
   void Render(std::vector<int16_t>& buf) {
     std::lock_guard<std::mutex> guard(mutex_);
 
@@ -34,9 +39,17 @@ class GameAudio {
 
 class GameAudioManager {
  public:
-  void PlayAny(double frequency, double duration, double volume) {
+  template <class... Args>
+  void PlayAny(Args&&... args) {
     int n = rand() % audios_.size();
-    audios_[n]->Play(frequency, duration, volume);
+    Play(n, std::forward<Args>(args)...);
+  }
+  template <class... Args>
+  void Play(int n, Args&&... args) {
+    if (n < 0 || n >= audios_.size()) {
+      return;
+    }
+    audios_[n]->Play(std::forward<Args>(args)...);
   }
   std::function<void(std::vector<int16_t>&)> AddGameAudio(int sample_rate) {
     auto audio = std::unique_ptr<GameAudio>(new GameAudio(sample_rate));

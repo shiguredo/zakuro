@@ -1,13 +1,14 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m86.4240.9-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4240)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m89.4389-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4389)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-## About Support
+## About Shiguredo's open source software
 
-We check PRs or Issues only when written in JAPANESE.
-In other languages, we won't be able to deal with them. Thank you for your understanding.
+We will not respond to PRs or issues that have not been discussed on Discord. Also, Discord is only available in Japanese.
+
+Please read https://github.com/shiguredo/oss before use.
 
 ## 時雨堂のオープンソースソフトウェアについて
 
@@ -17,17 +18,25 @@ In other languages, we won't be able to deal with them. Thank you for your under
 
 WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora 向けの WebRTC 負荷試験ツールです。
 
-## ドキュメント
+## 使ってみる
 
-[WebRTC Load Testing Tool Zakuro ドキュメント](https://zakuro.shiguredo.jp/)
+Zakuro を使ってみたい人は [USE.md](doc/USE.md) をお読みください。
+
+## ビルドする
+
+Zakuro のビルドしたい人は [BUILD.md](doc/BUILD.md) をお読みください
+
+## FAQ
+
+[FAQ.md](doc/FAQ.md) をお読みください。
 
 ## ライセンス
 
 Apache License 2.0
 
 ```
-Copyright 2020, Wandbox LLC (Original Author)
-Copyright 2020, Shiguredo Inc.
+Copyright 2020-2021, Wandbox LLC (Original Author)
+Copyright 2020-2021, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -42,18 +51,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## サポートについて
+### 音声ファイルのライセンス
 
-- **サポートしません**
-- **アドバイスしません**
-- フィードバックは歓迎します
+スポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](http://www14.big.or.jp/~amiami/happy/) 様の声素材を使用しています。
 
-### Discord
-
-最新の状況などは Discord で共有しています。
-
-### バグ報告
-
-Discord へお願いします。
-
-https://discord.gg/eEUZf6j
+[ゲーム等に使えるフリー声素材配布ページ \- あみたろの声素材工房](https://www14.big.or.jp/~amiami/happy/voice.html)

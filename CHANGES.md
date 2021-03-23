@@ -11,6 +11,29 @@
 
 ## develop
 
+## 2021.1
+
+- [CHANGE] Sora 関連の引数には `--sora-` の prefix を追加する
+    - @melpon
+- [CHANGE] CentOS 8 を削除する
+    - @voluntas
+- [UPDATE] blend2d を `92ba4eaa2f22331bc9823ddb47f53dd8ce683c8b` に上げる
+    - @voluntas
+- [UPDATE] asmjit を `a4dd0b2d8b0fdbcda777e4d6dae0e76636080113` に上げる
+    - @voluntas
+- [UPDATE] `libwebrtc` を `M89.4389@{#7}` に上げる
+    - @melpon
+- [UPDATE] `cmake` を `3.19.4` に上げる
+    - @voluntas
+- [ADD] サイマルキャストの active と adaptivePtime に対応する
+    - @melpon
+- [UPDATE] nlohmann/json を Boost.JSON に変更
+    - @melpon
+- [ADD] 実験的機能として YAML ファイルへ対応する
+    - @melpon
+- [ADD] 実験的機能としてスポットライト利用時に音声ファイルを利用して好きな数字を発生できる機能を追加する
+    - @melpon
+
 ## 2020.2
 
 - [ADD] `--game=kuzushi` を実装

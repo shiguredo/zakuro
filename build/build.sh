@@ -10,7 +10,6 @@ _PACKAGES=" \
   macos \
   ubuntu-18.04_x86_64 \
   ubuntu-20.04_x86_64 \
-  centos-8_x86_64 \
 "
 
 function show_help() {
@@ -91,7 +90,7 @@ case "$PACKAGE" in
 
     ./macos/install_deps.sh
 
-    source ./macos/_install/webrtc/VERSIONS
+    source ./macos/_install/webrtc/release/VERSIONS
 
     if [ -z "$JOBS" ]; then
       JOBS=`sysctl -n hw.logicalcpu_max`
@@ -127,6 +126,12 @@ case "$PACKAGE" in
         cp    LICENSE             _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/
         cp    NOTICE              _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/
         cat   _build/macos/NOTICE >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        curl -fLO http://www.openh264.org/BINARY_LICENSE.txt
+        echo  "# OpenH264"        >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        echo  '```'               >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        cat   BINARY_LICENSE.txt  >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        echo  '```'               >> _package/zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}/NOTICE
+        rm    BINARY_LICENSE.txt
         pushd _package
           tar czf zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}.tar.gz zakuro-${ZAKURO_VERSION}_macos-${MACOS_VERSION}
         popd
@@ -165,12 +170,12 @@ case "$PACKAGE" in
       --build-arg BOOST_VERSION=$BOOST_VERSION \
       --build-arg SDL2_VERSION=$SDL2_VERSION \
       --build-arg SDL2_IMAGE_VERSION=$SDL2_IMAGE_VERSION \
-      --build-arg JSON_VERSION=$JSON_VERSION \
       --build-arg CLI11_VERSION=$CLI11_VERSION \
       --build-arg CMAKE_VERSION=$CMAKE_VERSION \
       --build-arg BLEND2D_VERSION=$BLEND2D_VERSION \
       --build-arg ASMJIT_VERSION=$ASMJIT_VERSION \
       --build-arg OPENH264_VERSION=$OPENH264_VERSION \
+      --build-arg YAML_CPP_VERSION=$YAML_CPP_VERSION \
       --build-arg PACKAGE_NAME=$PACKAGE \
       $PACKAGE
 
@@ -199,6 +204,12 @@ case "$PACKAGE" in
         cp    LICENSE                  _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/
         cp    NOTICE                   _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/
         cat   _build/${PACKAGE}/NOTICE >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        curl -fLO http://www.openh264.org/BINARY_LICENSE.txt
+        echo  "# OpenH264"             >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        echo  '```'                    >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        cat   BINARY_LICENSE.txt       >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        echo  '```'                    >> _package/zakuro-${ZAKURO_VERSION}_${PACKAGE}/NOTICE
+        rm    BINARY_LICENSE.txt
         pushd _package
           tar czf zakuro-${ZAKURO_VERSION}_${PACKAGE}.tar.gz zakuro-${ZAKURO_VERSION}_${PACKAGE}
         popd

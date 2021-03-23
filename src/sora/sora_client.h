@@ -11,9 +11,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
-
-// nlohmann/json
-#include <nlohmann/json.hpp>
+#include <boost/json.hpp>
 
 #include "rtc/rtc_manager.h"
 #include "rtc/rtc_message_sender.h"
@@ -32,13 +30,12 @@ struct SoraClientConfig {
   std::string audio_codec_type = "";
   int video_bit_rate = 0;
   int audio_bit_rate = 0;
-  nlohmann::json metadata;
-  nlohmann::json signaling_notify_metadata;
+  boost::json::value metadata;
+  boost::json::value signaling_notify_metadata;
   std::string role = "sendonly";
   bool multistream = false;
   bool spotlight = false;
   int spotlight_number = 0;
-  int port = -1;
   bool simulcast = false;
 };
 
@@ -59,7 +56,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
   void Reset();
   void Connect();
-  void Close();
+  void Close(std::function<void()> on_close);
 
   webrtc::PeerConnectionInterface::IceConnectionState GetRTCConnectionState()
       const;
@@ -76,11 +73,11 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
   void DoSendPong();
   void DoSendPong(
       const rtc::scoped_refptr<const webrtc::RTCStatsReport>& report);
-  void CreatePeerFromConfig(nlohmann::json jconfig);
+  void CreatePeerFromConfig(boost::json::value jconfig);
 
  private:
   void OnConnect(boost::system::error_code ec);
-  void OnClose(boost::system::error_code ec);
+  void OnClose(std::function<void()> on_close, boost::system::error_code ec);
   void OnRead(boost::system::error_code ec,
               std::size_t bytes_transferred,
               std::string text);

@@ -38,21 +38,6 @@ if [ $CLI11_CHANGED -eq 1 -o ! -e $INSTALL_DIR/CLI11/include/CLI/Version.hpp ]; 
 fi
 echo $CLI11_VERSION > $CLI11_VERSION_FILE
 
-# nlohmann/json
-JSON_VERSION_FILE="$INSTALL_DIR/json.version"
-JSON_CHANGED=0
-if [ ! -e $JSON_VERSION_FILE -o "$JSON_VERSION" != "`cat $JSON_VERSION_FILE`" ]; then
-  JSON_CHANGED=1
-fi
-
-if [ $JSON_CHANGED -eq 1 -o ! -e $INSTALL_DIR/json/include/nlohmann/json.hpp ]; then
-  pushd $INSTALL_DIR
-    rm -rf json
-    git clone --branch v$JSON_VERSION --depth 1 https://github.com/nlohmann/json.git
-  popd
-fi
-echo $JSON_VERSION > $JSON_VERSION_FILE
-
 # WebRTC
 WEBRTC_VERSION_FILE="$INSTALL_DIR/webrtc.version"
 WEBRTC_CHANGED=0
@@ -60,9 +45,9 @@ if [ ! -e $WEBRTC_VERSION_FILE -o "$WEBRTC_BUILD_VERSION" != "`cat $WEBRTC_VERSI
   WEBRTC_CHANGED=1
 fi
 
-if [ $WEBRTC_CHANGED -eq 1 -o ! -e $INSTALL_DIR/webrtc/lib/libwebrtc.a ]; then
+if [ $WEBRTC_CHANGED -eq 1 -o ! -e $INSTALL_DIR/webrtc/release/lib/libwebrtc.a ]; then
   rm -rf $INSTALL_DIR/webrtc
-  ../../script/get_webrtc.sh $WEBRTC_BUILD_VERSION macos $INSTALL_DIR $SOURCE_DIR
+  ../../script/get_webrtc.sh $WEBRTC_BUILD_VERSION macos_`uname -m` $INSTALL_DIR $SOURCE_DIR
 fi
 echo $WEBRTC_BUILD_VERSION > $WEBRTC_VERSION_FILE
 
@@ -85,16 +70,15 @@ if [ $BOOST_CHANGED -eq 1 -o ! -e $INSTALL_DIR/boost/lib/libboost_filesystem.a ]
   rm -rf $INSTALL_DIR/boost
   ../../script/setup_boost.sh $BOOST_VERSION $SOURCE_DIR/boost $CACHE_DIR/boost
   pushd $SOURCE_DIR/boost/source
-    echo "using clang : : $INSTALL_DIR/llvm/clang/bin/clang++ : ;" > project-config.jam
+    echo "using clang : : clang++ : ;" > project-config.jam
     SYSROOT="`xcrun --sdk macosx --show-sdk-path`"
     ./b2 \
       cflags=" \
         --sysroot=$SYSROOT \
       " \
       cxxflags=" \
-        -isystem $INSTALL_DIR/llvm/libcxx/include \
-        -nostdinc++ \
         --sysroot=$SYSROOT \
+        -std=c++14 \
       " \
       toolset=clang \
       visibility=hidden \
@@ -105,7 +89,8 @@ if [ $BOOST_CHANGED -eq 1 -o ! -e $INSTALL_DIR/boost/lib/libboost_filesystem.a ]
       --build-dir=$BUILD_DIR/boost \
       --prefix=$INSTALL_DIR/boost \
       --ignore-site-config \
-      --with-filesystem
+      --with-filesystem \
+      --with-json
   popd
 fi
 echo $BOOST_VERSION > $BOOST_VERSION_FILE
@@ -134,10 +119,12 @@ if [ $BLEND2D_CHANGED -eq 1 -o ! -e $INSTALL_DIR/blend2d/lib/libblend2d.a ]; the
 
   mkdir $BUILD_DIR/blend2d
   pushd $BUILD_DIR/blend2d
+    sed -i -e 's/\(blend2d_detect_cflags.*mavx.*\)/#\1/' $SOURCE_DIR/blend2d/CMakeLists.txt
     cmake $SOURCE_DIR/blend2d \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR/blend2d \
-      -DBLEND2D_STATIC=ON
+      -DBLEND2D_STATIC=ON \
+      -DBLEND2D_NO_JIT=ON
     cmake --build .
     cmake --build . --target install
   popd
@@ -162,3 +149,31 @@ if [ $OPENH264_CHANGED -eq 1 -o ! -e $INSTALL_DIR/openh264/include/wels/codec_ap
   popd
 fi
 echo "$OPENH264_VERSION" > $OPENH264_VERSION_FILE
+
+# yaml-cpp
+YAML_CPP_VERSION_FILE="$INSTALL_DIR/yaml-cpp.version"
+YAML_CPP_CHANGED=0
+if [ ! -e $YAML_CPP_VERSION_FILE -o "$YAML_CPP_VERSION" != "`cat $YAML_CPP_VERSION_FILE`" ]; then
+  YAML_CPP_CHANGED=1
+fi
+if [ $YAML_CPP_CHANGED -eq 1 -o ! -e $INSTALL_DIR/yaml-cpp/lib/libyaml-cpp.a ]; then
+  rm -rf $SOURCE_DIR/yaml-cpp
+  rm -rf $INSTALL_DIR/yaml-cpp
+  rm -rf $BUILD_DIR/yaml-cpp
+
+  pushd $SOURCE_DIR
+    git clone --branch yaml-cpp-$YAML_CPP_VERSION --depth 1 https://github.com/jbeder/yaml-cpp.git
+  popd
+
+  mkdir -p $BUILD_DIR/yaml-cpp
+  pushd $BUILD_DIR/yaml-cpp
+    cmake $SOURCE_DIR/yaml-cpp \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR/yaml-cpp \
+      -DYAML_CPP_BUILD_TESTS=OFF \
+      -DYAML_CPP_BUILD_TOOLS=OFF
+    cmake --build .
+    cmake --build . --target install
+  popd
+fi
+echo "$YAML_CPP_VERSION" > $YAML_CPP_VERSION_FILE
