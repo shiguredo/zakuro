@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] `cmake` を `3.20.0` に上げる
+    - @voluntas
+
 ## 2021.1
 
 - [CHANGE] Sora 関連の引数には `--sora-` の prefix を追加する
