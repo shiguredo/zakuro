@@ -28,13 +28,14 @@ $ sudo apt install libnspr4 libnss3
 
 ```
 $ ./zakuro \
+
     --sora-signaling-url wss://example.com/signaling \
     --sora-role sendrecv \
     --sora-channel-id zakuro-test \
-    --sora-resolution 640x480 \
     --sora-video-codec-type VP8 \
     --sora-video-bit-rate 1000 \
     --sora-multistream true \
+    --resolution 640x480 \
     --fake-capture-device \
     --vcs 5
 ```
