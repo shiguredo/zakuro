@@ -11,10 +11,12 @@
 
 ## develop
 
-- [FIX] `--metadata` と `--signaling-notify-metadata` 引数に `--sora-` プリフィックスが付いてなかったのを修正
-    - @melpon
+## 2021.1.1
+
 - [UPDATE] `cmake` を `3.20.0` に上げる
     - @voluntas
+- [FIX] `--metadata` と `--signaling-notify-metadata` 引数に `--sora-` プリフィックスが付いてなかったのを修正
+    - @melpon
 
 ## 2021.1
 
