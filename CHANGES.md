@@ -11,6 +11,8 @@
 
 ## develop
 
+- [FIX] `--metadata` と `--signaling-notify-metadata` 引数に `--sora-` プリフィックスが付いてなかったのを修正
+    - @melpon
 - [UPDATE] `cmake` を `3.20.0` に上げる
     - @voluntas
 
