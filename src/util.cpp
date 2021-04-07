@@ -169,12 +169,12 @@ void Util::ParseArgs(std::vector<std::string>& args,
       },
       "JSON Value");
   std::string sora_metadata;
-  app.add_option("--metadata", sora_metadata,
+  app.add_option("--sora-metadata", sora_metadata,
                  "Signaling metadata used in connect message")
       ->check(is_json);
   std::string sora_signaling_notify_metadata;
-  app.add_option("--signaling-notify-metadata", sora_signaling_notify_metadata,
-                 "Signaling metadata")
+  app.add_option("--sora-signaling-notify-metadata",
+                 sora_signaling_notify_metadata, "Signaling metadata")
       ->check(is_json);
 
   try {
