@@ -11,6 +11,11 @@
 
 ## develop
 
+- [FIX] 設定ファイルの `metadata` や `signaling-notify-metadata` などが引数に反映されていないのを修正
+    - @melpon
+- [UPDATE] 設定ファイルの内容を出力する際に引数をエスケープする
+    - @melpon
+
 ## 2021.1.1
 
 - [UPDATE] `cmake` を `3.20.0` に上げる

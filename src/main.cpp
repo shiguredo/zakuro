@@ -35,6 +35,27 @@
 
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
 
+// 雑なエスケープ処理
+// 文字列中に \ や " が含まれてたら全体をエスケープする
+std::string escape_if_needed(std::string str) {
+  auto n = str.find_first_of("\\\"");
+  if (n == std::string::npos) {
+    return str;
+  }
+  std::string s;
+  s += '\"';
+  for (auto c : str) {
+    switch (c) {
+      case '\\':
+      case '\"':
+        s += '\\';
+    }
+    s += c;
+  }
+  s += '\"';
+  return s;
+}
+
 int main(int argc, char* argv[]) {
   rlimit lim;
   if (::getrlimit(RLIMIT_NOFILE, &lim) != 0) {
@@ -101,10 +122,11 @@ int main(int argc, char* argv[]) {
 
       std::cout << argv[0];
       for (auto arg : args) {
-        std::cout << " " << arg;
+        std::cout << " " << escape_if_needed(arg);
       }
       std::cout << std::endl;
 
+      config_file = "";
       config = ZakuroConfig();
       Util::ParseArgs(args, config_file, log_level, port, config);
       configs.push_back(config);
