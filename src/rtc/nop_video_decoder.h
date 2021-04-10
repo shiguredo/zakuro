@@ -18,7 +18,6 @@ class NopVideoDecoder : public webrtc::VideoDecoder {
       webrtc::DecodedImageCallback* callback) override;
 
   int32_t Release() override;
-  bool PrefersLateDecoding() const override;
   const char* ImplementationName() const override;
 
  private:

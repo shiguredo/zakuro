@@ -305,6 +305,7 @@ elseif (TARGET_OS STREQUAL "linux")
     PRIVATE
       WEBRTC_POSIX
       _LIBCPP_ABI_UNSTABLE
+      _LIBCPP_DISABLE_AVAILABILITY
   )
   target_sources(zakuro
     PRIVATE

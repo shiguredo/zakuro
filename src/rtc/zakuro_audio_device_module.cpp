@@ -1,5 +1,7 @@
 #include "zakuro_audio_device_module.h"
 
+#include <cmath>
+
 ZakuroAudioDeviceModule::ZakuroAudioDeviceModule(
     ZakuroAudioDeviceModuleConfig config)
     : config_(std::move(config)) {
@@ -36,7 +38,7 @@ ZakuroAudioDeviceModule::ZakuroAudioDeviceModule(
     };
     fake_audio_->data.resize(SAMPLE_RATE * 2);
 
-    int bipbop_sample_count = (int)ceil(BIPBOP_DURATION * SAMPLE_RATE);
+    int bipbop_sample_count = (int)std::ceil(BIPBOP_DURATION * SAMPLE_RATE);
 
     add_hum(BIPBOP_VOLUME, BIP_FREQUENCY, SAMPLE_RATE, 0,
             fake_audio_->data.data(), bipbop_sample_count);

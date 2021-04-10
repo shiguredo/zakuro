@@ -44,9 +44,6 @@ int32_t NopVideoDecoder::RegisterDecodeCompleteCallback(
 int32_t NopVideoDecoder::Release() {
   return WEBRTC_VIDEO_CODEC_OK;
 }
-bool NopVideoDecoder::PrefersLateDecoding() const {
-  return false;
-}
 const char* NopVideoDecoder::ImplementationName() const {
   return "NOP Decoder";
 }

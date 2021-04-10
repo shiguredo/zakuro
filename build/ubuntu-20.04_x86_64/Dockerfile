@@ -40,6 +40,7 @@ RUN \
   && ./b2 \
     cxxflags=' \
       -D_LIBCPP_ABI_UNSTABLE \
+      -D_LIBCPP_DISABLE_AVAILABILITY  \
       -nostdinc++ \
       -isystem/root/llvm/libcxx/include \
     ' \
@@ -84,7 +85,12 @@ RUN cd /root \
   && cmake /root/blend2d_source \
       -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang \
       -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ \
-      -DCMAKE_CXX_FLAGS="-D_LIBCPP_ABI_UNSTABLE -nostdinc++ -isystem/root/llvm/libcxx/include" \
+      -DCMAKE_CXX_FLAGS=" \
+        -D_LIBCPP_ABI_UNSTABLE \
+        -D_LIBCPP_DISABLE_AVAILABILITY  \
+        -nostdinc++ \
+        -isystem/root/llvm/libcxx/include \
+      " \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/root/blend2d \
       -DBLEND2D_STATIC=ON \
@@ -115,7 +121,12 @@ RUN \
   && cmake /root/yaml-cpp_source \
       -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang \
       -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ \
-      -DCMAKE_CXX_FLAGS="-D_LIBCPP_ABI_UNSTABLE -nostdinc++ -isystem/root/llvm/libcxx/include" \
+      -DCMAKE_CXX_FLAGS=" \
+        -D_LIBCPP_ABI_UNSTABLE \
+        -D_LIBCPP_DISABLE_AVAILABILITY  \
+        -nostdinc++ \
+        -isystem/root/llvm/libcxx/include \
+      " \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/root/yaml-cpp \
       -DYAML_CPP_BUILD_TESTS=OFF \
