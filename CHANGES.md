@@ -13,6 +13,8 @@
 
 - [UPDATE] WebRTC のバージョンを M90 (4430@{#3}) に上げる
     - @melpon
+- [UPDATE] Boost 1.76.0 に上げる
+    - @voluntas
 
 ## 2021.1.2
 
