@@ -11,6 +11,17 @@
 
 ## develop
 
+- [UPDATE] `cmake` を `3.20.1` に上げる
+    - @voluntas
+- [UPDATE] WebRTC のバージョンを M90 (4430@{#3}) に上げる
+    - @melpon
+- [UPDATE] Boost 1.76.0 に上げる
+    - @voluntas
+- [UPDATE] blend2d を `41e4f9f440ed2cef9f3d19699a14e9e7b11144e4` に上げる
+    - @voluntas
+- [UPDATE] asmjit を `0dd16b0a98ae1da48563c9cc62f757a9e6bbe9b6` に上げる
+    - @voluntas
+
 ## 2021.1.2
 
 - [UPDATE] 設定ファイルの内容を出力する際に引数をエスケープする
