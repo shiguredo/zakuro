@@ -31,7 +31,6 @@
 #include "virtual_client.h"
 #include "wav_reader.h"
 #include "zakuro.h"
-#include "zakuro_args.h"
 
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
 

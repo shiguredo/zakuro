@@ -14,7 +14,6 @@
 #include <yaml-cpp/yaml.h>
 
 #include "zakuro.h"
-#include "zakuro_args.h"
 
 class Util {
  public:
