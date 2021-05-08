@@ -23,6 +23,8 @@
     - @voluntas
 - [ADD] DataChannel シグナリングに対応
     - @melpon
+- [ADD] WS の re-offer に対応
+    - @melpon
 
 ## 2021.1.2
 
