@@ -197,7 +197,8 @@ void SoraClient::DoSendPong(
                                              std::size_t) {});
 }
 
-void SoraClient::CreatePeerFromConfig(boost::json::value jconfig) {
+std::shared_ptr<RTCConnection> SoraClient::CreateRTCConnection(
+    boost::json::value jconfig) {
   webrtc::PeerConnectionInterface::RTCConfiguration rtc_config;
   webrtc::PeerConnectionInterface::IceServers ice_servers;
 
@@ -220,7 +221,7 @@ void SoraClient::CreatePeerFromConfig(boost::json::value jconfig) {
   // CPU degration は常に無効にする
   rtc_config.set_cpu_adaptation(false);
 
-  connection_ = manager_->CreateConnection(rtc_config, this);
+  return manager_->CreateConnection(rtc_config, this);
 }
 
 void SoraClient::Close(std::function<void()> on_close) {
@@ -259,7 +260,7 @@ void SoraClient::OnRead(boost::system::error_code ec,
   auto json_message = boost::json::parse(text);
   const std::string type = json_message.at("type").as_string().c_str();
   if (type == "offer") {
-    CreatePeerFromConfig(json_message.at("config"));
+    connection_ = CreateRTCConnection(json_message.at("config"));
     const std::string sdp = json_message.at("sdp").as_string().c_str();
 
     connection_->SetOffer(sdp, [self = shared_from_this(), json_message]() {
@@ -351,6 +352,9 @@ void SoraClient::OnRead(boost::system::error_code ec,
               std::string sdp;
               desc->ToString(&sdp);
               boost::asio::post(self->ioc_, [self, sdp]() {
+                if (!self->connection_) {
+                  return;
+                }
                 boost::json::value json_message = {{"type", "update"},
                                                    {"sdp", sdp}};
                 self->ws_->WriteText(

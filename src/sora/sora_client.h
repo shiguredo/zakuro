@@ -73,7 +73,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
   void DoSendPong();
   void DoSendPong(
       const rtc::scoped_refptr<const webrtc::RTCStatsReport>& report);
-  void CreatePeerFromConfig(boost::json::value jconfig);
+  std::shared_ptr<RTCConnection> CreateRTCConnection(boost::json::value jconfig);
 
  private:
   void OnConnect(boost::system::error_code ec);
