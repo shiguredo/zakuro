@@ -157,6 +157,24 @@ void Util::ParseArgs(std::vector<std::string>& args,
   app.add_option("--sora-spotlight-number", config.sora_spotlight_number,
                  "Number of spotlight")
       ->check(CLI::Range(0, 8));
+  app.add_option("--sora-data-channel-signaling",
+                 config.sora_data_channel_signaling,
+                 "Use DataChannel for Sora signaling (default: false)")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--sora-data-channel-signaling-timeout",
+                 config.sora_data_channel_signaling_timeout,
+                 "Timeout for Data Channel in seconds (default: 30)")
+      ->check(CLI::PositiveNumber);
+  app.add_option("--sora-ignore-disconnect-websocket",
+                 config.sora_ignore_disconnect_websocket,
+                 "Ignore WebSocket disconnection if using Data Channel "
+                 "(default: false)")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--sora-close-websocket", config.sora_close_websocket,
+                 "Close WebSocket when starting to use Data Channel "
+                 "(only if --sora-ignore-disconnect-websocket=true) "
+                 "(default: true)")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
 
   auto is_json = CLI::Validator(
       [](std::string input) -> std::string {
@@ -327,6 +345,10 @@ std::vector<std::string> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_BOOLEAN(sora, "sora-", "simulcast");
     DEF_BOOLEAN(sora, "sora-", "spotlight");
     DEF_INTEGER(sora, "sora-", "spotlight-number");
+    DEF_BOOLEAN(sora, "sora-", "data-channel-signaling");
+    DEF_INTEGER(sora, "sora-", "data-channel-signaling-timeout");
+    DEF_BOOLEAN(sora, "sora-", "ignore-disconnect-websocket");
+    DEF_BOOLEAN(sora, "sora-", "close-websocket");
     if (sora["metadata"]) {
       boost::json::value value = NodeToJson(sora["metadata"]);
       args.push_back("--sora-metadata");
