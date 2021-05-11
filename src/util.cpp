@@ -163,7 +163,7 @@ void Util::ParseArgs(std::vector<std::string>& args,
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-data-channel-signaling-timeout",
                  config.sora_data_channel_signaling_timeout,
-                 "Timeout for Data Channel in seconds (default: 30)")
+                 "Timeout for Data Channel in seconds (default: 180)")
       ->check(CLI::PositiveNumber);
   app.add_option("--sora-ignore-disconnect-websocket",
                  config.sora_ignore_disconnect_websocket,
