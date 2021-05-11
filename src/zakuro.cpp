@@ -23,7 +23,6 @@
 #include "virtual_client.h"
 #include "wav_reader.h"
 #include "zakuro.h"
-#include "zakuro_args.h"
 
 Zakuro::Zakuro(ZakuroConfig config) : config_(std::move(config)) {}
 
@@ -159,6 +158,12 @@ int Zakuro::Run() {
     sorac_config.spotlight = config_.sora_spotlight;
     sorac_config.spotlight_number = config_.sora_spotlight_number;
     sorac_config.simulcast = config_.sora_simulcast;
+    sorac_config.data_channel_signaling = config_.sora_data_channel_signaling;
+    sorac_config.data_channel_signaling_timeout =
+        config_.sora_data_channel_signaling_timeout;
+    sorac_config.ignore_disconnect_websocket =
+        config_.sora_ignore_disconnect_websocket;
+    sorac_config.close_websocket = config_.sora_close_websocket;
 
     for (int i = 0; i < config_.vcs; i++) {
       auto vc = std::unique_ptr<VirtualClient>(

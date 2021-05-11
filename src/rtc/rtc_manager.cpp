@@ -32,7 +32,7 @@ RTCManager::RTCManager(
     RTCManagerConfig config,
     rtc::scoped_refptr<ScalableVideoTrackSource> video_track_source,
     VideoTrackReceiver* receiver)
-    : config_(std::move(config)), receiver_(receiver), data_manager_(nullptr) {
+    : config_(std::move(config)), receiver_(receiver) {
   rtc::InitializeSSL();
 
   network_thread_ = rtc::Thread::CreateWithSocketServer();
@@ -55,42 +55,46 @@ RTCManager::RTCManager(
   // media_dependencies
   cricket::MediaEngineDependencies media_dependencies;
   media_dependencies.task_queue_factory = dependencies.task_queue_factory.get();
-  media_dependencies.adm = worker_thread_->Invoke<
-      rtc::scoped_refptr<webrtc::AudioDeviceModule> >(RTC_FROM_HERE, [&] {
-    ZakuroAudioDeviceModuleConfig admconfig;
-    admconfig.task_queue_factory = dependencies.task_queue_factory.get();
-    if (config_.audio_type == RTCManagerConfig::AudioType::Device) {
+  media_dependencies.adm =
+      worker_thread_->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule> >(
+          RTC_FROM_HERE, [&] {
+            ZakuroAudioDeviceModuleConfig admconfig;
+            admconfig.task_queue_factory =
+                dependencies.task_queue_factory.get();
+            if (config_.audio_type == RTCManagerConfig::AudioType::Device) {
 #if defined(__linux__)
-      webrtc::AudioDeviceModule::AudioLayer audio_layer =
-          webrtc::AudioDeviceModule::kLinuxAlsaAudio;
+              webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                  webrtc::AudioDeviceModule::kLinuxAlsaAudio;
 #else
       webrtc::AudioDeviceModule::AudioLayer audio_layer =
           webrtc::AudioDeviceModule::kPlatformDefaultAudio;
 #endif
-      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-      admconfig.adm = webrtc::AudioDeviceModule::Create(
-          audio_layer, dependencies.task_queue_factory.get());
-    } else if (config_.audio_type == RTCManagerConfig::AudioType::NoAudio) {
-      webrtc::AudioDeviceModule::AudioLayer audio_layer =
-          webrtc::AudioDeviceModule::kDummyAudio;
-      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-      admconfig.adm = webrtc::AudioDeviceModule::Create(
-          audio_layer, dependencies.task_queue_factory.get());
-    } else if (config_.audio_type ==
-               RTCManagerConfig::AudioType::SpecifiedFakeAudio) {
-      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
-      admconfig.fake_audio = config_.fake_audio;
-    } else if (config_.audio_type ==
-               RTCManagerConfig::AudioType::AutoGenerateFakeAudio) {
-      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
-    } else if (config_.audio_type == RTCManagerConfig::AudioType::External) {
-      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
-      admconfig.render = config_.render_audio;
-      admconfig.sample_rate = config_.sample_rate;
-      admconfig.channels = config_.channels;
-    }
-    return ZakuroAudioDeviceModule::Create(std::move(admconfig));
-  });
+              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+              admconfig.adm = webrtc::AudioDeviceModule::Create(
+                  audio_layer, dependencies.task_queue_factory.get());
+            } else if (config_.audio_type ==
+                       RTCManagerConfig::AudioType::NoAudio) {
+              webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                  webrtc::AudioDeviceModule::kDummyAudio;
+              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+              admconfig.adm = webrtc::AudioDeviceModule::Create(
+                  audio_layer, dependencies.task_queue_factory.get());
+            } else if (config_.audio_type ==
+                       RTCManagerConfig::AudioType::SpecifiedFakeAudio) {
+              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
+              admconfig.fake_audio = config_.fake_audio;
+            } else if (config_.audio_type ==
+                       RTCManagerConfig::AudioType::AutoGenerateFakeAudio) {
+              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
+            } else if (config_.audio_type ==
+                       RTCManagerConfig::AudioType::External) {
+              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
+              admconfig.render = config_.render_audio;
+              admconfig.sample_rate = config_.sample_rate;
+              admconfig.channels = config_.channels;
+            }
+            return ZakuroAudioDeviceModule::Create(std::move(admconfig));
+          });
   media_dependencies.audio_encoder_factory =
       webrtc::CreateBuiltinAudioEncoderFactory();
   media_dependencies.audio_decoder_factory =
@@ -174,8 +178,8 @@ RTCManager::~RTCManager() {
   rtc::CleanupSSL();
 }
 
-void RTCManager::SetDataManager(RTCDataManager* data_manager) {
-  data_manager_ = data_manager;
+void RTCManager::AddDataManager(std::shared_ptr<RTCDataManager> data_manager) {
+  data_manager_dispatcher_.Add(data_manager);
 }
 
 std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
@@ -183,9 +187,10 @@ std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
     RTCMessageSender* sender) {
   rtc_config.enable_dtls_srtp = true;
   rtc_config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
-  rtc_config.turn_port_prune_policy = webrtc::PortPrunePolicy::PRUNE_BASED_ON_PRIORITY;
+  rtc_config.turn_port_prune_policy =
+      webrtc::PortPrunePolicy::PRUNE_BASED_ON_PRIORITY;
   std::unique_ptr<PeerConnectionObserver> observer(
-      new PeerConnectionObserver(sender, receiver_, data_manager_));
+      new PeerConnectionObserver(sender, receiver_, &data_manager_dispatcher_));
   webrtc::PeerConnectionDependencies dependencies(observer.get());
 
   // WebRTC の SSL 接続の検証は自前のルート証明書(rtc_base/ssl_roots.h)でやっていて、
