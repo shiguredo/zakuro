@@ -11,7 +11,7 @@
 
 ## develop
 
-- [UPDATE] `cmake` を `3.20.1` に上げる
+- [UPDATE] `cmake` を `3.20.2` に上げる
     - @voluntas
 - [UPDATE] WebRTC のバージョンを M90 (4430@{#3}) に上げる
     - @melpon
@@ -23,9 +23,9 @@
     - @voluntas
 - [ADD] DataChannel シグナリングに対応
     - @melpon
-- [ADD] WS の re-offer に対応
+- [ADD] WebSocket シグナリングの re-offer に対応
     - @melpon
-- [FIX] active: false に対応
+- [FIX] サイマルキャストの active: false に対応
     - @melpon
 
 ## 2021.1.2
