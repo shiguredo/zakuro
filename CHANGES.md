@@ -11,7 +11,20 @@
 
 ## develop
 
+## 2021.3
+
 - [UPDATE] `cmake` を `3.20.2` に上げる
+    - @voluntas
+- [ADD] DataChannel シグナリングに対応
+    - @melpon
+- [ADD] WebSocket シグナリングの re-offer に対応
+    - @melpon
+- [FIX] サイマルキャストの active: false に対応
+    - @melpon
+
+## 2021.2
+
+- [UPDATE] `cmake` を `3.20.1` に上げる
     - @voluntas
 - [UPDATE] WebRTC のバージョンを M90 (4430@{#3}) に上げる
     - @melpon
@@ -21,12 +34,6 @@
     - @voluntas
 - [UPDATE] asmjit を `0dd16b0a98ae1da48563c9cc62f757a9e6bbe9b6` に上げる
     - @voluntas
-- [ADD] DataChannel シグナリングに対応
-    - @melpon
-- [ADD] WebSocket シグナリングの re-offer に対応
-    - @melpon
-- [FIX] サイマルキャストの active: false に対応
-    - @melpon
 
 ## 2021.1.2
 
