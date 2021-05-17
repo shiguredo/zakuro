@@ -11,13 +11,18 @@
 
 ## develop
 
+## 2021.4
+
+- [UPDATE] DataChannel の type: switch に対応
+    - @melpon
+
 ## 2021.3
 
 - [UPDATE] `cmake` を `3.20.2` に上げる
     - @voluntas
-- [ADD] DataChannel シグナリングに対応
+- [UPDATE] DataChannel シグナリングに対応
     - @melpon
-- [ADD] WebSocket シグナリングの re-offer に対応
+- [UPDATE] WebSocket シグナリングの re-offer に対応
     - @melpon
 - [FIX] サイマルキャストの active: false に対応
     - @melpon
