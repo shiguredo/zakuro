@@ -43,7 +43,7 @@ struct ZakuroConfig {
   bool sora_spotlight = false;
   int sora_spotlight_number = 0;
   bool sora_data_channel_signaling = false;
-  int sora_data_channel_signaling_timeout = 30;
+  int sora_data_channel_signaling_timeout = 180;
   bool sora_ignore_disconnect_websocket = false;
   bool sora_close_websocket = true;
   boost::json::value sora_metadata;

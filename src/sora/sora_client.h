@@ -39,7 +39,7 @@ struct SoraClientConfig {
   int spotlight_number = 0;
   bool simulcast = false;
   bool data_channel_signaling = false;
-  int data_channel_signaling_timeout = 30;
+  int data_channel_signaling_timeout = 180;
   bool ignore_disconnect_websocket = false;
   bool close_websocket = true;
 };
@@ -114,7 +114,6 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
   std::shared_ptr<Websocket> ws_;
   std::shared_ptr<SoraDataChannelOnAsio> dc_;
   bool ignore_disconnect_websocket_;
-  std::vector<std::string> data_channel_lables_;
 
   std::atomic_bool destructed_ = {false};
 
