@@ -163,7 +163,7 @@ int Zakuro::Run() {
         config_.sora_data_channel_signaling_timeout;
     sorac_config.ignore_disconnect_websocket =
         config_.sora_ignore_disconnect_websocket;
-    sorac_config.close_websocket = config_.sora_close_websocket;
+    sorac_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
 
     for (int i = 0; i < config_.vcs; i++) {
       auto vc = std::unique_ptr<VirtualClient>(

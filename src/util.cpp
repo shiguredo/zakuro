@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <cstdlib>
 #include <regex>
 #include <string>
 
@@ -11,6 +12,8 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/json.hpp>
+#include <boost/optional.hpp>
+#include <boost/optional/optional_io.hpp>
 #include <boost/preprocessor/stringize.hpp>
 
 // WebRTC
@@ -43,7 +46,7 @@ void Util::ParseArgs(std::vector<std::string>& args,
   app.add_option("--config", config_file, "YAML config file path")
       ->check(CLI::ExistingFile);
 
-  auto log_level_map = std::vector<std::pair<std::string, int> >(
+  auto log_level_map = std::vector<std::pair<std::string, int>>(
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
@@ -127,8 +130,12 @@ void Util::ParseArgs(std::vector<std::string>& args,
   app.add_set("--sora-role", config.sora_role,
               {"sendonly", "recvonly", "sendrecv"}, "Role");
 
-  auto bool_map = std::vector<std::pair<std::string, bool> >(
+  auto bool_map = std::vector<std::pair<std::string, bool>>(
       {{"false", false}, {"true", true}});
+  auto optional_bool_map =
+      std::vector<std::pair<std::string, boost::optional<bool>>>(
+          {{"false", false}, {"true", true}, {"none", boost::none}});
+
   app.add_option("--sora-video", config.sora_video,
                  "Send video to sora (default: true)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
@@ -160,7 +167,8 @@ void Util::ParseArgs(std::vector<std::string>& args,
   app.add_option("--sora-data-channel-signaling",
                  config.sora_data_channel_signaling,
                  "Use DataChannel for Sora signaling (default: false)")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+      ->type_name("TEXT")
+      ->transform(CLI::CheckedTransformer(optional_bool_map, CLI::ignore_case));
   app.add_option("--sora-data-channel-signaling-timeout",
                  config.sora_data_channel_signaling_timeout,
                  "Timeout for Data Channel in seconds (default: 180)")
@@ -169,12 +177,12 @@ void Util::ParseArgs(std::vector<std::string>& args,
                  config.sora_ignore_disconnect_websocket,
                  "Ignore WebSocket disconnection if using Data Channel "
                  "(default: false)")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
-  app.add_option("--sora-close-websocket", config.sora_close_websocket,
-                 "Close WebSocket when starting to use Data Channel "
-                 "(only if --sora-ignore-disconnect-websocket=true) "
-                 "(default: true)")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+      ->type_name("TEXT")
+      ->transform(CLI::CheckedTransformer(optional_bool_map, CLI::ignore_case));
+  app.add_option(
+         "--sora-disconnect-wait-timeout", config.sora_disconnect_wait_timeout,
+         "Disconnecting timeout for Data Channel in seconds (default: 5)")
+      ->check(CLI::PositiveNumber);
 
   auto is_json = CLI::Validator(
       [](std::string input) -> std::string {
@@ -198,7 +206,7 @@ void Util::ParseArgs(std::vector<std::string>& args,
   try {
     app.parse(args);
   } catch (const CLI::ParseError& e) {
-    exit(app.exit(e));
+    std::exit(app.exit(e));
   }
 
   if (version) {
@@ -207,7 +215,7 @@ void Util::ParseArgs(std::vector<std::string>& args,
     std::cout << "WebRTC: " << ZakuroVersion::GetLibwebrtcName() << std::endl;
     std::cout << "Environment: " << ZakuroVersion::GetEnvironmentName()
               << std::endl;
-    exit(0);
+    std::exit(0);
   }
 
   // 設定ファイルがある
@@ -220,15 +228,15 @@ void Util::ParseArgs(std::vector<std::string>& args,
   // エラーになってしまうので、ここでチェックする
   if (config.sora_signaling_url.empty()) {
     std::cerr << "--sora-signaling-url is required" << std::endl;
-    exit(1);
+    std::exit(1);
   }
   if (config.sora_channel_id.empty()) {
     std::cerr << "--sora-channel-id is required" << std::endl;
-    exit(1);
+    std::exit(1);
   }
   if (config.sora_role.empty()) {
     std::cerr << "--sora-role is required" << std::endl;
-    exit(1);
+    std::exit(1);
   }
 
   // サイマルキャストは VP8 か H264 のみで動作する
@@ -236,19 +244,19 @@ void Util::ParseArgs(std::vector<std::string>& args,
       config.sora_video_codec_type != "H264") {
     std::cerr << "Simulcast works only --sora-video-codec=VP8 or H264."
               << std::endl;
-    exit(1);
+    std::exit(1);
   }
 
   // H264 は --openh264 が指定されてる場合のみ動作する
   if (config.sora_video_codec_type == "H264" && config.openh264.empty()) {
     std::cerr << "Specify --openh264=/path/to/libopenh264.so for H.264 codec"
               << std::endl;
-    exit(1);
+    std::exit(1);
   }
   // --openh264 のパスは絶対パスである必要がある
   if (!config.openh264.empty() && config.openh264[0] != '/') {
     std::cerr << "--openh264 file path must be absolute path" << std::endl;
-    exit(1);
+    std::exit(1);
   }
 
   // メタデータのパース
@@ -345,10 +353,10 @@ std::vector<std::string> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_BOOLEAN(sora, "sora-", "simulcast");
     DEF_BOOLEAN(sora, "sora-", "spotlight");
     DEF_INTEGER(sora, "sora-", "spotlight-number");
-    DEF_BOOLEAN(sora, "sora-", "data-channel-signaling");
+    DEF_STRING(sora, "sora-", "data-channel-signaling");
     DEF_INTEGER(sora, "sora-", "data-channel-signaling-timeout");
-    DEF_BOOLEAN(sora, "sora-", "ignore-disconnect-websocket");
-    DEF_BOOLEAN(sora, "sora-", "close-websocket");
+    DEF_STRING(sora, "sora-", "ignore-disconnect-websocket");
+    DEF_INTEGER(sora, "sora-", "disconnect-wait-timeout");
     if (sora["metadata"]) {
       boost::json::value value = NodeToJson(sora["metadata"]);
       args.push_back("--sora-metadata");
@@ -431,7 +439,7 @@ std::string Util::GenerateRandomNumericChars(size_t length) {
   auto random_numerics = []() -> char {
     const char charset[] = "0123456789";
     const size_t max_index = (sizeof(charset) - 1);
-    return charset[rand() % max_index];
+    return charset[std::rand() % max_index];
   };
   std::string result(length, 0);
   std::generate_n(result.begin(), length, random_numerics);
