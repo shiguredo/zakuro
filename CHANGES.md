@@ -17,6 +17,8 @@
     - @voluntas
 - [UPDATE] asmjit を `78de7d9c81a6ad1b0f732b52666960d9be1c6461` に上げる
     - @voluntas
+- [FIX] DataChannel 周りの新しい仕様への追従
+    - @melpon
 
 ## 2021.4
 
