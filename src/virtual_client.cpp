@@ -19,15 +19,17 @@ void VirtualClient::Connect() {
 
   if (sora_client_) {
     closing_ = true;
-    sora_client_->Close([this, sora_client = sora_client_]() {
-      boost::asio::post(*ioc_, [this, sora_client]() mutable {
-        sora_client.reset();
-        rtc_manager_.reset();
-        closing_ = false;
-        boost::asio::post(*ioc_, std::bind(&VirtualClient::Connect, this));
-      });
-    });
+    sora_client_->Close(
+        [this, rtc_manager = rtc_manager_, sora_client = sora_client_]() {
+          boost::asio::post(*ioc_, [this, rtc_manager, sora_client]() mutable {
+            sora_client.reset();
+            rtc_manager.reset();
+            closing_ = false;
+            boost::asio::post(*ioc_, std::bind(&VirtualClient::Connect, this));
+          });
+        });
     sora_client_.reset();
+    rtc_manager_.reset();
     return;
   }
 

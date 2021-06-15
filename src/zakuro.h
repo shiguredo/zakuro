@@ -1,10 +1,13 @@
 #ifndef ZAKURO_H_
 #define ZAKURO_H_
 
+#include <algorithm>
+#include <cstdlib>
 #include <string>
 
 // Boost
 #include <boost/json.hpp>
+#include <boost/optional.hpp>
 
 struct ZakuroConfig {
   std::string name = "zakuro";
@@ -42,10 +45,10 @@ struct ZakuroConfig {
   bool sora_simulcast = false;
   bool sora_spotlight = false;
   int sora_spotlight_number = 0;
-  bool sora_data_channel_signaling = false;
+  boost::optional<bool> sora_data_channel_signaling = false;
   int sora_data_channel_signaling_timeout = 180;
-  bool sora_ignore_disconnect_websocket = false;
-  bool sora_close_websocket = true;
+  boost::optional<bool> sora_ignore_disconnect_websocket = false;
+  int sora_disconnect_wait_timeout = 5;
   boost::json::value sora_metadata;
   boost::json::value sora_signaling_notify_metadata;
 
