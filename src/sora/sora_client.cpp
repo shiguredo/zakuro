@@ -58,7 +58,10 @@ SoraClient::~SoraClient() {
   destructed_ = true;
   // 一応閉じる努力はする
   if (dc_) {
-    dc_->Close([dc = dc_]() {}, config_.disconnect_wait_timeout);
+    webrtc::DataBuffer disconnect_data =
+        ConvertToDataBuffer("signaling", R"({"type":"disconnect})");
+    dc_->Close(
+        disconnect_data, [dc = dc_]() {}, config_.disconnect_wait_timeout);
     dc_ = nullptr;
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
@@ -74,15 +77,20 @@ void SoraClient::Close(std::function<void()> on_close) {
   auto connection = std::move(connection_);
   connection_ = nullptr;
 
+  webrtc::DataBuffer disconnect_data =
+      ConvertToDataBuffer("signaling", R"({"type":"disconnect})");
+
   if (dc && ws) {
     dc->Close(
+        disconnect_data,
         [dc, connection, ws = std::move(ws), on_close]() {
           ws->Close([ws, on_close](boost::system::error_code) { on_close(); });
         },
         config_.disconnect_wait_timeout);
   } else if (dc && !ws) {
-    dc->Close([dc, connection, on_close]() { on_close(); },
-              config_.disconnect_wait_timeout);
+    dc->Close(
+        disconnect_data, [dc, connection, on_close]() { on_close(); },
+        config_.disconnect_wait_timeout);
   } else if (!dc && ws) {
     boost::json::value disconnect = {{"type", "disconnect"}};
     ws->WriteText(boost::json::serialize(disconnect));
@@ -499,12 +507,17 @@ void SoraClient::OnRead(boost::system::error_code ec,
   DoRead();
 }
 
-void SoraClient::SendDataChannel(const std::string& label,
-                                 const std::string& input) {
+webrtc::DataBuffer SoraClient::ConvertToDataBuffer(const std::string& label,
+                                                   const std::string& input) {
   RTC_LOG(LS_INFO) << "Send DataChannel label=" << label << " data=" << input;
   bool compressed = compressed_labels_.find(label) != compressed_labels_.end();
   const std::string& str = compressed ? ZlibHelper::Compress(input) : input;
-  webrtc::DataBuffer data(rtc::CopyOnWriteBuffer(str), compressed);
+  return webrtc::DataBuffer(rtc::CopyOnWriteBuffer(str), compressed);
+}
+
+void SoraClient::SendDataChannel(const std::string& label,
+                                 const std::string& input) {
+  webrtc::DataBuffer data = ConvertToDataBuffer(label, input);
   dc_->Send(label, data);
 }
 
