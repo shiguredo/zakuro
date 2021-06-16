@@ -34,7 +34,7 @@ void VirtualClient::Connect() {
   }
 
   rtc_manager_.reset(new RTCManager(rtcm_config_, capturer_, nullptr));
-  sora_client_ = SoraClient::Create(*ioc_, rtc_manager_.get(), sorac_config_);
+  sora_client_ = SoraClient::Create(*ioc_, rtc_manager_, sorac_config_);
   sora_client_->Connect();
 }
 void VirtualClient::Close() {
