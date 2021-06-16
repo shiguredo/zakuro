@@ -50,12 +50,12 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
                    public RTCMessageSender,
                    public SoraDataChannelObserver {
   SoraClient(boost::asio::io_context& ioc,
-             RTCManager* manager,
+             std::shared_ptr<RTCManager> manager,
              SoraClientConfig config);
 
  public:
   static std::shared_ptr<SoraClient> Create(boost::asio::io_context& ioc,
-                                            RTCManager* manager,
+                                            std::shared_ptr<RTCManager> manager,
                                             SoraClientConfig config) {
     return std::shared_ptr<SoraClient>(
         new SoraClient(ioc, manager, std::move(config)));
@@ -93,7 +93,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
  private:
   webrtc::DataBuffer ConvertToDataBuffer(const std::string& label,
-                                       const std::string& input);
+                                         const std::string& input);
   void SendDataChannel(const std::string& label, const std::string& input);
 
  private:
@@ -118,6 +118,8 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
  private:
   boost::asio::io_context& ioc_;
+  std::shared_ptr<RTCManager> manager_;
+
   std::shared_ptr<Websocket> ws_;
   std::shared_ptr<SoraDataChannelOnAsio> dc_;
   bool using_datachannel_ = false;
@@ -125,7 +127,6 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
   std::atomic_bool destructed_ = {false};
 
-  RTCManager* manager_;
   std::shared_ptr<RTCConnection> connection_;
   SoraClientConfig config_;
 
