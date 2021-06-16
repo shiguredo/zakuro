@@ -59,7 +59,8 @@ class SoraDataChannel : public RTCDataManager {
     auto data_channel = it->second;
     data_channel->Send(data);
   }
-  void Close(std::function<void()> on_close) {
+  void Close(const webrtc::DataBuffer& disconnect_message,
+             std::function<void()> on_close) {
     webrtc::MutexLock lock(&mutex_);
     auto it = labels_.find("signaling");
     if (it == labels_.end()) {
@@ -69,11 +70,8 @@ class SoraDataChannel : public RTCDataManager {
       return;
     }
     on_close_ = on_close;
-    std::string str = R"({"type":"disconnect})";
-    RTC_LOG(LS_INFO) << "Send DataChannel label=signaling data=" << str;
-    webrtc::DataBuffer data(rtc::CopyOnWriteBuffer(str), false);
     auto data_channel = it->second;
-    data_channel->Send(data);
+    data_channel->Send(disconnect_message);
   }
 
  public:

@@ -11,6 +11,11 @@
 
 ## develop
 
+## 2021.5.1
+
+- [FIX] DataChannel 周りの対応漏れを追加
+    - @melpon
+
 ## 2021.5
 
 - [UPDATE] WebRTC のバージョンを M91 (4472@{#9}) に上げる
