@@ -77,10 +77,9 @@ void SoraClient::Close(std::function<void()> on_close) {
   auto connection = std::move(connection_);
   connection_ = nullptr;
 
-  webrtc::DataBuffer disconnect_data =
-      ConvertToDataBuffer("signaling", R"({"type":"disconnect})");
-
   if (dc && ws) {
+    webrtc::DataBuffer disconnect_data =
+        ConvertToDataBuffer("signaling", R"({"type":"disconnect})");
     dc->Close(
         disconnect_data,
         [dc, connection, ws = std::move(ws), on_close]() {
@@ -88,6 +87,8 @@ void SoraClient::Close(std::function<void()> on_close) {
         },
         config_.disconnect_wait_timeout);
   } else if (dc && !ws) {
+    webrtc::DataBuffer disconnect_data =
+        ConvertToDataBuffer("signaling", R"({"type":"disconnect})");
     dc->Close(
         disconnect_data, [dc, connection, on_close]() { on_close(); },
         config_.disconnect_wait_timeout);
@@ -509,8 +510,9 @@ void SoraClient::OnRead(boost::system::error_code ec,
 
 webrtc::DataBuffer SoraClient::ConvertToDataBuffer(const std::string& label,
                                                    const std::string& input) {
-  RTC_LOG(LS_INFO) << "Send DataChannel label=" << label << " data=" << input;
   bool compressed = compressed_labels_.find(label) != compressed_labels_.end();
+  RTC_LOG(LS_INFO) << "Convert to DataBuffer: label=" << label
+                   << " compressed=" << compressed << " input=" << input;
   const std::string& str = compressed ? ZlibHelper::Compress(input) : input;
   return webrtc::DataBuffer(rtc::CopyOnWriteBuffer(str), compressed);
 }
