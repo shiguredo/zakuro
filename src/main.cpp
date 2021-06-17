@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
   int log_level = rtc::LS_NONE;
   int port = -1;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, config);
+  Util::ParseArgs(args, config_file, log_level, port, config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -106,6 +106,20 @@ int main(int argc, char* argv[]) {
       common_args.push_back(zakuro_node["port"].as<std::string>());
     }
 
+    std::vector<std::string> post_args;
+    // args の --config を取り除きつつ post_args に追加
+    for (auto it = args.begin(); it != args.end(); ++it) {
+      if (*it == "--config") {
+        // --config hoge
+        ++it;
+        continue;
+      }
+      if (it->find("--config=") == 0) {
+        continue;
+      }
+      post_args.push_back(*it);
+    }
+
     if (!zakuro_node["instances"]) {
       std::cerr << "zakuro の下に instances キーがありません。" << std::endl;
       return 1;
@@ -118,6 +132,7 @@ int main(int argc, char* argv[]) {
     for (auto instance : instances_node) {
       auto args = Util::NodeToArgs(instance);
       args.insert(args.begin(), common_args.begin(), common_args.end());
+      args.insert(args.end(), post_args.begin(), post_args.end());
 
       std::cout << argv[0];
       for (auto arg : args) {
@@ -127,7 +142,7 @@ int main(int argc, char* argv[]) {
 
       config_file = "";
       config = ZakuroConfig();
-      Util::ParseArgs(args, config_file, log_level, port, config);
+      Util::ParseArgs(args, config_file, log_level, port, config, true);
       configs.push_back(config);
     }
   }
@@ -155,6 +170,13 @@ int main(int argc, char* argv[]) {
   //  // TODO: vcs をスレッドセーフにする（VC 生成スレッドと競合するので）
   //  SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
   //}
+
+  std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
+  key_core->Init();
+  // 各 config に GameKeyCore の設定を入れていく
+  for (auto& config : configs) {
+    config.key_core = key_core;
+  }
 
   std::vector<std::unique_ptr<std::thread>> ths;
   for (const auto& config : configs) {

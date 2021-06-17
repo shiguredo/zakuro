@@ -18,11 +18,11 @@
 class FakeAudioKeyTrigger {
  public:
   FakeAudioKeyTrigger(boost::asio::io_context& ioc,
+                      std::shared_ptr<GameKeyCore> key_core,
                       GameAudioManager* gam,
                       ScenarioPlayer* sp,
                       std::vector<std::unique_ptr<VirtualClient>>& vcs)
-      : ioc_(ioc), gam_(gam), sp_(sp), vcs_(vcs) {
-    key_.Init();
+      : ioc_(ioc), key_(key_core), gam_(gam), sp_(sp), vcs_(vcs) {
     th_.reset(new std::thread([this]() {
       std::string seq;
       std::chrono::system_clock::time_point seq_time;

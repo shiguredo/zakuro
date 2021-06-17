@@ -30,14 +30,17 @@ std::string to_string(std::string str) {
 
 }  // namespace std
 
-void Util::ParseArgs(std::vector<std::string>& args,
+void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& config_file,
                      int& log_level,
                      int& port,
-                     ZakuroConfig& config) {
+                     ZakuroConfig& config,
+                     bool ignore_config) {
+  std::vector<std::string> args = cargs;
   std::reverse(args.begin(), args.end());
 
   CLI::App app("Zakuro - WebRTC Load Testing Tool");
+  app.option_defaults()->take_last();
 
   // アプリケーション全体で１個しか存在しない共通オプション
   bool version = false;
@@ -219,7 +222,7 @@ void Util::ParseArgs(std::vector<std::string>& args,
   }
 
   // 設定ファイルがある
-  if (!config_file.empty()) {
+  if (!ignore_config && !config_file.empty()) {
     return;
   }
 

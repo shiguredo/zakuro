@@ -17,7 +17,11 @@
 
 class GameKuzushi {
  public:
-  GameKuzushi(int width, int height, GameAudioManager* gam) : gam_(gam) {
+  GameKuzushi(int width,
+              int height,
+              GameAudioManager* gam,
+              std::shared_ptr<GameKeyCore> core)
+      : gam_(gam), key_(core) {
     Init(width, height);
   }
 
@@ -39,8 +43,6 @@ class GameKuzushi {
 
  private:
   void Init(int width, int height) {
-    key_.Init();
-
     width_ = width;
     height_ = height;
 

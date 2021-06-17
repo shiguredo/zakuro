@@ -9,6 +9,8 @@
 #include <boost/json.hpp>
 #include <boost/optional.hpp>
 
+#include "game/game_key_core.h"
+
 struct ZakuroConfig {
   std::string name = "zakuro";
   int vcs = 1;
@@ -51,6 +53,8 @@ struct ZakuroConfig {
   int sora_disconnect_wait_timeout = 5;
   boost::json::value sora_metadata;
   boost::json::value sora_signaling_notify_metadata;
+
+  std::shared_ptr<GameKeyCore> key_core;
 
   struct Size {
     int width;
