@@ -17,11 +17,12 @@
 
 class Util {
  public:
-  static void ParseArgs(std::vector<std::string>& args,
+  static void ParseArgs(const std::vector<std::string>& args,
                         std::string& config_file,
                         int& log_level,
                         int& port,
-                        ZakuroConfig& config);
+                        ZakuroConfig& config,
+                        bool ignore_config);
   static std::vector<std::string> NodeToArgs(const YAML::Node& inst);
   static boost::json::value NodeToJson(const YAML::Node& node);
   static std::string GenerateRandomChars();
