@@ -171,6 +171,13 @@ int main(int argc, char* argv[]) {
   //  SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
   //}
 
+  std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
+  key_core->Init();
+  // 各 config に GameKeyCore の設定を入れていく
+  for (auto& config : configs) {
+    config.key_core = key_core;
+  }
+
   std::vector<std::unique_ptr<std::thread>> ths;
   for (const auto& config : configs) {
     ths.push_back(std::unique_ptr<std::thread>(new std::thread([config]() {

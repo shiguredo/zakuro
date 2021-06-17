@@ -32,7 +32,8 @@ int Zakuro::Run() {
   if (config_.game == "kuzushi") {
     auto size = config_.GetSize();
     gam.reset(new GameAudioManager());
-    kuzushi.reset(new GameKuzushi(size.width, size.height, gam.get()));
+    kuzushi.reset(
+        new GameKuzushi(size.width, size.height, gam.get(), config_.key_core));
   }
 
   bool fake_audio_key_trigger = true;
@@ -210,8 +211,8 @@ int Zakuro::Run() {
     }
 
     if (fake_audio_key_trigger) {
-      trigger.reset(
-          new FakeAudioKeyTrigger(ioc, gam.get(), &scenario_player, vcs));
+      trigger.reset(new FakeAudioKeyTrigger(ioc, config_.key_core, gam.get(),
+                                            &scenario_player, vcs));
     }
 
     ioc.run();
