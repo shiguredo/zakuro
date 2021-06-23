@@ -8,7 +8,6 @@ PROGRAM="$0"
 
 _PACKAGES=" \
   macos \
-  ubuntu-18.04_x86_64 \
   ubuntu-20.04_x86_64 \
 "
 
