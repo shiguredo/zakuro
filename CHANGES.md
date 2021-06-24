@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] WebRTC のバージョンを M92 (4515@{#9}) に上げる
+    - @melpon
+
 ## 2021.7
 
 - [CHANGE] Ubuntu 18.04 のビルドを削除
