@@ -15,7 +15,7 @@ Zakuro を提供することで、 Sora を運用するサーバのサイジン�
 
 ## Zakuro は無料で利用できますか？
 
-[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0>`_ としてソースコードを公開しています。
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) としてソースコードを公開しています。
 
 ## Zakuro のライセンスを教えて下さい
 
