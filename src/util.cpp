@@ -206,6 +206,66 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  sora_signaling_notify_metadata, "Signaling metadata")
       ->check(is_json);
 
+  // Fake network 系
+  app.add_option("--fake-network-send-queue-length-packets",
+                 config.fake_network_send.queue_length_packets,
+                 "Queue length in number of packets for sending");
+  app.add_option("--fake-network-send-queue-delay-ms",
+                 config.fake_network_send.queue_delay_ms,
+                 "Delay in addition to capacity induced delay for sending");
+  app.add_option("--fake-network-send-delay-standard-deviation-ms",
+                 config.fake_network_send.delay_standard_deviation_ms,
+                 "Standard deviation of the extra delay for sending");
+  app.add_option("--fake-network-send-link-capacity-kbps",
+                 config.fake_network_send.link_capacity_kbps,
+                 "Link capacity in kbps for sending");
+  app.add_option("--fake-network-send-loss-percent",
+                 config.fake_network_send.loss_percent,
+                 "Random packet loss for sending");
+  app.add_option("--fake-network-send-allow-reordering",
+                 config.fake_network_send.allow_reordering,
+                 "If packets are allowed to be reordered for sending")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--fake-network-send-avg-burst-loss-length",
+                 config.fake_network_send.avg_burst_loss_length,
+                 "The average length of a burst of lost packets for sending");
+  app.add_option("--fake-network-send-packet-overhead",
+                 config.fake_network_send.packet_overhead,
+                 "Additional bytes to add to packet size for sending");
+  app.add_option("--fake-network-send-codel-active-queue-management",
+                 config.fake_network_send.codel_active_queue_management,
+                 "Enable CoDel active queue management for sending")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--fake-network-receive-queue-length-packets",
+                 config.fake_network_receive.queue_length_packets,
+                 "Queue length in number of packets for receiving");
+  app.add_option("--fake-network-receive-queue-delay-ms",
+                 config.fake_network_receive.queue_delay_ms,
+                 "Delay in addition to capacity induced delay for receiving");
+  app.add_option("--fake-network-receive-delay-standard-deviation-ms",
+                 config.fake_network_receive.delay_standard_deviation_ms,
+                 "Standard deviation of the extra delay for receiving");
+  app.add_option("--fake-network-receive-link-capacity-kbps",
+                 config.fake_network_receive.link_capacity_kbps,
+                 "Link capacity in kbps for receiving");
+  app.add_option("--fake-network-receive-loss-percent",
+                 config.fake_network_receive.loss_percent,
+                 "Random packet loss for receiving");
+  app.add_option("--fake-network-receive-allow-reordering",
+                 config.fake_network_receive.allow_reordering,
+                 "If packets are allowed to be reordered for receiving")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--fake-network-receive-avg-burst-loss-length",
+                 config.fake_network_receive.avg_burst_loss_length,
+                 "The average length of a burst of lost packets for receiving");
+  app.add_option("--fake-network-receive-packet-overhead",
+                 config.fake_network_receive.packet_overhead,
+                 "Additional bytes to add to packet size for receiving");
+  app.add_option("--fake-network-receive-codel-active-queue-management",
+                 config.fake_network_receive.codel_active_queue_management,
+                 "Enable CoDel active queue management for receiving")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+
   try {
     app.parse(args);
   } catch (const CLI::ParseError& e) {
@@ -272,10 +332,51 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   }
 }
 
-std::vector<std::string> Util::NodeToArgs(const YAML::Node& inst) {
-  std::vector<std::string> args;
+template <class T>
+static std::string ConvertEnv(const YAML::Node& node,
+                              const std::map<std::string, std::string>& envs) {
+  // とりあえず文字列として取り出して置換する
+  std::string input = node.as<std::string>();
+  std::string result;
+  std::regex re("\\$\\{(.*?)\\}");
+  std::sregex_iterator it(input.begin(), input.end(), re);
+  std::sregex_iterator last_it;
+  std::sregex_iterator end;
+  for (; it != end; ++it) {
+    const std::smatch& m = *it;
+    result += m.prefix().str();
+    std::string name = m[1].str();
+    auto mit = envs.find(name);
+    if (mit != envs.end()) {
+      result += mit->second;
+    } else {
+      result += m.str();
+    }
+    last_it = it;
+  }
+  if (last_it != end) {
+    result += last_it->suffix().str();
+  } else {
+    result = input;
+  }
+
+  // 変換後、実際に対象の型に置換できるかチェック
+  YAML::Node n(result);
+  return std::to_string(n.as<T>());
+}
+
+std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
+  std::vector<std::vector<std::string>> argss;
 
   bool has_error = false;
+
+  int instance_num = 1;
+  {
+    const YAML::Node& node = inst["instance_num"];
+    if (node) {
+      instance_num = node.as<int>();
+    }
+  }
 
 #define DEF_SCALAR(x, prefix, key, type, type_name)                                       \
   try {                                                                                   \
@@ -287,7 +388,7 @@ std::vector<std::string> Util::NodeToArgs(const YAML::Node& inst) {
         has_error = true;                                                                 \
       } else {                                                                            \
         args.push_back("--" prefix key);                                                  \
-        args.push_back(std::to_string(node.as<type>()));                                  \
+        args.push_back(ConvertEnv<type>(node, envs));                                     \
       }                                                                                   \
     }                                                                                     \
   } catch (YAML::BadConversion & e) {                                                     \
@@ -322,61 +423,97 @@ std::vector<std::string> Util::NodeToArgs(const YAML::Node& inst) {
     has_error = true;                                                                  \
   }
 
-  DEF_STRING(inst, "", "name");
-  DEF_INTEGER(inst, "", "vcs");
-  DEF_DOUBLE(inst, "", "hatch-rate");
-  DEF_FLAG(inst, "", "no-video-device");
-  DEF_FLAG(inst, "", "no-audio-device");
-  DEF_FLAG(inst, "", "fake-capture-device");
-  DEF_STRING(inst, "", "fake-video-capture");
-  DEF_STRING(inst, "", "fake-audio-capture");
-  DEF_FLAG(inst, "", "sandstorm");
-  DEF_STRING(inst, "", "video-device");
-  DEF_STRING(inst, "", "resolution");
-  DEF_INTEGER(inst, "", "framerate");
-  DEF_FLAG(inst, "", "fixed-resolution");
-  DEF_STRING(inst, "", "priority");
-  DEF_FLAG(inst, "", "insecure");
-  DEF_STRING(inst, "", "openh264");
-  DEF_STRING(inst, "", "game");
-  DEF_STRING(inst, "", "scenario");
+  for (int i = 0; i < instance_num; i++) {
+    std::map<std::string, std::string> envs;
+    envs[""] = std::to_string(i + 1);
+    std::vector<std::string> args;
 
-  const YAML::Node& sora = inst["sora"];
-  if (sora) {
-    DEF_STRING(sora, "sora-", "signaling-url");
-    DEF_STRING(sora, "sora-", "channel-id");
-    DEF_STRING(sora, "sora-", "role");
-    DEF_BOOLEAN(sora, "sora-", "video");
-    DEF_BOOLEAN(sora, "sora-", "audio");
-    DEF_STRING(sora, "sora-", "video-codec-type");
-    DEF_STRING(sora, "sora-", "audio-codec-type");
-    DEF_INTEGER(sora, "sora-", "video-bit-rate");
-    DEF_INTEGER(sora, "sora-", "audio-bit-rate");
-    DEF_BOOLEAN(sora, "sora-", "multistream");
-    DEF_BOOLEAN(sora, "sora-", "simulcast");
-    DEF_BOOLEAN(sora, "sora-", "spotlight");
-    DEF_INTEGER(sora, "sora-", "spotlight-number");
-    DEF_STRING(sora, "sora-", "data-channel-signaling");
-    DEF_INTEGER(sora, "sora-", "data-channel-signaling-timeout");
-    DEF_STRING(sora, "sora-", "ignore-disconnect-websocket");
-    DEF_INTEGER(sora, "sora-", "disconnect-wait-timeout");
-    if (sora["metadata"]) {
-      boost::json::value value = NodeToJson(sora["metadata"]);
-      args.push_back("--sora-metadata");
-      args.push_back(boost::json::serialize(value));
+    DEF_STRING(inst, "", "name");
+    DEF_INTEGER(inst, "", "vcs");
+    DEF_DOUBLE(inst, "", "hatch-rate");
+    DEF_FLAG(inst, "", "no-video-device");
+    DEF_FLAG(inst, "", "no-audio-device");
+    DEF_FLAG(inst, "", "fake-capture-device");
+    DEF_STRING(inst, "", "fake-video-capture");
+    DEF_STRING(inst, "", "fake-audio-capture");
+    DEF_FLAG(inst, "", "sandstorm");
+    DEF_STRING(inst, "", "video-device");
+    DEF_STRING(inst, "", "resolution");
+    DEF_INTEGER(inst, "", "framerate");
+    DEF_FLAG(inst, "", "fixed-resolution");
+    DEF_STRING(inst, "", "priority");
+    DEF_FLAG(inst, "", "insecure");
+    DEF_STRING(inst, "", "openh264");
+    DEF_STRING(inst, "", "game");
+    DEF_STRING(inst, "", "scenario");
+
+    const YAML::Node& sora = inst["sora"];
+    if (sora) {
+      DEF_STRING(sora, "sora-", "signaling-url");
+      DEF_STRING(sora, "sora-", "channel-id");
+      DEF_STRING(sora, "sora-", "role");
+      DEF_BOOLEAN(sora, "sora-", "video");
+      DEF_BOOLEAN(sora, "sora-", "audio");
+      DEF_STRING(sora, "sora-", "video-codec-type");
+      DEF_STRING(sora, "sora-", "audio-codec-type");
+      DEF_INTEGER(sora, "sora-", "video-bit-rate");
+      DEF_INTEGER(sora, "sora-", "audio-bit-rate");
+      DEF_BOOLEAN(sora, "sora-", "multistream");
+      DEF_BOOLEAN(sora, "sora-", "simulcast");
+      DEF_BOOLEAN(sora, "sora-", "spotlight");
+      DEF_INTEGER(sora, "sora-", "spotlight-number");
+      DEF_STRING(sora, "sora-", "data-channel-signaling");
+      DEF_INTEGER(sora, "sora-", "data-channel-signaling-timeout");
+      DEF_STRING(sora, "sora-", "ignore-disconnect-websocket");
+      DEF_INTEGER(sora, "sora-", "disconnect-wait-timeout");
+      if (sora["metadata"]) {
+        boost::json::value value = NodeToJson(sora["metadata"]);
+        args.push_back("--sora-metadata");
+        args.push_back(boost::json::serialize(value));
+      }
+      if (sora["signaling-notify-metadata"]) {
+        boost::json::value value =
+            NodeToJson(sora["signaling-notify-metadata"]);
+        args.push_back("--sora-signaling-notify-metadata");
+        args.push_back(boost::json::serialize(value));
+      }
     }
-    if (sora["signaling-notify-metadata"]) {
-      boost::json::value value = NodeToJson(sora["signaling-notify-metadata"]);
-      args.push_back("--sora-signaling-notify-metadata");
-      args.push_back(boost::json::serialize(value));
+
+    const YAML::Node& fake_network = inst["fake-network"];
+    if (fake_network) {
+      DEF_INTEGER(fake_network, "fake-network-", "send-queue-length-packets");
+      DEF_INTEGER(fake_network, "fake-network-", "send-queue-delay-ms");
+      DEF_INTEGER(fake_network, "fake-network-",
+                  "send-delay-standard-deviation-ms");
+      DEF_INTEGER(fake_network, "fake-network-", "send-link-capacity-kbps");
+      DEF_INTEGER(fake_network, "fake-network-", "send-loss-percent");
+      DEF_BOOLEAN(fake_network, "fake-network-", "send-allow-reordering");
+      DEF_INTEGER(fake_network, "fake-network-", "send-avg-burst-loss-length");
+      DEF_INTEGER(fake_network, "fake-network-", "send-packet-overhead");
+      DEF_BOOLEAN(fake_network, "fake-network-",
+                  "send-codel-active-queue-management");
+      DEF_INTEGER(fake_network, "fake-network-",
+                  "receive-queue-length-packets");
+      DEF_INTEGER(fake_network, "fake-network-", "receive-queue-delay-ms");
+      DEF_INTEGER(fake_network, "fake-network-",
+                  "receive-delay-standard-deviation-ms");
+      DEF_INTEGER(fake_network, "fake-network-", "receive-link-capacity-kbps");
+      DEF_INTEGER(fake_network, "fake-network-", "receive-loss-percent");
+      DEF_BOOLEAN(fake_network, "fake-network-", "receive-allow-reordering");
+      DEF_INTEGER(fake_network, "fake-network-",
+                  "receive-avg-burst-loss-length");
+      DEF_INTEGER(fake_network, "fake-network-", "receive-packet-overhead");
+      DEF_BOOLEAN(fake_network, "fake-network-",
+                  "receive-codel-active-queue-management");
     }
+
+    if (has_error) {
+      throw std::exception();
+    }
+    argss.push_back(args);
   }
 
-  if (has_error) {
-    throw std::exception();
-  }
-
-  return args;
+  return argss;
 }
 
 boost::json::value Util::NodeToJson(const YAML::Node& node) {

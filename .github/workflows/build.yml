@@ -48,10 +48,9 @@ jobs:
       fail-fast: false
       matrix:
         name:
-          - ubuntu-18.04_x86_64
           - ubuntu-20.04_x86_64
     name: Build zakuro for ${{ matrix.name }}
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Get Versions
@@ -120,7 +119,6 @@ jobs:
       fail-fast: true
       matrix:
         name:
-          - ubuntu-18.04_x86_64
           - ubuntu-20.04_x86_64
     steps:
       - uses: actions/download-artifact@v1

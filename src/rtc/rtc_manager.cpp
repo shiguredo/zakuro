@@ -21,6 +21,7 @@
 #include <rtc_base/logging.h>
 #include <rtc_base/ssl_adapter.h>
 
+#include "fake_network_call_factory.h"
 #include "nop_video_decoder.h"
 #include "peer_connection_observer.h"
 #include "rtc_ssl_verifier.h"
@@ -110,6 +111,9 @@ RTCManager::RTCManager(
 
   dependencies.media_engine =
       cricket::CreateMediaEngine(std::move(media_dependencies));
+
+  dependencies.call_factory = CreateFakeNetworkCallFactory(
+      config_.fake_network_send, config_.fake_network_receive);
 
   factory_ =
       webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));

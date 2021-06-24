@@ -130,20 +130,22 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     for (auto instance : instances_node) {
-      auto args = Util::NodeToArgs(instance);
-      args.insert(args.begin(), common_args.begin(), common_args.end());
-      args.insert(args.end(), post_args.begin(), post_args.end());
+      auto argss = Util::NodeToArgs(instance);
+      for (auto args : argss) {
+        args.insert(args.begin(), common_args.begin(), common_args.end());
+        args.insert(args.end(), post_args.begin(), post_args.end());
 
-      std::cout << argv[0];
-      for (auto arg : args) {
-        std::cout << " " << escape_if_needed(arg);
+        std::cout << argv[0];
+        for (auto arg : args) {
+          std::cout << " " << escape_if_needed(arg);
+        }
+        std::cout << std::endl;
+
+        config_file = "";
+        config = ZakuroConfig();
+        Util::ParseArgs(args, config_file, log_level, port, config, true);
+        configs.push_back(config);
       }
-      std::cout << std::endl;
-
-      config_file = "";
-      config = ZakuroConfig();
-      Util::ParseArgs(args, config_file, log_level, port, config, true);
-      configs.push_back(config);
     }
   }
 

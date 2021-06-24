@@ -132,3 +132,15 @@ zakuro:
         spotlight: true
         simulcast: true
 ```
+
+### instance_num と ${} によるシナリオの動的生成
+
+```
+  instances:
+    - instance_num: 2
+      name: zakuro
+      vcs: 2
+      sora:
+        channel-id: "sora${}"
+        ...
+```
