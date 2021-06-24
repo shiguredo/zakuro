@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2021.7
+
 - [CHANGE] Ubuntu 18.04 のビルドを削除
     - @melpon
 - [ADD] YAML 設定で複数のインスタンスを立ち上げられる機能を実装
