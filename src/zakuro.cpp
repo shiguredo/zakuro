@@ -36,7 +36,7 @@ int Zakuro::Run() {
         new GameKuzushi(size.width, size.height, gam.get(), config_.key_core));
   }
 
-  bool fake_audio_key_trigger = true;
+  bool fake_audio_key_trigger = config_.game != "kuzushi";
   std::unique_ptr<FakeAudioKeyTrigger> trigger;
   if (fake_audio_key_trigger) {
     gam.reset(new GameAudioManager());
