@@ -28,9 +28,9 @@ webrtc::Call* FakeNetworkCallFactory::CreateCall(
   static_assert(
       std::is_standard_layout<webrtc::BuiltInNetworkBehaviorConfig>::value, "");
   bool send_config_changed =
-      memcmp(&send_config_, &default_config, sizeof(default_config)) == 0;
+      memcmp(&send_config_, &default_config, sizeof(default_config)) != 0;
   bool receive_config_changed =
-      memcmp(&receive_config_, &default_config, sizeof(default_config)) == 0;
+      memcmp(&receive_config_, &default_config, sizeof(default_config)) != 0;
 
   webrtc::Call* call = webrtc::Call::Create(
       config,
