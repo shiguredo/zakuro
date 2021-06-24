@@ -206,6 +206,66 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  sora_signaling_notify_metadata, "Signaling metadata")
       ->check(is_json);
 
+  // Fake network 系
+  app.add_option("--fake-network-send-queue-length-packets",
+                 config.fake_network_send.queue_length_packets,
+                 "Queue length in number of packets for sending");
+  app.add_option("--fake-network-send-queue-delay-ms",
+                 config.fake_network_send.queue_delay_ms,
+                 "Delay in addition to capacity induced delay for sending");
+  app.add_option("--fake-network-send-delay-standard-deviation-ms",
+                 config.fake_network_send.delay_standard_deviation_ms,
+                 "Standard deviation of the extra delay for sending");
+  app.add_option("--fake-network-send-link-capacity-kbps",
+                 config.fake_network_send.link_capacity_kbps,
+                 "Link capacity in kbps for sending");
+  app.add_option("--fake-network-send-loss-percent",
+                 config.fake_network_send.loss_percent,
+                 "Random packet loss for sending");
+  app.add_option("--fake-network-send-allow-reordering",
+                 config.fake_network_send.allow_reordering,
+                 "If packets are allowed to be reordered for sending")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--fake-network-send-avg-burst-loss-length",
+                 config.fake_network_send.avg_burst_loss_length,
+                 "The average length of a burst of lost packets for sending");
+  app.add_option("--fake-network-send-packet-overhead",
+                 config.fake_network_send.packet_overhead,
+                 "Additional bytes to add to packet size for sending");
+  app.add_option("--fake-network-send-codel-active-queue-management",
+                 config.fake_network_send.codel_active_queue_management,
+                 "Enable CoDel active queue management for sending")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--fake-network-receive-queue-length-packets",
+                 config.fake_network_receive.queue_length_packets,
+                 "Queue length in number of packets for receiving");
+  app.add_option("--fake-network-receive-queue-delay-ms",
+                 config.fake_network_receive.queue_delay_ms,
+                 "Delay in addition to capacity induced delay for receiving");
+  app.add_option("--fake-network-receive-delay-standard-deviation-ms",
+                 config.fake_network_receive.delay_standard_deviation_ms,
+                 "Standard deviation of the extra delay for receiving");
+  app.add_option("--fake-network-receive-link-capacity-kbps",
+                 config.fake_network_receive.link_capacity_kbps,
+                 "Link capacity in kbps for receiving");
+  app.add_option("--fake-network-receive-loss-percent",
+                 config.fake_network_receive.loss_percent,
+                 "Random packet loss for receiving");
+  app.add_option("--fake-network-receive-allow-reordering",
+                 config.fake_network_receive.allow_reordering,
+                 "If packets are allowed to be reordered for receiving")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--fake-network-receive-avg-burst-loss-length",
+                 config.fake_network_receive.avg_burst_loss_length,
+                 "The average length of a burst of lost packets for receiving");
+  app.add_option("--fake-network-receive-packet-overhead",
+                 config.fake_network_receive.packet_overhead,
+                 "Additional bytes to add to packet size for receiving");
+  app.add_option("--fake-network-receive-codel-active-queue-management",
+                 config.fake_network_receive.codel_active_queue_management,
+                 "Enable CoDel active queue management for receiving")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+
   try {
     app.parse(args);
   } catch (const CLI::ParseError& e) {

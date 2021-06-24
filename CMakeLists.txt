@@ -92,6 +92,7 @@ target_sources(zakuro
     src/main.cpp
     src/rtc/device_video_capturer.cpp
     src/rtc/dynamic_h264_video_encoder.cpp
+    src/rtc/fake_network_call_factory.cpp
     src/rtc/h264_format.cpp
     src/rtc/nop_video_decoder.cpp
     src/rtc/peer_connection_observer.cpp

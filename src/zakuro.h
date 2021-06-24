@@ -5,6 +5,9 @@
 #include <cstdlib>
 #include <string>
 
+// WebRTC
+#include <api/test/simulated_network.h>
+
 // Boost
 #include <boost/json.hpp>
 #include <boost/optional.hpp>
@@ -53,6 +56,9 @@ struct ZakuroConfig {
   int sora_disconnect_wait_timeout = 5;
   boost::json::value sora_metadata;
   boost::json::value sora_signaling_notify_metadata;
+
+  webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
+  webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
 
   std::shared_ptr<GameKeyCore> key_core;
 

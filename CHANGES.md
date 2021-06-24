@@ -11,9 +11,11 @@
 
 ## develop
 
+- [CHANGE] Ubuntu 18.04 のビルドを削除
+    - @melpon
 - [ADD] YAML 設定で複数のインスタンスを立ち上げられる機能を実装
     - @melpon
-- [ADD] Ubuntu 18.04 のビルドを削除
+- [ADD] パケロスなどの機能をオプションで指定可能にする
     - @melpon
 
 ## 2021.6
