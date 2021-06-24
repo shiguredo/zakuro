@@ -7,8 +7,6 @@
 #include <modules/video_coding/codecs/vp8/include/vp8.h>
 #include <modules/video_coding/codecs/vp9/include/vp9.h>
 
-#include "h264_format.h"
-
 int32_t NopVideoDecoder::InitDecode(const webrtc::VideoCodec* codec_settings,
                                     int32_t number_of_cores) {
   return WEBRTC_VIDEO_CODEC_OK;
@@ -57,14 +55,14 @@ NopVideoDecoderFactory::GetSupportedFormats() const {
   }
   supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kAv1CodecName));
   std::vector<webrtc::SdpVideoFormat> h264_codecs = {
-      CreateH264Format(webrtc::H264::kProfileBaseline, webrtc::H264::kLevel3_1,
-                       "1"),
-      CreateH264Format(webrtc::H264::kProfileBaseline, webrtc::H264::kLevel3_1,
-                       "0"),
-      CreateH264Format(webrtc::H264::kProfileConstrainedBaseline,
-                       webrtc::H264::kLevel3_1, "1"),
-      CreateH264Format(webrtc::H264::kProfileConstrainedBaseline,
-                       webrtc::H264::kLevel3_1, "0")};
+      CreateH264Format(webrtc::H264Profile::kProfileBaseline,
+                       webrtc::H264Level::kLevel3_1, "1"),
+      CreateH264Format(webrtc::H264Profile::kProfileBaseline,
+                       webrtc::H264Level::kLevel3_1, "0"),
+      CreateH264Format(webrtc::H264Profile::kProfileConstrainedBaseline,
+                       webrtc::H264Level::kLevel3_1, "1"),
+      CreateH264Format(webrtc::H264Profile::kProfileConstrainedBaseline,
+                       webrtc::H264Level::kLevel3_1, "0")};
   for (const webrtc::SdpVideoFormat& format : h264_codecs) {
     supported_codecs.push_back(format);
   }
