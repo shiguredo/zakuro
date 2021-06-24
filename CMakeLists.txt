@@ -99,6 +99,7 @@ target_sources(zakuro
     src/rtc/rtc_manager.cpp
     src/rtc/rtc_ssl_verifier.cpp
     src/rtc/scalable_track_source.cpp
+    src/rtc/sctp_transport_factory.cpp
     src/rtc/software_video_encoder.cpp
     src/rtc/zakuro_audio_device_module.cpp
     src/sora/sora_client.cpp

@@ -125,6 +125,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_set("--game", config.game, {"kuzushi"}, "Play game");
   app.add_set("--scenario", config.scenario, {"", "reconnect"},
               "Scenario type");
+  app.add_flag("--use-dcsctp", config.use_dcsctp,
+               "Use dcsctp instead of usrsctp");
 
   // Sora 系オプション
   app.add_option("--sora-signaling-url", config.sora_signaling_url,
@@ -446,6 +448,7 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "openh264");
     DEF_STRING(inst, "", "game");
     DEF_STRING(inst, "", "scenario");
+    DEF_FLAG(inst, "", "use-dcsctp");
 
     const YAML::Node& sora = inst["sora"];
     if (sora) {
