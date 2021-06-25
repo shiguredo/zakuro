@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2021.8
+
 - [UPDATE] WebRTC のバージョンを M92 (4515@{#9}) に上げる
     - @melpon
 - [ADD] dcsctp を利用するオプション `--use-dcsctp` を追加
