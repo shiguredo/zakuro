@@ -14,7 +14,6 @@
 #include <rtc_base/logging.h>
 
 #include "dynamic_h264_video_encoder.h"
-#include "h264_format.h"
 
 SoftwareVideoEncoderFactory::SoftwareVideoEncoderFactory(std::string openh264,
                                                          bool simulcast)
@@ -34,14 +33,14 @@ SoftwareVideoEncoderFactory::GetSupportedFormats() const {
   }
   supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kAv1CodecName));
   std::vector<webrtc::SdpVideoFormat> h264_codecs = {
-      CreateH264Format(webrtc::H264::kProfileBaseline, webrtc::H264::kLevel3_1,
-                       "1"),
-      CreateH264Format(webrtc::H264::kProfileBaseline, webrtc::H264::kLevel3_1,
-                       "0"),
-      CreateH264Format(webrtc::H264::kProfileConstrainedBaseline,
-                       webrtc::H264::kLevel3_1, "1"),
-      CreateH264Format(webrtc::H264::kProfileConstrainedBaseline,
-                       webrtc::H264::kLevel3_1, "0")};
+      CreateH264Format(webrtc::H264Profile::kProfileBaseline,
+                       webrtc::H264Level::kLevel3_1, "1"),
+      CreateH264Format(webrtc::H264Profile::kProfileBaseline,
+                       webrtc::H264Level::kLevel3_1, "0"),
+      CreateH264Format(webrtc::H264Profile::kProfileConstrainedBaseline,
+                       webrtc::H264Level::kLevel3_1, "1"),
+      CreateH264Format(webrtc::H264Profile::kProfileConstrainedBaseline,
+                       webrtc::H264Level::kLevel3_1, "0")};
   for (const webrtc::SdpVideoFormat& format : h264_codecs) {
     supported_codecs.push_back(format);
   }

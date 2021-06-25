@@ -28,7 +28,6 @@ $ sudo apt install libnspr4 libnss3
 
 ```
 $ ./zakuro \
-
     --sora-signaling-url wss://example.com/signaling \
     --sora-role sendrecv \
     --sora-channel-id zakuro-test \
@@ -135,7 +134,7 @@ zakuro:
 
 ### instance_num と ${} によるシナリオの動的生成
 
-```
+```yaml
   instances:
     - instance_num: 2
       name: zakuro

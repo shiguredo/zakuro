@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m91.4472-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4472)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m92.4515-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4515)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -29,6 +29,121 @@ Zakuro のビルドしたい人は [BUILD.md](doc/BUILD.md) をお読みくだ�
 ## FAQ
 
 [FAQ.md](doc/FAQ.md) をお読みください。
+
+## ヘルプ
+
+```console
+$ ./zakuro --help
+Zakuro - WebRTC Load Testing Tool
+Usage: [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  --version                   Show version information
+  --config TEXT:FILE          YAML config file path
+  --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
+                              Log severity level threshold
+  --port INT:INT in [-1 - 65535]
+                              Port number (default: -1)
+  --name TEXT                 Client Name
+  --vcs INT:INT in [1 - 100]  Virtual Clients
+  --hatch-rate FLOAT:FLOAT in [0.1 - 100]
+                              Spawned virtual clients per seconds
+  --no-video-device           Do not use video device
+  --no-audio-device           Do not use audio device
+  --fake-capture-device       Fake Capture Device
+  --fake-video-capture TEXT:FILE
+                              Fake Video from File
+  --fake-audio-capture TEXT:FILE
+                              Fake Audio from File
+  --sandstorm                 Fake Sandstorm Video
+  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
+  --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT])
+  --framerate INT:INT in [1 - 60]
+                              Video framerate
+  --fixed-resolution          Maintain video resolution in degradation
+  --priority TEXT:{BALANCE,FRAMERATE,RESOLUTION}
+                              Preference in video degradation (experimental)
+  --insecure                  Allow insecure server connections when using SSL
+  --openh264 TEXT:FILE        OpenH264 dynamic library path. "OpenH264 Video Codec provided by Cisco Systems, Inc."
+  --game TEXT:{kuzushi}       Play game
+  --scenario TEXT:{,reconnect}
+                              Scenario type
+  --use-dcsctp                Use dcsctp instead of usrsctp
+  --sora-signaling-url TEXT   Signaling URL
+  --sora-channel-id TEXT      Channel ID
+  --sora-role TEXT:{recvonly,sendonly,sendrecv}
+                              Role
+  --sora-video BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Send video to sora (default: true)
+  --sora-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Send audio to sora (default: true)
+  --sora-video-codec-type TEXT:{,AV1,H264,VP8,VP9}
+                              Video codec for send
+  --sora-audio-codec-type TEXT:{,OPUS}
+                              Audio codec for send
+  --sora-video-bit-rate INT:INT in [0 - 30000]
+                              Video bit rate
+  --sora-audio-bit-rate INT:INT in [0 - 510]
+                              Audio bit rate
+  --sora-multistream BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Use multistream (default: false)
+  --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Use simulcast (default: false)
+  --sora-spotlight BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Use spotlight (default: false)
+  --sora-spotlight-number INT:INT in [0 - 8]
+                              Number of spotlight
+  --sora-data-channel-signaling TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
+                              Use DataChannel for Sora signaling (default: false)
+  --sora-data-channel-signaling-timeout INT:POSITIVE
+                              Timeout for Data Channel in seconds (default: 180)
+  --sora-ignore-disconnect-websocket TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
+                              Ignore WebSocket disconnection if using Data Channel (default: false)
+  --sora-disconnect-wait-timeout INT:POSITIVE
+                              Disconnecting timeout for Data Channel in seconds (default: 5)
+  --sora-metadata TEXT:JSON Value
+                              Signaling metadata used in connect message
+  --sora-signaling-notify-metadata TEXT:JSON Value
+                              Signaling metadata
+  --fake-network-send-queue-length-packets UINT
+                              Queue length in number of packets for sending
+  --fake-network-send-queue-delay-ms INT
+                              Delay in addition to capacity induced delay for sending
+  --fake-network-send-delay-standard-deviation-ms INT
+                              Standard deviation of the extra delay for sending
+  --fake-network-send-link-capacity-kbps INT
+                              Link capacity in kbps for sending
+  --fake-network-send-loss-percent INT
+                              Random packet loss for sending
+  --fake-network-send-allow-reordering BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              If packets are allowed to be reordered for sending
+  --fake-network-send-avg-burst-loss-length INT
+                              The average length of a burst of lost packets for sending
+  --fake-network-send-packet-overhead INT
+                              Additional bytes to add to packet size for sending
+  --fake-network-send-codel-active-queue-management BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Enable CoDel active queue management for sending
+  --fake-network-receive-queue-length-packets UINT
+                              Queue length in number of packets for receiving
+  --fake-network-receive-queue-delay-ms INT
+                              Delay in addition to capacity induced delay for receiving
+  --fake-network-receive-delay-standard-deviation-ms INT
+                              Standard deviation of the extra delay for receiving
+  --fake-network-receive-link-capacity-kbps INT
+                              Link capacity in kbps for receiving
+  --fake-network-receive-loss-percent INT
+                              Random packet loss for receiving
+  --fake-network-receive-allow-reordering BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              If packets are allowed to be reordered for receiving
+  --fake-network-receive-avg-burst-loss-length INT
+                              The average length of a burst of lost packets for receiving
+  --fake-network-receive-packet-overhead INT
+                              Additional bytes to add to packet size for receiving
+  --fake-network-receive-codel-active-queue-management BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Enable CoDel active queue management for receiving
+```
+
 
 ## ライセンス
 
