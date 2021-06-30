@@ -13,6 +13,8 @@
 
 - [UPDATE] `cmake` を `3.20.5` に上げる
     - @voluntas
+- [ADD] `--sora-audio-opus-params-clock-rate` オプションを追加
+    - @melpon
 
 ## 2021.8
 

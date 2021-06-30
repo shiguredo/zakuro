@@ -154,6 +154,8 @@ int Zakuro::Run() {
     sorac_config.audio_codec_type = config_.sora_audio_codec_type;
     sorac_config.video_bit_rate = config_.sora_video_bit_rate;
     sorac_config.audio_bit_rate = config_.sora_audio_bit_rate;
+    sorac_config.audio_opus_params_clock_rate =
+        config_.sora_audio_opus_params_clock_rate;
     sorac_config.metadata = config_.sora_metadata;
     sorac_config.signaling_notify_metadata =
         config_.sora_signaling_notify_metadata;
