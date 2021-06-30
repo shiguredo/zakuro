@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] `cmake` を `3.20.5` に上げる
+    - @voluntas
+
 ## 2021.8
 
 - [UPDATE] WebRTC のバージョンを M92 (4515@{#9}) に上げる
