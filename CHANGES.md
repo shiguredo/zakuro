@@ -15,6 +15,8 @@
     - @voluntas
 - [ADD] `--sora-audio-opus-params-clock-rate` オプションを追加
     - @melpon
+- [FIX] fake 映像/音声が正常に動かなくなっていたのを修正
+    - @melpon
 
 ## 2021.8
 

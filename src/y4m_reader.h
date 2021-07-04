@@ -2,6 +2,7 @@
 #define Y4M_READER_H_
 
 #include <stdio.h>
+#include <stddef.h>
 
 #include <chrono>
 #include <memory>
@@ -30,16 +31,16 @@ class Y4MReader {
 
  private:
   std::shared_ptr<FILE> file_;
-  int start_pos_ = 0;
-  int pos_ = 0;
-  int frame_ = 0;
-  int prev_frame_ = -1;
-  int width_ = 0;
-  int height_ = 0;
-  int fps_num_ = 0;
-  int fps_den_ = 0;
-  int aspect_h_ = 0;
-  int aspect_v_ = 0;
+  int64_t start_pos_ = 0;
+  int64_t pos_ = 0;
+  int64_t frame_ = 0;
+  int64_t prev_frame_ = -1;
+  int64_t width_ = 0;
+  int64_t height_ = 0;
+  int64_t fps_num_ = 0;
+  int64_t fps_den_ = 0;
+  int64_t aspect_h_ = 0;
+  int64_t aspect_v_ = 0;
   uintmax_t file_size_ = 0;
 };
 

@@ -36,7 +36,8 @@ int Zakuro::Run() {
         new GameKuzushi(size.width, size.height, gam.get(), config_.key_core));
   }
 
-  bool fake_audio_key_trigger = config_.game != "kuzushi";
+  bool fake_audio_key_trigger =
+      config_.game != "kuzushi" && config_.fake_audio_capture.empty();
   std::unique_ptr<FakeAudioKeyTrigger> trigger;
   if (fake_audio_key_trigger) {
     gam.reset(new GameAudioManager());
@@ -180,7 +181,11 @@ int Zakuro::Run() {
     ScenarioPlayer scenario_player(ioc, gam.get(), vcs);
     ScenarioData data;
     int loop_index;
-    if (config_.scenario == "") {
+    if (!fake_audio_key_trigger) {
+      data.Reconnect();
+      data.Sleep(10000, 10000);
+      loop_index = 2;
+    } else if (config_.scenario == "") {
       data.Reconnect();
       data.Sleep(1000, 5000);
       data.PlayVoiceNumberClient();
