@@ -46,6 +46,8 @@ struct ZakuroConfig {
   // 0 の場合ビットレートは Sora 側で決める
   int sora_video_bit_rate = 0;
   int sora_audio_bit_rate = 0;
+  // opus の設定
+  int sora_audio_opus_params_clock_rate = 0;
   std::string sora_role = "";
   bool sora_multistream = false;
   bool sora_simulcast = false;

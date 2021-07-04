@@ -11,6 +11,15 @@
 
 ## develop
 
+## 2021.9
+
+- [UPDATE] `cmake` を `3.20.5` に上げる
+    - @voluntas
+- [ADD] `--sora-audio-opus-params-clock-rate` オプションを追加
+    - @melpon
+- [FIX] fake 映像/音声が正常に動かなくなっていたのを修正
+    - @melpon
+
 ## 2021.8
 
 - [UPDATE] WebRTC のバージョンを M92 (4515@{#9}) に上げる

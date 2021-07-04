@@ -151,7 +151,9 @@ int Y4MReader::ReadHeader() {
         // 'C420' = 4:2:0 with coincident chroma planes
         // 'C422' = 4:2:2
         // 'C444' = 4:4:4
-        if (token != "C420jpeg" && token != "C420paldv" && token != "C420") {
+        // 'C420mpeg2' = Same as C420
+        if (token != "C420jpeg" && token != "C420paldv" && token != "C420" &&
+            token != "C420mpeg2") {
           return 2;
         }
         break;
