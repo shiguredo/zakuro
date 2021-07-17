@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] `cmake` を `3.21.0` に上げる
+    - @voluntas
+
 ## 2021.9
 
 - [UPDATE] `cmake` を `3.20.5` に上げる
