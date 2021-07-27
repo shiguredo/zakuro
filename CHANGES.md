@@ -13,8 +13,6 @@
 
 - [UPDATE] `cmake` を `3.21.0` に上げる
     - @voluntas
-- [UPDATE] `CLI11` を `2.0.0` に上げる
-    - @voluntas
 
 ## 2021.9
 
