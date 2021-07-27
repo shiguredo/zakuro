@@ -113,18 +113,19 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::Range(1, 60));
   app.add_flag("--fixed-resolution", config.fixed_resolution,
                "Maintain video resolution in degradation");
-  app.add_set("--priority", config.priority,
-              {"BALANCE", "FRAMERATE", "RESOLUTION"},
-              "Preference in video degradation (experimental)");
+  app.add_option("--priority", config.priority,
+                 "Preference in video degradation (experimental)")
+      ->check(CLI::IsMember({"BALANCE", "FRAMERATE", "RESOLUTION"}));
   app.add_flag("--insecure", config.insecure,
                "Allow insecure server connections when using SSL");
   app.add_option("--openh264", config.openh264,
                  "OpenH264 dynamic library path. \"OpenH264 Video Codec "
                  "provided by Cisco Systems, Inc.\"")
       ->check(CLI::ExistingFile);
-  app.add_set("--game", config.game, {"kuzushi"}, "Play game");
-  app.add_set("--scenario", config.scenario, {"", "reconnect"},
-              "Scenario type");
+  app.add_option("--game", config.game, "Play game")
+      ->check(CLI::IsMember({"kuzushi"}));
+  app.add_option("--scenario", config.scenario, "Scenario type")
+      ->check(CLI::IsMember({"", "reconnect"}));
   app.add_flag("--use-dcsctp", config.use_dcsctp,
                "Use dcsctp instead of usrsctp");
 
@@ -132,8 +133,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-signaling-url", config.sora_signaling_url,
                  "Signaling URL");
   app.add_option("--sora-channel-id", config.sora_channel_id, "Channel ID");
-  app.add_set("--sora-role", config.sora_role,
-              {"sendonly", "recvonly", "sendrecv"}, "Role");
+  app.add_option("--sora-role", config.sora_role, "Role")
+      ->check(CLI::IsMember({"sendonly", "recvonly", "sendrecv"}));
 
   auto bool_map = std::vector<std::pair<std::string, bool>>(
       {{"false", false}, {"true", true}});
@@ -147,10 +148,12 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-audio", config.sora_audio,
                  "Send audio to sora (default: true)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
-  app.add_set("--sora-video-codec-type", config.sora_video_codec_type,
-              {"", "VP8", "VP9", "AV1", "H264"}, "Video codec for send");
-  app.add_set("--sora-audio-codec-type", config.sora_audio_codec_type,
-              {"", "OPUS"}, "Audio codec for send");
+  app.add_option("--sora-video-codec-type", config.sora_video_codec_type,
+                 "Video codec for send")
+      ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264"}));
+  app.add_option("--sora-audio-codec-type", config.sora_audio_codec_type,
+                 "Audio codec for send")
+      ->check(CLI::IsMember({"", "OPUS"}));
   app.add_option("--sora-video-bit-rate", config.sora_video_bit_rate,
                  "Video bit rate")
       ->check(CLI::Range(0, 30000));
@@ -174,7 +177,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::Range(0, 8));
   app.add_option("--sora-data-channel-signaling",
                  config.sora_data_channel_signaling,
-                 "Use DataChannel for Sora signaling (default: false)")
+                 "Use DataChannel for Sora signaling (default: none)")
       ->type_name("TEXT")
       ->transform(CLI::CheckedTransformer(optional_bool_map, CLI::ignore_case));
   app.add_option("--sora-data-channel-signaling-timeout",
@@ -184,7 +187,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-ignore-disconnect-websocket",
                  config.sora_ignore_disconnect_websocket,
                  "Ignore WebSocket disconnection if using Data Channel "
-                 "(default: false)")
+                 "(default: none)")
       ->type_name("TEXT")
       ->transform(CLI::CheckedTransformer(optional_bool_map, CLI::ignore_case));
   app.add_option(
