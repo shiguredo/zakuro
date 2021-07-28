@@ -15,6 +15,8 @@
     - @voluntas
 - [UPDATE] `CLI11` を `2.0.0` に上げる
     - @melpon
+- [UPDATE] AES-GCM を候補に含める
+    - @melpon
 
 ## 2021.9
 
