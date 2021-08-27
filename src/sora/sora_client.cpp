@@ -106,6 +106,11 @@ void SoraClient::Close(std::function<void()> on_close) {
   }
 }
 
+void SoraClient::SendMessage(const std::string& label,
+                             const std::string& data) {
+  SendDataChannel(label, data);
+}
+
 void SoraClient::Reset() {
   //watchdog_.Disable();
   connection_ = nullptr;
@@ -247,6 +252,32 @@ void SoraClient::DoSendConnect() {
   if (config_.ignore_disconnect_websocket) {
     json_message["ignore_disconnect_websocket"] =
         *config_.ignore_disconnect_websocket;
+  }
+
+  if (!config_.data_channel_messaging.empty()) {
+    boost::json::array ar;
+    for (const auto& m : config_.data_channel_messaging) {
+      boost::json::object obj;
+      obj["label"] = m.label;
+      obj["direction"] = m.direction;
+      if (m.ordered) {
+        obj["ordered"] = *m.ordered;
+      }
+      if (m.max_packet_life_time) {
+        obj["max_packet_life_time"] = *m.max_packet_life_time;
+      }
+      if (m.max_retransmits) {
+        obj["max_retransmits"] = *m.max_retransmits;
+      }
+      if (m.protocol) {
+        obj["protocol"] = *m.protocol;
+      }
+      if (m.compress) {
+        obj["compress"] = *m.compress;
+      }
+      ar.push_back(obj);
+    }
+    json_message["data_channel_messaging"] = ar;
   }
 
   ws_->WriteText(boost::json::serialize(json_message),
@@ -528,7 +559,7 @@ webrtc::DataBuffer SoraClient::ConvertToDataBuffer(const std::string& label,
   RTC_LOG(LS_INFO) << "Convert to DataBuffer: label=" << label
                    << " compressed=" << compressed << " input=" << input;
   const std::string& str = compressed ? ZlibHelper::Compress(input) : input;
-  return webrtc::DataBuffer(rtc::CopyOnWriteBuffer(str), compressed);
+  return webrtc::DataBuffer(rtc::CopyOnWriteBuffer(str), true);
 }
 
 void SoraClient::SendDataChannel(const std::string& label,

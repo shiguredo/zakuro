@@ -213,6 +213,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-signaling-notify-metadata",
                  sora_signaling_notify_metadata, "Signaling metadata")
       ->check(is_json);
+  std::string sora_data_channel_messaging;
+  app.add_option("--sora-data-channel-messaging", sora_data_channel_messaging,
+                 "DataChannel messaging")
+      ->check(is_json);
 
   // Fake network 系
   app.add_option("--fake-network-send-queue-length-packets",
@@ -337,6 +341,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   if (!sora_signaling_notify_metadata.empty()) {
     config.sora_signaling_notify_metadata =
         boost::json::parse(sora_signaling_notify_metadata);
+  }
+  if (!sora_data_channel_messaging.empty()) {
+    config.sora_data_channel_messaging =
+        boost::json::parse(sora_data_channel_messaging);
   }
 }
 
