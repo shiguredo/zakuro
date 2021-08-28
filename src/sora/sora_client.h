@@ -22,16 +22,6 @@
 #include "watchdog.h"
 #include "websocket.h"
 
-struct DataChannelMessaging {
-  std::string label;
-  std::string direction;
-  boost::optional<bool> ordered;
-  boost::optional<int> max_packet_life_time;
-  boost::optional<int> max_retransmits;
-  boost::optional<std::string> protocol;
-  boost::optional<bool> compress;
-};
-
 struct SoraClientConfig {
   std::string signaling_url;
   std::string channel_id;
@@ -55,8 +45,7 @@ struct SoraClientConfig {
   int data_channel_signaling_timeout = 180;
   boost::optional<bool> ignore_disconnect_websocket;
   int disconnect_wait_timeout = 5;
-
-  std::vector<DataChannelMessaging> data_channel_messaging;
+  boost::json::value data_channel_messaging;
 };
 
 class SoraClient : public std::enable_shared_from_this<SoraClient>,

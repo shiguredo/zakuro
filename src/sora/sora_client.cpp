@@ -254,30 +254,8 @@ void SoraClient::DoSendConnect() {
         *config_.ignore_disconnect_websocket;
   }
 
-  if (!config_.data_channel_messaging.empty()) {
-    boost::json::array ar;
-    for (const auto& m : config_.data_channel_messaging) {
-      boost::json::object obj;
-      obj["label"] = m.label;
-      obj["direction"] = m.direction;
-      if (m.ordered) {
-        obj["ordered"] = *m.ordered;
-      }
-      if (m.max_packet_life_time) {
-        obj["max_packet_life_time"] = *m.max_packet_life_time;
-      }
-      if (m.max_retransmits) {
-        obj["max_retransmits"] = *m.max_retransmits;
-      }
-      if (m.protocol) {
-        obj["protocol"] = *m.protocol;
-      }
-      if (m.compress) {
-        obj["compress"] = *m.compress;
-      }
-      ar.push_back(obj);
-    }
-    json_message["data_channel_messaging"] = ar;
+  if (!config_.data_channel_messaging.is_null()) {
+    json_message["data_channel_messaging"] = config_.data_channel_messaging;
   }
 
   ws_->WriteText(boost::json::serialize(json_message),
@@ -557,7 +535,8 @@ webrtc::DataBuffer SoraClient::ConvertToDataBuffer(const std::string& label,
                                                    const std::string& input) {
   bool compressed = compressed_labels_.find(label) != compressed_labels_.end();
   RTC_LOG(LS_INFO) << "Convert to DataBuffer: label=" << label
-                   << " compressed=" << compressed << " input=" << input;
+                   << " compressed=" << compressed
+                   << " inputsize=" << input.size();
   const std::string& str = compressed ? ZlibHelper::Compress(input) : input;
   return webrtc::DataBuffer(rtc::CopyOnWriteBuffer(str), true);
 }
@@ -588,7 +567,8 @@ void SoraClient::OnMessage(
                 (const char*)buffer.data.cdata() + buffer.size());
   }
 
-  RTC_LOG(LS_INFO) << "label=" << label << " data=" << data;
+  RTC_LOG(LS_INFO) << "OnMessage label=" << label
+                   << " datasize=" << data.size();
 
   // ハンドリングする必要のあるラベル以外は何もしない
   if (label != "signaling" && label != "stats") {

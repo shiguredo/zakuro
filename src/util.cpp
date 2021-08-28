@@ -495,6 +495,11 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
         args.push_back("--sora-signaling-notify-metadata");
         args.push_back(boost::json::serialize(value));
       }
+      if (sora["data-channel-messaging"]) {
+        boost::json::value value = NodeToJson(sora["data-channel-messaging"]);
+        args.push_back("--sora-data-channel-messaging");
+        args.push_back(boost::json::serialize(value));
+      }
     }
 
     const YAML::Node& fake_network = inst["fake-network"];
