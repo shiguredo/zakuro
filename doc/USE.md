@@ -143,3 +143,41 @@ zakuro:
         channel-id: "sora${}"
         ...
 ```
+
+### フェイクネットワークによるパケロスの設定
+
+```yaml
+zakuro:
+  instances:
+    - name: zakuro
+      vcs: 1
+      sora:
+        ...
+      fake-network:
+        send-loss-percent: 20
+        receive-loss-percent: 20
+```
+
+### DataChannel メッセージングの設定
+
+```yaml
+zakuro:
+  instances:
+    - name: zakuro
+      vcs: 2
+      sora:
+        signaling-url: "wss://sora.example.com/signaling"
+        channel-id: sora
+        role: sendrecv
+        multistream: true
+        data-channel-signaling: true
+        data-channel-messaging:
+          - label: "#test"
+            direction: "sendrecv"
+            # 省略時は 500 (ms)
+            interval: 1000
+            # 省略時は 10 (bytes)
+            size_min: 10
+            # 省略時は 10 (bytes)
+            size_max: 100
+```
