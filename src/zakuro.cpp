@@ -72,6 +72,21 @@ static bool ParseDataChannelMessaging(boost::json::value data_channel_messaging,
       ch.label = boost::json::value_to<std::string>(it->value());
     }
 
+    // direction
+    std::string direction;
+    {
+      auto it = obj.find("direction");
+      if (it == obj.end()) {
+        std::cout << __LINE__ << std::endl;
+        return false;
+      }
+      if (!it->value().is_string()) {
+        std::cout << __LINE__ << std::endl;
+        return false;
+      }
+      direction = boost::json::value_to<std::string>(it->value());
+    }
+
     // interval
     {
       auto it = obj.find("interval");
@@ -84,8 +99,8 @@ static bool ParseDataChannelMessaging(boost::json::value data_channel_messaging,
         if (ch.interval <= 0) {
           std::cout << __LINE__ << std::endl;
           return false;
+          obj.erase(it);
         }
-        obj.erase(it);
       }
     }
 
@@ -105,8 +120,8 @@ static bool ParseDataChannelMessaging(boost::json::value data_channel_messaging,
           std::cout << __LINE__ << std::endl;
           return false;
         }
+        obj.erase(it);
       }
-      obj.erase(it);
     }
 
     // size-max
@@ -123,17 +138,20 @@ static bool ParseDataChannelMessaging(boost::json::value data_channel_messaging,
         if (ch.size_max < MESSAGE_SIZE_MIN || ch.size_max > MESSAGE_SIZE_MAX) {
           return false;
         }
+        obj.erase(it);
       }
-      obj.erase(it);
     }
 
     if (ch.size_min > ch.size_max) {
       ch.size_max = ch.size_min;
     }
 
-    m.channels.push_back(ch);
+    // direction が sendonly, sendrecv の場合だけ channels に追加する
+    // recvonly の場合は送信する必要が無いので追加しない
+    if (direction == "sendonly" || direction == "sendrecv") {
+      m.channels.push_back(ch);
+    }
   }
-  std::cout << boost::json::serialize(dcm) << std::endl;
   m.remain = dcm;
   return true;
 }
@@ -248,10 +266,12 @@ int Zakuro::Run() {
 
   // DataChannel メッセージング
   DataChannelMessaging dcm;
-  if (!ParseDataChannelMessaging(config_.sora_data_channel_messaging, dcm)) {
-    std::cerr << "[" << config_.name
-              << "] failed to parse DataChannel messaging" << std::endl;
-    return 2;
+  if (!config_.sora_data_channel_messaging.is_null()) {
+    if (!ParseDataChannelMessaging(config_.sora_data_channel_messaging, dcm)) {
+      std::cerr << "[" << config_.name
+                << "] failed to parse DataChannel messaging" << std::endl;
+      return 2;
+    }
   }
 
   std::vector<std::unique_ptr<VirtualClient>> vcs;

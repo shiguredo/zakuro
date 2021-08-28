@@ -325,8 +325,6 @@ std::shared_ptr<RTCConnection> SoraClient::CreateRTCConnection(
 void SoraClient::OnRead(boost::system::error_code ec,
                         std::size_t bytes_transferred,
                         std::string text) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << ": " << ec;
-
   boost::ignore_unused(bytes_transferred);
 
   // 書き込みのために読み込み処理がキャンセルされた時にこのエラーになるので、これはエラーとして扱わない
@@ -334,6 +332,10 @@ void SoraClient::OnRead(boost::system::error_code ec,
     return;
 
   if (ec) {
+    RTC_LOG(LS_ERROR) << "OnRead error: code=" << ws_->reason().code
+                      << " reason=" << ws_->reason().reason.c_str()
+                      << " ec=" << ec.message();
+
     // とりあえず WS や DC を閉じておいて、後で再接続が起きるようにする
     if (connection_) {
       ReconnectAfter();
