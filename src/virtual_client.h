@@ -20,6 +20,7 @@ class VirtualClient {
   void Connect();
   void Close();
   void Clear();
+  void SendMessage(const std::string& label, const std::string& data);
 
  private:
   boost::asio::io_context* ioc_;
