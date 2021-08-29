@@ -19,10 +19,9 @@ FakeNetworkCallFactory::FakeNetworkCallFactory(
 
 webrtc::Call* FakeNetworkCallFactory::CreateCall(
     const webrtc::Call::Config& config) {
-  // https://bugs.chromium.org/p/webrtc/issues/detail?id=12778
-  // の修正があるため、ここは近々処理を変更する必要がある
-
   webrtc::BuiltInNetworkBehaviorConfig default_config;
+
+  webrtc::RtpTransportConfig transport_config = config.ExtractTransportConfig();
 
   // デフォルトの設定と違いがあるか調べる
   static_assert(
@@ -33,9 +32,12 @@ webrtc::Call* FakeNetworkCallFactory::CreateCall(
       memcmp(&receive_config_, &default_config, sizeof(default_config)) != 0;
 
   webrtc::Call* call = webrtc::Call::Create(
-      config,
+      config, webrtc::Clock::GetRealTimeClock(),
       webrtc::SharedModuleThread::Create(
-          webrtc::ProcessThread::Create("ModuleProcessThread"), nullptr));
+          webrtc::ProcessThread::Create("ModuleProcessThread"), nullptr),
+      config.rtp_transport_controller_send_factory->Create(
+          transport_config, webrtc::Clock::GetRealTimeClock(),
+          webrtc::ProcessThread::Create("PacerThread")));
 
   if (send_config_changed || receive_config_changed) {
     return new webrtc::DegradedCall(std::unique_ptr<webrtc::Call>(call),

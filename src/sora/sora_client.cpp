@@ -106,6 +106,11 @@ void SoraClient::Close(std::function<void()> on_close) {
   }
 }
 
+void SoraClient::SendMessage(const std::string& label,
+                             const std::string& data) {
+  SendDataChannel(label, data);
+}
+
 void SoraClient::Reset() {
   //watchdog_.Disable();
   connection_ = nullptr;
@@ -249,6 +254,10 @@ void SoraClient::DoSendConnect() {
         *config_.ignore_disconnect_websocket;
   }
 
+  if (!config_.data_channel_messaging.is_null()) {
+    json_message["data_channel_messaging"] = config_.data_channel_messaging;
+  }
+
   ws_->WriteText(boost::json::serialize(json_message),
                  [self = shared_from_this()](boost::system::error_code ec,
                                              std::size_t) {});
@@ -316,8 +325,6 @@ std::shared_ptr<RTCConnection> SoraClient::CreateRTCConnection(
 void SoraClient::OnRead(boost::system::error_code ec,
                         std::size_t bytes_transferred,
                         std::string text) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << ": " << ec;
-
   boost::ignore_unused(bytes_transferred);
 
   // 書き込みのために読み込み処理がキャンセルされた時にこのエラーになるので、これはエラーとして扱わない
@@ -325,6 +332,10 @@ void SoraClient::OnRead(boost::system::error_code ec,
     return;
 
   if (ec) {
+    RTC_LOG(LS_ERROR) << "OnRead error: code=" << ws_->reason().code
+                      << " reason=" << ws_->reason().reason.c_str()
+                      << " ec=" << ec.message();
+
     // とりあえず WS や DC を閉じておいて、後で再接続が起きるようにする
     if (connection_) {
       ReconnectAfter();
@@ -526,9 +537,10 @@ webrtc::DataBuffer SoraClient::ConvertToDataBuffer(const std::string& label,
                                                    const std::string& input) {
   bool compressed = compressed_labels_.find(label) != compressed_labels_.end();
   RTC_LOG(LS_INFO) << "Convert to DataBuffer: label=" << label
-                   << " compressed=" << compressed << " input=" << input;
+                   << " compressed=" << compressed
+                   << " inputsize=" << input.size();
   const std::string& str = compressed ? ZlibHelper::Compress(input) : input;
-  return webrtc::DataBuffer(rtc::CopyOnWriteBuffer(str), compressed);
+  return webrtc::DataBuffer(rtc::CopyOnWriteBuffer(str), true);
 }
 
 void SoraClient::SendDataChannel(const std::string& label,
@@ -557,7 +569,8 @@ void SoraClient::OnMessage(
                 (const char*)buffer.data.cdata() + buffer.size());
   }
 
-  RTC_LOG(LS_INFO) << "label=" << label << " data=" << data;
+  RTC_LOG(LS_INFO) << "OnMessage label=" << label
+                   << " datasize=" << data.size();
 
   // ハンドリングする必要のあるラベル以外は何もしない
   if (label != "signaling" && label != "stats") {

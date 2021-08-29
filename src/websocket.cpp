@@ -318,3 +318,7 @@ void Websocket::OnClose(close_callback_t on_close,
 
   on_close(ec);
 }
+
+const boost::beast::websocket::close_reason& Websocket::reason() const {
+  return IsSSL() ? wss_->reason() : ws_->reason();
+}

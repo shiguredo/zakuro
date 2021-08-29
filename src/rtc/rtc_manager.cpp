@@ -11,13 +11,13 @@
 #include <api/task_queue/default_task_queue_factory.h>
 #include <api/video_codecs/builtin_video_decoder_factory.h>
 #include <api/video_codecs/builtin_video_encoder_factory.h>
-#include <api/video_track_source_proxy.h>
 #include <media/engine/webrtc_media_engine.h>
 #include <modules/audio_device/include/audio_device.h>
 #include <modules/audio_device/include/audio_device_factory.h>
 #include <modules/audio_processing/include/audio_processing.h>
 #include <modules/video_capture/video_capture.h>
 #include <modules/video_capture/video_capture_factory.h>
+#include <pc/video_track_source_proxy.h>
 #include <rtc_base/logging.h>
 #include <rtc_base/ssl_adapter.h>
 
@@ -129,6 +129,7 @@ RTCManager::RTCManager(
   webrtc::PeerConnectionFactoryInterface::Options factory_options;
   factory_options.disable_encryption = false;
   factory_options.ssl_max_version = rtc::SSL_PROTOCOL_DTLS_12;
+  factory_options.crypto_options.srtp.enable_gcm_crypto_suites = true;
   factory_->SetOptions(factory_options);
 
   if (config_.audio_type != RTCManagerConfig::AudioType::NoAudio) {

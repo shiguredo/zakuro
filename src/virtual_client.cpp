@@ -54,3 +54,11 @@ void VirtualClient::Close() {
 void VirtualClient::Clear() {
   sora_client_.reset();
 }
+
+void VirtualClient::SendMessage(const std::string& label,
+                                const std::string& data) {
+  if (sora_client_ == nullptr || closing_) {
+    return;
+  }
+  sora_client_->SendMessage(label, data);
+}
