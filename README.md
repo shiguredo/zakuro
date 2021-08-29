@@ -57,7 +57,7 @@ Options:
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
   --sandstorm                 Fake Sandstorm Video
-  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
+  --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
   --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT])
   --framerate INT:INT in [1 - 60]
                               Video framerate
@@ -67,25 +67,26 @@ Options:
   --insecure                  Allow insecure server connections when using SSL
   --openh264 TEXT:FILE        OpenH264 dynamic library path. "OpenH264 Video Codec provided by Cisco Systems, Inc."
   --game TEXT:{kuzushi}       Play game
-  --scenario TEXT:{,reconnect}
-                              Scenario type
+  --scenario TEXT:{reconnect} Scenario type
   --use-dcsctp                Use dcsctp instead of usrsctp
   --sora-signaling-url TEXT   Signaling URL
   --sora-channel-id TEXT      Channel ID
-  --sora-role TEXT:{recvonly,sendonly,sendrecv}
+  --sora-role TEXT:{sendonly,recvonly,sendrecv}
                               Role
   --sora-video BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send video to sora (default: true)
   --sora-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send audio to sora (default: true)
-  --sora-video-codec-type TEXT:{,AV1,H264,VP8,VP9}
+  --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264}
                               Video codec for send
-  --sora-audio-codec-type TEXT:{,OPUS}
+  --sora-audio-codec-type TEXT:{OPUS}
                               Audio codec for send
   --sora-video-bit-rate INT:INT in [0 - 30000]
                               Video bit rate
   --sora-audio-bit-rate INT:INT in [0 - 510]
                               Audio bit rate
+  --sora-audio-opus-params-clock-rate INT:INT in [1600 - 48000]
+                              OPUS clock rate
   --sora-multistream BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use multistream (default: false)
   --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
@@ -95,17 +96,19 @@ Options:
   --sora-spotlight-number INT:INT in [0 - 8]
                               Number of spotlight
   --sora-data-channel-signaling TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
-                              Use DataChannel for Sora signaling (default: false)
+                              Use DataChannel for Sora signaling (default: none)
   --sora-data-channel-signaling-timeout INT:POSITIVE
                               Timeout for Data Channel in seconds (default: 180)
   --sora-ignore-disconnect-websocket TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
-                              Ignore WebSocket disconnection if using Data Channel (default: false)
+                              Ignore WebSocket disconnection if using Data Channel (default: none)
   --sora-disconnect-wait-timeout INT:POSITIVE
                               Disconnecting timeout for Data Channel in seconds (default: 5)
   --sora-metadata TEXT:JSON Value
                               Signaling metadata used in connect message
   --sora-signaling-notify-metadata TEXT:JSON Value
                               Signaling metadata
+  --sora-data-channel-messaging TEXT:JSON Value
+                              DataChannel messaging
   --fake-network-send-queue-length-packets UINT
                               Queue length in number of packets for sending
   --fake-network-send-queue-delay-ms INT
