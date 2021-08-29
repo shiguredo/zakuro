@@ -11,14 +11,21 @@
 
 ## develop
 
-- [UPDATE] libwebrtc のバージョンを `m93.4577.0.0` に上げる
+- [UPDATE] Boost 1.77.0 に上げる
     - @voluntas
-- [UPDATE] `cmake` を `3.21.0` に上げる
+- [UPDATE] libwebrtc のバージョンを `m93.4577.8.0` に上げる
+    - @melpon
+- [UPDATE] `cmake` を `3.21.2` に上げる
     - @voluntas
 - [UPDATE] `CLI11` を `2.0.0` に上げる
     - @melpon
 - [UPDATE] AES-GCM を候補に含める
     - @melpon
+- [ADD] DataChannel メッセージングに対応
+    - @melpon
+- [ADD] DataChannel メッセージング向け負荷試験機能を追加
+    - @melpon
+
 
 ## 2021.9
 
