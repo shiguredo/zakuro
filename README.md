@@ -18,6 +18,14 @@ Please read https://github.com/shiguredo/oss before use.
 
 WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora 向けの WebRTC 負荷試験ツールです。
 
+## 特徴
+
+- YAML による設定ファイルへ対応
+- 動的インスタンス作成へ対応
+- データチャネルメッセージングへ対応
+- フェイクネットワークへ対応
+- 最新の libwebrtc へ対応
+
 ## 使ってみる
 
 Zakuro を使ってみたい人は [USE.md](doc/USE.md) をお読みください。
@@ -174,3 +182,4 @@ limitations under the License.
 スポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](http://www14.big.or.jp/~amiami/happy/) 様の声素材を使用しています。
 
 [ゲーム等に使えるフリー声素材配布ページ \- あみたろの声素材工房](https://www14.big.or.jp/~amiami/happy/voice.html)
+
