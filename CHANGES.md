@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] signaling mid 対応
+    - @melpon
+
 ## 2021.10
 
 - [UPDATE] Boost 1.77.0 に上げる
