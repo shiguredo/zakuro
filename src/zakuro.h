@@ -36,7 +36,7 @@ struct ZakuroConfig {
   std::string scenario;
   bool use_dcsctp = false;
 
-  std::string sora_signaling_url = "";
+  std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;
   bool sora_video = true;
   bool sora_audio = true;

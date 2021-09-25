@@ -23,7 +23,7 @@
 #include "websocket.h"
 
 struct SoraClientConfig {
-  std::string signaling_url;
+  std::vector<std::string> signaling_urls;
   std::string channel_id;
 
   bool insecure = false;
@@ -76,11 +76,11 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
  private:
   void ReconnectAfter();
   void OnWatchdogExpired();
-  bool ParseURL(URLParts& parts) const;
+  bool ParseURL(const std::string& url, URLParts& parts, bool& ssl) const;
 
  private:
   void DoRead();
-  void DoSendConnect();
+  void DoSendConnect(bool redirect);
   void DoSendPong();
   void DoSendPong(
       const rtc::scoped_refptr<const webrtc::RTCStatsReport>& report);
@@ -89,10 +89,17 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
       boost::json::value jconfig);
 
  private:
-  void OnConnect(boost::system::error_code ec);
+  void OnConnect(boost::system::error_code ec,
+                 std::string url,
+                 std::shared_ptr<Websocket> ws);
   void OnRead(boost::system::error_code ec,
               std::size_t bytes_transferred,
               std::string text);
+
+  void Redirect(std::string url);
+  void OnRedirect(boost::system::error_code ec,
+                  std::string url,
+                  std::shared_ptr<Websocket> ws);
 
  private:
   webrtc::DataBuffer ConvertToDataBuffer(const std::string& label,
@@ -121,6 +128,8 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
  private:
   boost::asio::io_context& ioc_;
+  std::vector<std::shared_ptr<Websocket>> connecting_wss_;
+  std::string connected_signaling_url_;
   std::shared_ptr<RTCManager> manager_;
 
   std::shared_ptr<Websocket> ws_;
