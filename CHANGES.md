@@ -13,6 +13,8 @@
 
 - [UPDATE] signaling mid 対応
     - @melpon
+- [UPDATE] libwebrtc のバージョンを `m94.4606.3.0` に上げる
+    - @voluntas
 
 ## 2021.10
 
