@@ -11,9 +11,13 @@
 
 ## develop
 
-- [UPDATE] signaling mid 対応
+## 2021.11
+
+- [ADD] クラスター機能に対応
     - @melpon
-- [UPDATE] libwebrtc のバージョンを `m94.4606.3.0` に上げる
+- [UPDATE] シグナリングの mid に対応
+    - @melpon
+- [UPDATE] libwebrtc のバージョンを `m94.4606.3.2` に上げる
     - @voluntas
 
 ## 2021.10
