@@ -17,7 +17,7 @@
     - @melpon
 - [UPDATE] シグナリングの mid に対応
     - @melpon
-- [UPDATE] libwebrtc のバージョンを `m94.4606.3.2` に上げる
+- [UPDATE] libwebrtc のバージョンを `m94.4606.3.3` に上げる
     - @voluntas
 - [UPDATE] `cmake` を `3.21.3` に上げる
     - @voluntas
