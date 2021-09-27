@@ -11,6 +11,23 @@
 
 ## develop
 
+## 2021.11
+
+- [ADD] クラスター機能に対応
+    - @melpon
+- [UPDATE] シグナリングの mid に対応
+    - @melpon
+- [UPDATE] libwebrtc のバージョンを `m94.4606.3.3` に上げる
+    - @voluntas
+- [UPDATE] `cmake` を `3.21.3` に上げる
+    - @voluntas
+- [UPDATE] asmjit を `d0d14ac774977d0060a351f66e35cb57ba0bf59c` に上げる
+    - @voluntas
+- [UPDATE] blend2d を `3a0299c9126d19759a483ac3267a52b50ec77141` に上げる
+    - @voluntas
+
+## 2021.10
+
 - [UPDATE] Boost 1.77.0 に上げる
     - @voluntas
 - [UPDATE] libwebrtc のバージョンを `m93.4577.8.0` に上げる

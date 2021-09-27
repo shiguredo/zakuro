@@ -287,7 +287,7 @@ int Zakuro::Run() {
 
     SoraClientConfig sorac_config;
     sorac_config.insecure = config_.insecure;
-    sorac_config.signaling_url = config_.sora_signaling_url;
+    sorac_config.signaling_urls = config_.sora_signaling_urls;
     sorac_config.channel_id = config_.sora_channel_id;
     sorac_config.video = config_.sora_video;
     sorac_config.audio = config_.sora_audio;

@@ -130,8 +130,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                "Use dcsctp instead of usrsctp");
 
   // Sora 系オプション
-  app.add_option("--sora-signaling-url", config.sora_signaling_url,
-                 "Signaling URL");
+  app.add_option("--sora-signaling-url", config.sora_signaling_urls,
+                 "Signaling URLs")
+      ->take_all();
   app.add_option("--sora-channel-id", config.sora_channel_id, "Channel ID");
   app.add_option("--sora-role", config.sora_role, "Role")
       ->check(CLI::IsMember({"sendonly", "recvonly", "sendrecv"}));
@@ -301,7 +302,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   // 必須オプション。
   // add_option()->required() を使うと --version や --config を指定した際に
   // エラーになってしまうので、ここでチェックする
-  if (config.sora_signaling_url.empty()) {
+  if (config.sora_signaling_urls.empty()) {
     std::cerr << "--sora-signaling-url is required" << std::endl;
     std::exit(1);
   }
@@ -315,7 +316,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   }
 
   // サイマルキャストは VP8 か H264 のみで動作する
-  if (config.sora_simulcast && config.sora_video_codec_type != "VP8" &&
+  if (config.sora_video && config.sora_simulcast &&
+      config.sora_video_codec_type != "VP8" &&
       config.sora_video_codec_type != "H264") {
     std::cerr << "Simulcast works only --sora-video-codec=VP8 or H264."
               << std::endl;
@@ -466,7 +468,28 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
 
     const YAML::Node& sora = inst["sora"];
     if (sora) {
-      DEF_STRING(sora, "sora-", "signaling-url");
+      // --sora-signaling-url: string or string[]
+      {
+        try {
+          const YAML::Node& node = sora["signaling-url"];
+          if (node.IsSequence()) {
+            args.push_back("--sora-signaling-url");
+            for (auto v : node) {
+              args.push_back(ConvertEnv<std::string>(v, envs));
+            }
+          } else if (node.IsScalar()) {
+            DEF_STRING(sora, "sora-", "signaling-url");
+          } else {
+            throw std::exception();
+          }
+        } catch (std::exception& e) {
+          std::cerr << "signaling-url "
+                       "の値は文字列または文字列の配列である必要があります。"
+                    << std::endl;
+          has_error = true;
+        }
+      }
+
       DEF_STRING(sora, "sora-", "channel-id");
       DEF_STRING(sora, "sora-", "role");
       DEF_BOOLEAN(sora, "sora-", "video");
