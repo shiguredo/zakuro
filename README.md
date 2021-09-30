@@ -67,7 +67,7 @@ Options:
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
   --sandstorm                 Fake Sandstorm Video
-  --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
+  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
   --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT])
   --framerate INT:INT in [1 - 60]
                               Video framerate
@@ -79,7 +79,8 @@ Options:
   --game TEXT:{kuzushi}       Play game
   --scenario TEXT:{reconnect} Scenario type
   --use-dcsctp                Use dcsctp instead of usrsctp
-  --sora-signaling-url TEXT   Signaling URL
+  --sora-signaling-url TEXT ...
+                              Signaling URLs
   --sora-channel-id TEXT      Channel ID
   --sora-role TEXT:{sendonly,recvonly,sendrecv}
                               Role
