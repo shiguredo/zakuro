@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m93.4577-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4577)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m94.4606-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4606)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -20,10 +20,11 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 
 ## 特徴
 
-- WebRTC SFU Sora 最新版に対応
+- WebRTC SFU Sora 開発版に対応
 - YAML による設定ファイルへ対応
 - 動的インスタンス作成へ対応
-- データチャネルメッセージングへ対応
+- クラスター機能への対応
+- データチャネルメッセージング機能へ対応
 - フェイクネットワークへ対応
 - 最新の libwebrtc へ対応
 
@@ -66,7 +67,7 @@ Options:
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
   --sandstorm                 Fake Sandstorm Video
-  --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
+  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
   --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT])
   --framerate INT:INT in [1 - 60]
                               Video framerate
@@ -78,7 +79,8 @@ Options:
   --game TEXT:{kuzushi}       Play game
   --scenario TEXT:{reconnect} Scenario type
   --use-dcsctp                Use dcsctp instead of usrsctp
-  --sora-signaling-url TEXT   Signaling URL
+  --sora-signaling-url TEXT ...
+                              Signaling URLs
   --sora-channel-id TEXT      Channel ID
   --sora-role TEXT:{sendonly,recvonly,sendrecv}
                               Role
