@@ -11,7 +11,11 @@
 
 ## develop
 
+## 2021.12
+
 - [UPDATE] `CLI11` を `2.1.1` に上げる
+    - @voluntas
+- [UPDATE] libwebrtc のバージョンを `m94.4606.3.4` に上げる
     - @voluntas
 - [FIX] Let's Encrypt な証明書の SSL 接続が失敗する問題を修正する
     - @melpon
