@@ -8,7 +8,7 @@
 
 最新の状況などは Discord で共有しています。
 
-https://discord.gg/eEUZf6j
+https://discord.gg/shiguredo
 
 ## バグ報告
 
