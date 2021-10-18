@@ -171,7 +171,7 @@ zakuro:
         role: sendrecv
         multistream: true
         data-channel-signaling: true
-        data-channel-messaging:
+        data-channels:
           - label: "#test"
             direction: "sendrecv"
             # 省略時は 500 (ms)

@@ -214,9 +214,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-signaling-notify-metadata",
                  sora_signaling_notify_metadata, "Signaling metadata")
       ->check(is_json);
-  std::string sora_data_channel_messaging;
-  app.add_option("--sora-data-channel-messaging", sora_data_channel_messaging,
-                 "DataChannel messaging")
+  std::string sora_data_channels;
+  app.add_option("--sora-data-channels", sora_data_channels,
+                 "DataChannels")
       ->check(is_json);
 
   // Fake network 系
@@ -344,9 +344,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     config.sora_signaling_notify_metadata =
         boost::json::parse(sora_signaling_notify_metadata);
   }
-  if (!sora_data_channel_messaging.empty()) {
-    config.sora_data_channel_messaging =
-        boost::json::parse(sora_data_channel_messaging);
+  if (!sora_data_channels.empty()) {
+    config.sora_data_channels =
+        boost::json::parse(sora_data_channels);
   }
 }
 
@@ -518,9 +518,9 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
         args.push_back("--sora-signaling-notify-metadata");
         args.push_back(boost::json::serialize(value));
       }
-      if (sora["data-channel-messaging"]) {
-        boost::json::value value = NodeToJson(sora["data-channel-messaging"]);
-        args.push_back("--sora-data-channel-messaging");
+      if (sora["data-channels"]) {
+        boost::json::value value = NodeToJson(sora["data-channels"]);
+        args.push_back("--sora-data-channels");
         args.push_back(boost::json::serialize(value));
       }
     }

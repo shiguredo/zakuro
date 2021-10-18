@@ -30,7 +30,7 @@ const int MESSAGE_SIZE_MIN = 1;
 const int MESSAGE_SIZE_MAX = 256 * 1000;
 const int BINARY_POOL_SIZE = 1 * 1024 * 1024;
 
-struct DataChannelMessaging {
+struct DataChannels {
   struct Channel {
     std::string label;
     int interval = 500;
@@ -41,16 +41,16 @@ struct DataChannelMessaging {
   boost::json::value remain;
 };
 
-static bool ParseDataChannelMessaging(boost::json::value data_channel_messaging,
-                                      DataChannelMessaging& m) {
-  m = DataChannelMessaging();
-  boost::json::value& dcm = data_channel_messaging;
+static bool ParseDataChannels(boost::json::value data_channels,
+                                      DataChannels& m) {
+  m = DataChannels();
+  boost::json::value& dcm = data_channels;
   if (!dcm.is_array()) {
     std::cout << __LINE__ << std::endl;
     return false;
   }
   for (auto& j : dcm.as_array()) {
-    DataChannelMessaging::Channel ch;
+    DataChannels::Channel ch;
 
     if (!j.is_object()) {
       std::cout << __LINE__ << std::endl;
@@ -265,11 +265,11 @@ int Zakuro::Run() {
   }
 
   // DataChannel メッセージング
-  DataChannelMessaging dcm;
-  if (!config_.sora_data_channel_messaging.is_null()) {
-    if (!ParseDataChannelMessaging(config_.sora_data_channel_messaging, dcm)) {
+  DataChannels dcs;
+  if (!config_.sora_data_channels.is_null()) {
+    if (!ParseDataChannels(config_.sora_data_channels, dcs)) {
       std::cerr << "[" << config_.name
-                << "] failed to parse DataChannel messaging" << std::endl;
+                << "] failed to parse DataChannels" << std::endl;
       return 2;
     }
   }
@@ -311,7 +311,7 @@ int Zakuro::Run() {
     sorac_config.ignore_disconnect_websocket =
         config_.sora_ignore_disconnect_websocket;
     sorac_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
-    sorac_config.data_channel_messaging = dcm.remain;
+    sorac_config.data_channels = dcm.remain;
 
     for (int i = 0; i < config_.vcs; i++) {
       auto vc = std::unique_ptr<VirtualClient>(
