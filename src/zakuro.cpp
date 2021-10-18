@@ -45,11 +45,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
                                       DataChannels& m) {
   m = DataChannels();
   boost::json::value& dcm = data_channels;
-  if (!dcm.is_array()) {
+  if (!dcs.is_array()) {
     std::cout << __LINE__ << std::endl;
     return false;
   }
-  for (auto& j : dcm.as_array()) {
+  for (auto& j : dcs.as_array()) {
     DataChannels::Channel ch;
 
     if (!j.is_object()) {
@@ -311,7 +311,7 @@ int Zakuro::Run() {
     sorac_config.ignore_disconnect_websocket =
         config_.sora_ignore_disconnect_websocket;
     sorac_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
-    sorac_config.data_channels = dcm.remain;
+    sorac_config.data_channels = dcs.remain;
 
     for (int i = 0; i < config_.vcs; i++) {
       auto vc = std::unique_ptr<VirtualClient>(
@@ -327,7 +327,7 @@ int Zakuro::Run() {
 
     // メインのシナリオとは別に、ラベル毎に裏で DataChannel を送信し続けるシナリオを作る
     std::vector<std::tuple<std::string, ScenarioData>> dcm_data;
-    for (const auto& ch : dcm.channels) {
+    for (const auto& ch : dcs.channels) {
       ScenarioData sd;
       sd.Sleep(ch.interval, ch.interval);
       sd.SendDataChannelMessage(ch.label, ch.size_min, ch.size_max);
