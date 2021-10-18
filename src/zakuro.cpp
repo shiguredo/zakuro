@@ -44,7 +44,7 @@ struct DataChannels {
 static bool ParseDataChannels(boost::json::value data_channels,
                                       DataChannels& m) {
   m = DataChannels();
-  boost::json::value& dcm = data_channels;
+  boost::json::value& dcs = data_channels;
   if (!dcs.is_array()) {
     std::cout << __LINE__ << std::endl;
     return false;
@@ -152,7 +152,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
       m.channels.push_back(ch);
     }
   }
-  m.remain = dcm;
+  m.remain = dcs;
   return true;
 }
 
@@ -326,12 +326,12 @@ int Zakuro::Run() {
     spc.binary_pool.reset(new BinaryPool(BINARY_POOL_SIZE));
 
     // メインのシナリオとは別に、ラベル毎に裏で DataChannel を送信し続けるシナリオを作る
-    std::vector<std::tuple<std::string, ScenarioData>> dcm_data;
+    std::vector<std::tuple<std::string, ScenarioData>> dcs_data;
     for (const auto& ch : dcs.channels) {
       ScenarioData sd;
       sd.Sleep(ch.interval, ch.interval);
       sd.SendDataChannelMessage(ch.label, ch.size_min, ch.size_max);
-      dcm_data.push_back(std::make_tuple("scenario-dcm-" + ch.label, sd));
+      dcs_data.push_back(std::make_tuple("scenario-dcs-" + ch.label, sd));
     }
 
     ScenarioPlayer scenario_player(spc);
@@ -343,12 +343,12 @@ int Zakuro::Run() {
       loop_index = 1;
     } else if (config_.scenario == "") {
       data.Reconnect();
-      for (const auto& d : dcm_data) {
+      for (const auto& d : dcs_data) {
         data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
       }
       data.Sleep(1000, 5000);
       data.PlayVoiceNumberClient();
-      loop_index = 1 + dcm_data.size();
+      loop_index = 1 + dcs_data.size();
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
       data.Sleep(1000, 5000);
