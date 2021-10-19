@@ -1,6 +1,7 @@
 #ifndef SCENARIO_PLAYER_H_
 #define SCENARIO_PLAYER_H_
 
+#include <chrono>
 #include <map>
 #include <memory>
 #include <random>
@@ -166,8 +167,28 @@ class ScenarioPlayer {
       }
       case ScenarioData::OP_SEND_DATA_CHANNEL_MESSAGE: {
         auto& op = boost::get<ScenarioData::OpSendDataChannelMessage>(opv);
-        std::string data = config_.binary_pool->Get(op.min_size, op.max_size);
+        std::string data =
+            config_.binary_pool->Get(op.min_size - 16, op.max_size - 16);
+
+        // 先頭に8バイトに現在時刻（マイクロ秒単位の UNIX Time）、次の8バイトにカウンターを入れる
+        char buf[16];
+        uint64_t time = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::system_clock::now().time_since_epoch())
+                            .count();
+        for (int i = 0; i < 8; i++) {
+          buf[i] = (char)((time >> ((7 - i) * 8)) & 0xff);
+        }
+        auto& counter = dc_counter_[op.label];
+        for (int i = 0; i < 8; i++) {
+          buf[i + 8] = (char)((counter >> ((7 - i) * 8)) & 0xff);
+        }
+        data.insert(data.begin(), buf, buf + sizeof(data));
+
+        RTC_LOG(LS_INFO) << "Send DataChannel unixtime(us)=" << time
+                         << " counter=" << counter;
+
         (*config_.vcs)[client_id]->SendMessage(op.label, data);
+        counter += 1;
         break;
       }
       case ScenarioData::OP_DISCONNECT: {
@@ -199,6 +220,7 @@ class ScenarioPlayer {
   std::vector<ClientInfo> client_infos_;
   VoiceNumberReader voice_reader_;
   std::map<std::string, std::shared_ptr<ScenarioPlayer>> sub_scenario_;
+  std::map<std::string, uint64_t> dc_counter_;
 };
 
 #endif

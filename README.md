@@ -118,8 +118,8 @@ Options:
                               Signaling metadata used in connect message
   --sora-signaling-notify-metadata TEXT:JSON Value
                               Signaling metadata
-  --sora-data-channel-messaging TEXT:JSON Value
-                              DataChannel messaging
+  --sora-data-channels TEXT:JSON Value
+                              DataChannels
   --fake-network-send-queue-length-packets UINT
                               Queue length in number of packets for sending
   --fake-network-send-queue-delay-ms INT
@@ -185,4 +185,16 @@ limitations under the License.
 スポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](http://www14.big.or.jp/~amiami/happy/) 様の声素材を使用しています。
 
 [ゲーム等に使えるフリー声素材配布ページ \- あみたろの声素材工房](https://www14.big.or.jp/~amiami/happy/voice.html)
+
+## 優先実装
+
+優先実装とは Sora のライセンスを契約頂いているお客様限定で Momo の実装予定機能を有償にて前倒しで実装することです。
+
+### 優先実装が可能な機能一覧
+
+**詳細は Discord やメールなどでお気軽にお問い合わせください**
+
+- Content Hint への対応
+- --fake-video-capture で mjpeg も指定可能にする
+- --audio-device 追加
 

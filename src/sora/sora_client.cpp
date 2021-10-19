@@ -343,8 +343,8 @@ void SoraClient::DoSendConnect(bool redirect) {
         *config_.ignore_disconnect_websocket;
   }
 
-  if (!config_.data_channel_messaging.is_null()) {
-    json_message["data_channel_messaging"] = config_.data_channel_messaging;
+  if (!config_.data_channels.is_null()) {
+    json_message["data_channels"] = config_.data_channels;
   }
 
   ws_->WriteText(boost::json::serialize(json_message),
@@ -681,7 +681,26 @@ void SoraClient::OnMessage(
                    << " datasize=" << data.size();
 
   // ハンドリングする必要のあるラベル以外は何もしない
-  if (label != "signaling" && label != "stats") {
+  if (label != "signaling" && label != "stats" && label[0] != '#') {
+    return;
+  }
+
+  // zakuro の場合、DataChannel メッセージは Fake データだけのはずで、
+  // その場合は先頭 16 バイトに特定のデータが入っている。
+  if (label[0] == '#') {
+    if (data.size() < 16) {
+      return;
+    }
+    uint64_t time = 0;
+    for (int i = 0; i < 8; i++) {
+      time |= ((uint64_t)data[i] & 0xff) << ((7 - i) * 8);
+    }
+    uint64_t counter = 0;
+    for (int i = 0; i < 8; i++) {
+      counter |= ((uint64_t)data[i + 8] & 0xff) << ((7 - i) * 8);
+    }
+    RTC_LOG(LS_INFO) << "Recv DataChannel unixtime(us)=" << time
+                     << " counter=" << counter;
     return;
   }
 

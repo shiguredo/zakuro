@@ -45,7 +45,7 @@ struct SoraClientConfig {
   int data_channel_signaling_timeout = 180;
   boost::optional<bool> ignore_disconnect_websocket;
   int disconnect_wait_timeout = 5;
-  boost::json::value data_channel_messaging;
+  boost::json::value data_channels;
 };
 
 class SoraClient : public std::enable_shared_from_this<SoraClient>,

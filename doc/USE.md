@@ -171,13 +171,30 @@ zakuro:
         role: sendrecv
         multistream: true
         data-channel-signaling: true
-        data-channel-messaging:
+        data-channels:
           - label: "#test"
             direction: "sendrecv"
             # 省略時は 500 (ms)
             interval: 1000
-            # 省略時は 10 (bytes)
-            size_min: 10
-            # 省略時は 10 (bytes)
+            # 省略時は 16 (bytes)
+            size_min: 16
+            # 省略時は 16 (bytes)
             size_max: 100
+```
+
+### 複数シグナリング URL
+
+```yaml
+zakuro:
+  instances:
+    - name: zakuro
+      vcs: 2
+      sora:
+        signaling-url:
+           - "wss://sora1.example.com/signaling"
+           - "wss://sora2.example.com/signaling"
+           - "wss://sora3.example.com/signaling"
+        channel-id: sora
+        role: sendrecv
+        multistream: true
 ```
