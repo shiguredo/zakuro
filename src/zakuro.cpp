@@ -26,7 +26,7 @@
 
 Zakuro::Zakuro(ZakuroConfig config) : config_(std::move(config)) {}
 
-const int MESSAGE_SIZE_MIN = 1;
+const int MESSAGE_SIZE_MIN = 16;
 const int MESSAGE_SIZE_MAX = 256 * 1000;
 const int BINARY_POOL_SIZE = 1 * 1024 * 1024;
 
@@ -34,8 +34,8 @@ struct DataChannelMessaging {
   struct Channel {
     std::string label;
     int interval = 500;
-    int size_min = 10;
-    int size_max = 10;
+    int size_min = 16;
+    int size_max = 16;
   };
   std::vector<Channel> channels;
   boost::json::value remain;

@@ -19,6 +19,8 @@
     - @voluntas
 - [FIX] Let's Encrypt な証明書の SSL 接続が失敗する問題を修正する
     - @melpon
+- [ADD] DataChannel メッセージングのデータに時刻とカウンターを追加
+    - @melpon
 
 ## 2021.11
 

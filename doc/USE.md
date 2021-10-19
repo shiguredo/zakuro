@@ -176,8 +176,8 @@ zakuro:
             direction: "sendrecv"
             # 省略時は 500 (ms)
             interval: 1000
-            # 省略時は 10 (bytes)
-            size_min: 10
-            # 省略時は 10 (bytes)
+            # 省略時は 16 (bytes)
+            size_min: 16
+            # 省略時は 16 (bytes)
             size_max: 100
 ```
