@@ -181,3 +181,20 @@ zakuro:
             # 省略時は 16 (bytes)
             size_max: 100
 ```
+
+### 複数シグナリング URL
+
+```yaml
+zakuro:
+  instances:
+    - name: zakuro
+      vcs: 2
+      sora:
+        signaling-url:
+           - "wss://sora1.example.com/signaling"
+           - "wss://sora2.example.com/signaling"
+           - "wss://sora3.example.com/signaling"
+        channel-id: sora
+        role: sendrecv
+        multistream: true
+```
