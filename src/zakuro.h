@@ -59,7 +59,7 @@ struct ZakuroConfig {
   int sora_disconnect_wait_timeout = 5;
   boost::json::value sora_metadata;
   boost::json::value sora_signaling_notify_metadata;
-  boost::json::value sora_data_channel_messaging;
+  boost::json::value sora_data_channels;
 
   webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
   webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;

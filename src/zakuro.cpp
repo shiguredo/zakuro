@@ -30,7 +30,7 @@ const int MESSAGE_SIZE_MIN = 16;
 const int MESSAGE_SIZE_MAX = 256 * 1000;
 const int BINARY_POOL_SIZE = 1 * 1024 * 1024;
 
-struct DataChannelMessaging {
+struct DataChannels {
   struct Channel {
     std::string label;
     int interval = 500;
@@ -41,16 +41,16 @@ struct DataChannelMessaging {
   boost::json::value remain;
 };
 
-static bool ParseDataChannelMessaging(boost::json::value data_channel_messaging,
-                                      DataChannelMessaging& m) {
-  m = DataChannelMessaging();
-  boost::json::value& dcm = data_channel_messaging;
-  if (!dcm.is_array()) {
+static bool ParseDataChannels(boost::json::value data_channels,
+                                      DataChannels& m) {
+  m = DataChannels();
+  boost::json::value& dcs = data_channels;
+  if (!dcs.is_array()) {
     std::cout << __LINE__ << std::endl;
     return false;
   }
-  for (auto& j : dcm.as_array()) {
-    DataChannelMessaging::Channel ch;
+  for (auto& j : dcs.as_array()) {
+    DataChannels::Channel ch;
 
     if (!j.is_object()) {
       std::cout << __LINE__ << std::endl;
@@ -152,7 +152,7 @@ static bool ParseDataChannelMessaging(boost::json::value data_channel_messaging,
       m.channels.push_back(ch);
     }
   }
-  m.remain = dcm;
+  m.remain = dcs;
   return true;
 }
 
@@ -265,11 +265,11 @@ int Zakuro::Run() {
   }
 
   // DataChannel メッセージング
-  DataChannelMessaging dcm;
-  if (!config_.sora_data_channel_messaging.is_null()) {
-    if (!ParseDataChannelMessaging(config_.sora_data_channel_messaging, dcm)) {
+  DataChannels dcs;
+  if (!config_.sora_data_channels.is_null()) {
+    if (!ParseDataChannels(config_.sora_data_channels, dcs)) {
       std::cerr << "[" << config_.name
-                << "] failed to parse DataChannel messaging" << std::endl;
+                << "] failed to parse DataChannels" << std::endl;
       return 2;
     }
   }
@@ -311,7 +311,7 @@ int Zakuro::Run() {
     sorac_config.ignore_disconnect_websocket =
         config_.sora_ignore_disconnect_websocket;
     sorac_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
-    sorac_config.data_channel_messaging = dcm.remain;
+    sorac_config.data_channels = dcs.remain;
 
     for (int i = 0; i < config_.vcs; i++) {
       auto vc = std::unique_ptr<VirtualClient>(
@@ -326,12 +326,12 @@ int Zakuro::Run() {
     spc.binary_pool.reset(new BinaryPool(BINARY_POOL_SIZE));
 
     // メインのシナリオとは別に、ラベル毎に裏で DataChannel を送信し続けるシナリオを作る
-    std::vector<std::tuple<std::string, ScenarioData>> dcm_data;
-    for (const auto& ch : dcm.channels) {
+    std::vector<std::tuple<std::string, ScenarioData>> dcs_data;
+    for (const auto& ch : dcs.channels) {
       ScenarioData sd;
       sd.Sleep(ch.interval, ch.interval);
       sd.SendDataChannelMessage(ch.label, ch.size_min, ch.size_max);
-      dcm_data.push_back(std::make_tuple("scenario-dcm-" + ch.label, sd));
+      dcs_data.push_back(std::make_tuple("scenario-dcs-" + ch.label, sd));
     }
 
     ScenarioPlayer scenario_player(spc);
@@ -343,12 +343,12 @@ int Zakuro::Run() {
       loop_index = 1;
     } else if (config_.scenario == "") {
       data.Reconnect();
-      for (const auto& d : dcm_data) {
+      for (const auto& d : dcs_data) {
         data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
       }
       data.Sleep(1000, 5000);
       data.PlayVoiceNumberClient();
-      loop_index = 1 + dcm_data.size();
+      loop_index = 1 + dcs_data.size();
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
       data.Sleep(1000, 5000);

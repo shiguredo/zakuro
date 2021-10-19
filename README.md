@@ -118,8 +118,8 @@ Options:
                               Signaling metadata used in connect message
   --sora-signaling-notify-metadata TEXT:JSON Value
                               Signaling metadata
-  --sora-data-channel-messaging TEXT:JSON Value
-                              DataChannel messaging
+  --sora-data-channels TEXT:JSON Value
+                              DataChannels
   --fake-network-send-queue-length-packets UINT
                               Queue length in number of packets for sending
   --fake-network-send-queue-delay-ms INT

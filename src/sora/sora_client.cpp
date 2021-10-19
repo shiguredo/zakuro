@@ -343,8 +343,8 @@ void SoraClient::DoSendConnect(bool redirect) {
         *config_.ignore_disconnect_websocket;
   }
 
-  if (!config_.data_channel_messaging.is_null()) {
-    json_message["data_channel_messaging"] = config_.data_channel_messaging;
+  if (!config_.data_channels.is_null()) {
+    json_message["data_channels"] = config_.data_channels;
   }
 
   ws_->WriteText(boost::json::serialize(json_message),
