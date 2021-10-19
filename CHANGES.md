@@ -11,6 +11,11 @@
 
 ## develop
 
+## 2021.13
+
+- [CHANGE] data_channel_messaging を data_channles へ変更する
+    - @torikizi
+
 ## 2021.12
 
 - [UPDATE] `CLI11` を `2.1.2` に上げる
