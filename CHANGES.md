@@ -15,6 +15,8 @@
 
 - [CHANGE] data_channel_messaging を data_channles へ変更する
     - @torikizi
+- [ADD] DataChannel メッセージングのデータに時刻とカウンターを追加
+    - @melpon
 
 ## 2021.12
 
@@ -23,8 +25,6 @@
 - [UPDATE] libwebrtc のバージョンを `m94.4606.3.4` に上げる
     - @voluntas
 - [FIX] Let's Encrypt な証明書の SSL 接続が失敗する問題を修正する
-    - @melpon
-- [ADD] DataChannel メッセージングのデータに時刻とカウンターを追加
     - @melpon
 
 ## 2021.11
