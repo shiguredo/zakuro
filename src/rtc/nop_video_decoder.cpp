@@ -7,9 +7,8 @@
 #include <modules/video_coding/codecs/vp8/include/vp8.h>
 #include <modules/video_coding/codecs/vp9/include/vp9.h>
 
-int32_t NopVideoDecoder::InitDecode(const webrtc::VideoCodec* codec_settings,
-                                    int32_t number_of_cores) {
-  return WEBRTC_VIDEO_CODEC_OK;
+bool NopVideoDecoder::Configure(const Settings& settings) {
+  return true;
 }
 
 int32_t NopVideoDecoder::Decode(const webrtc::EncodedImage& input_image,
