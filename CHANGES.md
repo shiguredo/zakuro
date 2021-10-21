@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] libwebrtc のバージョンを `m96.4664.0.2` に上げる
+    - @tnoho @voluntas
+
 ## 2021.13
 
 - [CHANGE] data_channel_messaging を data_channles へ変更する
