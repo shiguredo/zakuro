@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m94.4606-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4606)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m96.4664-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4664)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
