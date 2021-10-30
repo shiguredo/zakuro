@@ -13,8 +13,8 @@
 
 ## 2021.14
 
-- [UPDATE] libwebrtc のバージョンを `m96.4664.0.2` に上げる
-    - @tnoho @voluntas
+- [UPDATE] libwebrtc のバージョンを `m96.4664.1.1` に上げる
+    - @tnoho @voluntas @melpon
 
 ## 2021.13
 
