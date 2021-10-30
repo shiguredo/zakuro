@@ -42,7 +42,7 @@ struct DataChannels {
 };
 
 static bool ParseDataChannels(boost::json::value data_channels,
-                                      DataChannels& m) {
+                              DataChannels& m) {
   m = DataChannels();
   boost::json::value& dcs = data_channels;
   if (!dcs.is_array()) {
@@ -228,7 +228,7 @@ int Zakuro::Run() {
   rtcm_config.simulcast = config_.sora_simulcast;
   rtcm_config.priority = config_.priority;
   rtcm_config.openh264 = config_.openh264;
-  rtcm_config.use_dcsctp = config_.use_dcsctp;
+  rtcm_config.use_dcsctp = true;
   rtcm_config.fake_network_send = config_.fake_network_send;
   rtcm_config.fake_network_receive = config_.fake_network_receive;
   if (config_.no_audio_device) {
@@ -268,8 +268,8 @@ int Zakuro::Run() {
   DataChannels dcs;
   if (!config_.sora_data_channels.is_null()) {
     if (!ParseDataChannels(config_.sora_data_channels, dcs)) {
-      std::cerr << "[" << config_.name
-                << "] failed to parse DataChannels" << std::endl;
+      std::cerr << "[" << config_.name << "] failed to parse DataChannels"
+                << std::endl;
       return 2;
     }
   }

@@ -15,6 +15,8 @@
 
 - [UPDATE] libwebrtc のバージョンを `m96.4664.1.1` に上げる
     - @tnoho @voluntas @melpon
+- [CHANGE] `--use-dcsctp` フラグを削除（DcSCTP は常に有効になる）
+    - @melpon
 
 ## 2021.13
 
