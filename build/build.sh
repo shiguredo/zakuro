@@ -89,7 +89,7 @@ case "$PACKAGE" in
 
     ./macos/install_deps.sh
 
-    source ./macos/_install/webrtc/release/VERSIONS
+    source ./macos/_install/webrtc/VERSIONS
 
     if [ -z "$JOBS" ]; then
       JOBS=`sysctl -n hw.logicalcpu_max`
