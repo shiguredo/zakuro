@@ -126,8 +126,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::IsMember({"kuzushi"}));
   app.add_option("--scenario", config.scenario, "Scenario type")
       ->check(CLI::IsMember({"", "reconnect"}));
-  app.add_flag("--use-dcsctp", config.use_dcsctp,
-               "Use dcsctp instead of usrsctp");
 
   // Sora 系オプション
   app.add_option("--sora-signaling-url", config.sora_signaling_urls,
@@ -215,8 +213,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  sora_signaling_notify_metadata, "Signaling metadata")
       ->check(is_json);
   std::string sora_data_channels;
-  app.add_option("--sora-data-channels", sora_data_channels,
-                 "DataChannels")
+  app.add_option("--sora-data-channels", sora_data_channels, "DataChannels")
       ->check(is_json);
 
   // Fake network 系
@@ -345,8 +342,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
         boost::json::parse(sora_signaling_notify_metadata);
   }
   if (!sora_data_channels.empty()) {
-    config.sora_data_channels =
-        boost::json::parse(sora_data_channels);
+    config.sora_data_channels = boost::json::parse(sora_data_channels);
   }
 }
 
@@ -464,7 +460,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "openh264");
     DEF_STRING(inst, "", "game");
     DEF_STRING(inst, "", "scenario");
-    DEF_FLAG(inst, "", "use-dcsctp");
 
     const YAML::Node& sora = inst["sora"];
     if (sora) {

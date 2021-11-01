@@ -34,7 +34,6 @@ struct ZakuroConfig {
   std::string openh264 = "";
   std::string game;
   std::string scenario;
-  bool use_dcsctp = false;
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;

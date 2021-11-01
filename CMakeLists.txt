@@ -34,7 +34,7 @@ if(ZAKURO_PACKAGE_NAME STREQUAL "macos")
   set(OPENH264_ROOT_DIR ${_INSTALL_DIR}/openh264)
   set(YAML_CPP_ROOT_DIR ${_INSTALL_DIR}/yaml-cpp)
   set(WEBRTC_INCLUDE_DIR ${_INSTALL_DIR}/webrtc/include)
-  set(WEBRTC_LIBRARY_DIR ${_INSTALL_DIR}/webrtc/release/lib)
+  set(WEBRTC_LIBRARY_DIR ${_INSTALL_DIR}/webrtc/lib)
   #set(CLANG_ROOT ${_INSTALL_DIR}/llvm/clang)
 
   set(LIBCXX_INCLUDE_DIR ${_INSTALL_DIR}/llvm/libcxx/include)
