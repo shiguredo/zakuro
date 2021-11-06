@@ -188,7 +188,7 @@ class ScenarioPlayer {
         for (int i = 0; i < 8; i++) {
           p[i] = (char)((counter >> ((7 - i) * 8)) & 0xff);
         }
-        data.insert(data.begin(), buf, buf + sizeof(data));
+        data.insert(data.begin(), buf, buf + sizeof(buf));
 
         RTC_LOG(LS_INFO) << "Send DataChannel unixtime(us)=" << time
                          << " counter=" << counter;
