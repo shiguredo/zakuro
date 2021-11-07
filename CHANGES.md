@@ -13,6 +13,8 @@
 
 - [CHANGE] DataChannel メッセージングのランダムパケットの先頭に ZAKURO という文字列をいれる 
     - @melpon
+- [UPDATE] `cmake` を `3.21.4` に上げる
+    - @voluntas
 
 ## 2021.15
 
