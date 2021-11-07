@@ -168,21 +168,27 @@ class ScenarioPlayer {
       case ScenarioData::OP_SEND_DATA_CHANNEL_MESSAGE: {
         auto& op = boost::get<ScenarioData::OpSendDataChannelMessage>(opv);
         std::string data =
-            config_.binary_pool->Get(op.min_size - 16, op.max_size - 16);
+            config_.binary_pool->Get(op.min_size - 22, op.max_size - 22);
 
-        // 先頭に8バイトに現在時刻（マイクロ秒単位の UNIX Time）、次の8バイトにカウンターを入れる
-        char buf[16];
+        // 0-5: ZAKURO
+        // 6-13: 現在時刻（マイクロ秒単位の UNIX Time）
+        // 14-21: ラベルごとに一意に増えていくカウンター
+        char buf[22] = "ZAKURO";
+        char* p = buf + 6;
+
         uint64_t time = std::chrono::duration_cast<std::chrono::microseconds>(
                             std::chrono::system_clock::now().time_since_epoch())
                             .count();
         for (int i = 0; i < 8; i++) {
-          buf[i] = (char)((time >> ((7 - i) * 8)) & 0xff);
+          p[i] = (char)((time >> ((7 - i) * 8)) & 0xff);
         }
+        p += 8;
+
         auto& counter = dc_counter_[op.label];
         for (int i = 0; i < 8; i++) {
-          buf[i + 8] = (char)((counter >> ((7 - i) * 8)) & 0xff);
+          p[i] = (char)((counter >> ((7 - i) * 8)) & 0xff);
         }
-        data.insert(data.begin(), buf, buf + sizeof(data));
+        data.insert(data.begin(), buf, buf + sizeof(buf));
 
         RTC_LOG(LS_INFO) << "Send DataChannel unixtime(us)=" << time
                          << " counter=" << counter;

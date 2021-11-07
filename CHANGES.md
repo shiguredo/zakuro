@@ -11,6 +11,11 @@
 
 ## develop
 
+- [CHANGE] DataChannel メッセージングのランダムパケットの先頭に ZAKURO という文字列をいれる 
+    - @melpon
+- [UPDATE] `cmake` を `3.21.4` に上げる
+    - @voluntas
+
 ## 2021.15
 
 - [UPDATE] libwebrtc のバージョンを `m96.4664.1.1` に上げる
