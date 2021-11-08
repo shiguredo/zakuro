@@ -192,7 +192,6 @@ void RTCManager::AddDataManager(std::shared_ptr<RTCDataManager> data_manager) {
 std::shared_ptr<RTCConnection> RTCManager::CreateConnection(
     webrtc::PeerConnectionInterface::RTCConfiguration rtc_config,
     RTCMessageSender* sender) {
-  rtc_config.enable_dtls_srtp = true;
   rtc_config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
   rtc_config.turn_port_prune_policy =
       webrtc::PortPrunePolicy::PRUNE_BASED_ON_PRIORITY;
