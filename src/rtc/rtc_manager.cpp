@@ -116,7 +116,7 @@ RTCManager::RTCManager(
   dependencies.call_factory = CreateFakeNetworkCallFactory(
       config_.fake_network_send, config_.fake_network_receive);
   dependencies.sctp_factory.reset(
-      new SctpTransportFactory(network_thread_.get(), config_.use_dcsctp));
+      new SctpTransportFactory(network_thread_.get()));
 
   factory_ =
       webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));

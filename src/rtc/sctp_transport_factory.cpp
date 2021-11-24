@@ -6,22 +6,13 @@
 #include <system_wrappers/include/clock.h>
 #include <system_wrappers/include/field_trial.h>
 
-SctpTransportFactory::SctpTransportFactory(rtc::Thread* network_thread,
-                                           bool use_dcsctp)
-    : network_thread_(network_thread), use_dcsctp_(use_dcsctp) {}
+SctpTransportFactory::SctpTransportFactory(rtc::Thread* network_thread)
+    : network_thread_(network_thread) {}
 
 std::unique_ptr<cricket::SctpTransportInternal>
 SctpTransportFactory::CreateSctpTransport(
     rtc::PacketTransportInternal* transport) {
-  std::unique_ptr<cricket::SctpTransportInternal> result;
-  if (use_dcsctp_) {
-    result = std::unique_ptr<cricket::SctpTransportInternal>(
-        new webrtc::DcSctpTransport(network_thread_, transport,
-                                    webrtc::Clock::GetRealTimeClock()));
-  }
-  if (!result) {
-    result = std::unique_ptr<cricket::SctpTransportInternal>(
-        new cricket::UsrsctpTransport(network_thread_, transport));
-  }
-  return result;
+  return std::unique_ptr<cricket::SctpTransportInternal>(
+      new webrtc::DcSctpTransport(network_thread_, transport,
+                                  webrtc::Clock::GetRealTimeClock()));
 }

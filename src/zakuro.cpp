@@ -228,7 +228,6 @@ int Zakuro::Run() {
   rtcm_config.simulcast = config_.sora_simulcast;
   rtcm_config.priority = config_.priority;
   rtcm_config.openh264 = config_.openh264;
-  rtcm_config.use_dcsctp = true;
   rtcm_config.fake_network_send = config_.fake_network_send;
   rtcm_config.fake_network_receive = config_.fake_network_receive;
   if (config_.no_audio_device) {

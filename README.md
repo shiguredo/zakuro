@@ -78,7 +78,6 @@ Options:
   --openh264 TEXT:FILE        OpenH264 dynamic library path. "OpenH264 Video Codec provided by Cisco Systems, Inc."
   --game TEXT:{kuzushi}       Play game
   --scenario TEXT:{reconnect} Scenario type
-  --use-dcsctp                Use dcsctp instead of usrsctp
   --sora-signaling-url TEXT ...
                               Signaling URLs
   --sora-channel-id TEXT      Channel ID
