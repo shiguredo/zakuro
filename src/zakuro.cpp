@@ -26,7 +26,7 @@
 
 Zakuro::Zakuro(ZakuroConfig config) : config_(std::move(config)) {}
 
-const int MESSAGE_SIZE_MIN = 22;
+const int MESSAGE_SIZE_MIN = 48;
 const int MESSAGE_SIZE_MAX = 256 * 1000;
 const int BINARY_POOL_SIZE = 1 * 1024 * 1024;
 
