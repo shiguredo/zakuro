@@ -47,8 +47,6 @@ struct RTCManagerConfig {
   webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
   webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
 
-  bool use_dcsctp = false;
-
   // FRAMERATE が優先のときは RESOLUTION をデグレさせていく
   webrtc::DegradationPreference GetPriority() {
     if (priority == "FRAMERATE") {

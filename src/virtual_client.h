@@ -22,6 +22,8 @@ class VirtualClient {
   void Clear();
   void SendMessage(const std::string& label, const std::string& data);
 
+  std::string GetConnectionID();
+
  private:
   boost::asio::io_context* ioc_;
   rtc::scoped_refptr<ScalableVideoTrackSource> capturer_;

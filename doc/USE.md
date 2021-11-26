@@ -103,8 +103,6 @@ Zakuro ではカメラからの映像入力の代わりに y4m ファイルを�
 
 ### YAML 設定
 
-**この機能はまだ実験的な機能です**
-
 ```yaml
 zakuro:
   log-level: none
@@ -160,6 +158,8 @@ zakuro:
 
 ### DataChannel メッセージングの設定
 
+- DataChannel メッセージングバイナリの先頭には `<<"ZAKURO", UnixTimeMicro:64, Counter:64>>` が入ります
+
 ```yaml
 zakuro:
   instances:
@@ -176,10 +176,10 @@ zakuro:
             direction: "sendrecv"
             # 省略時は 500 (ms)
             interval: 1000
+            # 省略時は 48 (bytes)
+            size_min: 100
             # 省略時は 16 (bytes)
-            size_min: 16
-            # 省略時は 16 (bytes)
-            size_max: 100
+            size_max: 5000
 ```
 
 ### 複数シグナリング URL

@@ -45,6 +45,10 @@ std::shared_ptr<RTCConnection> SoraClient::GetRTCConnection() const {
   }
 }
 
+std::string SoraClient::GetConnectionID() const {
+  return connection_id_;
+}
+
 SoraClient::SoraClient(boost::asio::io_context& ioc,
                        std::shared_ptr<RTCManager> manager,
                        SoraClientConfig config)
@@ -457,6 +461,7 @@ void SoraClient::OnRead(boost::system::error_code ec,
       }
     }
 
+    connection_id_ = json_message.at("connection_id").as_string().c_str();
     connection_ = CreateRTCConnection(json_message.at("config"));
     const std::string sdp = json_message.at("sdp").as_string().c_str();
 
@@ -686,9 +691,9 @@ void SoraClient::OnMessage(
   }
 
   // zakuro の DataChannel メッセージだった場合は先頭6バイトが "ZAKURO" になっていて、
-  // その場合はその後 16 バイトに特定のデータが入っている。
+  // その場合はその後 42 バイトに特定のデータが入っている。
   if (label[0] == '#') {
-    if (data.size() < 22) {
+    if (data.size() < 48) {
       return;
     }
     if (std::memcmp(data.c_str(), "ZAKURO", 6) != 0) {
@@ -706,9 +711,15 @@ void SoraClient::OnMessage(
     for (int i = 0; i < 8; i++) {
       counter |= ((uint64_t)p[i] & 0xff) << ((7 - i) * 8);
     }
+    p += 8;
 
+    std::string conn_id;
+    conn_id.resize(26);
+    memcpy(&conn_id[0], p, 26);
+    // 途中が \0 で終わってた場合に備えて構築し直す
+    conn_id = conn_id.c_str();
     RTC_LOG(LS_INFO) << "Recv DataChannel unixtime(us)=" << time
-                     << " counter=" << counter;
+                     << " counter=" << counter << " connection_id=" << conn_id;
     return;
   }
 

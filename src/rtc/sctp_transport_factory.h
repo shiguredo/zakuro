@@ -11,14 +11,13 @@
 
 class SctpTransportFactory : public webrtc::SctpTransportFactoryInterface {
  public:
-  explicit SctpTransportFactory(rtc::Thread* network_thread, bool use_dcsctp);
+  explicit SctpTransportFactory(rtc::Thread* network_thread);
 
   std::unique_ptr<cricket::SctpTransportInternal> CreateSctpTransport(
       rtc::PacketTransportInternal* transport) override;
 
  private:
   rtc::Thread* network_thread_;
-  bool use_dcsctp_;
 };
 
 #endif
