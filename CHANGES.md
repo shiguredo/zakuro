@@ -11,6 +11,9 @@
 
 ## develop
 
+- [ADD] `--client-cert` と `--client-key` でクライアント認証をできるようにする
+    - @melpon
+
 ## 2021.17
 
 - [ADD] DataChannel メッセージングのランダムパケットの先頭部分に ConnecitonID を含める

@@ -34,6 +34,8 @@ struct ZakuroConfig {
   std::string openh264 = "";
   std::string game;
   std::string scenario;
+  std::string client_cert;
+  std::string client_key;
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;

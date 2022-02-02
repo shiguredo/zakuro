@@ -126,6 +126,12 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::IsMember({"kuzushi"}));
   app.add_option("--scenario", config.scenario, "Scenario type")
       ->check(CLI::IsMember({"", "reconnect"}));
+  app.add_option("--client-cert", config.client_cert,
+                 "Cert file path for client certification (PEM format)")
+      ->check(CLI::ExistingFile);
+  app.add_option("--client-key", config.client_key,
+                 "Private key file path for client certification (PEM format)")
+      ->check(CLI::ExistingFile);
 
   // Sora 系オプション
   app.add_option("--sora-signaling-url", config.sora_signaling_urls,
@@ -460,6 +466,8 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "openh264");
     DEF_STRING(inst, "", "game");
     DEF_STRING(inst, "", "scenario");
+    DEF_STRING(inst, "", "client-cert");
+    DEF_STRING(inst, "", "client-key");
 
     const YAML::Node& sora = inst["sora"];
     if (sora) {
