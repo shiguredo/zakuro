@@ -13,6 +13,10 @@
 
 - [ADD] `--client-cert` と `--client-key` でクライアント認証をできるようにする
     - @melpon
+- [UPDATE] libwebrtc のバージョンを `m99.4844.0.0` に上げる
+    - @melpon
+- [UPDATE] Boost 1.78.0 に上げる
+    - @melpon
 
 ## 2021.17
 
