@@ -75,6 +75,12 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       },
       "");
 
+  auto bool_map = std::vector<std::pair<std::string, bool>>(
+      {{"false", false}, {"true", true}});
+  auto optional_bool_map =
+      std::vector<std::pair<std::string, boost::optional<bool>>>(
+          {{"false", false}, {"true", true}, {"none", boost::none}});
+
   app.add_option("--name", config.name, "Client Name");
   app.add_option("--vcs", config.vcs, "Virtual Clients")
       ->check(CLI::Range(1, 100));
@@ -132,6 +138,12 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--client-key", config.client_key,
                  "Private key file path for client certification (PEM format)")
       ->check(CLI::ExistingFile);
+  app.add_option("--initial-mute-video", config.initial_mute_video,
+                 "Mute video initialy")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--initial-mute-audio", config.initial_mute_audio,
+                 "Mute audio initialy")
+      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
 
   // Sora 系オプション
   app.add_option("--sora-signaling-url", config.sora_signaling_urls,
@@ -140,12 +152,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-channel-id", config.sora_channel_id, "Channel ID");
   app.add_option("--sora-role", config.sora_role, "Role")
       ->check(CLI::IsMember({"sendonly", "recvonly", "sendrecv"}));
-
-  auto bool_map = std::vector<std::pair<std::string, bool>>(
-      {{"false", false}, {"true", true}});
-  auto optional_bool_map =
-      std::vector<std::pair<std::string, boost::optional<bool>>>(
-          {{"false", false}, {"true", true}, {"none", boost::none}});
 
   app.add_option("--sora-video", config.sora_video,
                  "Send video to sora (default: true)")
@@ -468,6 +474,8 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "scenario");
     DEF_STRING(inst, "", "client-cert");
     DEF_STRING(inst, "", "client-key");
+    DEF_BOOLEAN(inst, "", "initial-mute-video");
+    DEF_BOOLEAN(inst, "", "initial-mute-audio");
 
     const YAML::Node& sora = inst["sora"];
     if (sora) {

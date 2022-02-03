@@ -230,6 +230,8 @@ int Zakuro::Run() {
   rtcm_config.openh264 = config_.openh264;
   rtcm_config.fake_network_send = config_.fake_network_send;
   rtcm_config.fake_network_receive = config_.fake_network_receive;
+  rtcm_config.initial_mute_video = config_.initial_mute_video;
+  rtcm_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
     rtcm_config.audio_type = RTCManagerConfig::AudioType::NoAudio;
   } else if (!config_.game.empty()) {

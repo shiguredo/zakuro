@@ -36,6 +36,8 @@ struct ZakuroConfig {
   std::string scenario;
   std::string client_cert;
   std::string client_key;
+  bool initial_mute_video = false;
+  bool initial_mute_audio = false;
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;

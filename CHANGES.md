@@ -13,6 +13,8 @@
 
 - [ADD] `--client-cert` と `--client-key` でクライアント認証をできるようにする
     - @melpon
+- [ADD] `--initial-mute-video` と `--initial-mute-audio` でミュート状態で接続できるようにする
+    - @melpon
 - [UPDATE] libwebrtc のバージョンを `m99.4844.0.0` に上げる
     - @melpon
 - [UPDATE] Boost 1.78.0 に上げる

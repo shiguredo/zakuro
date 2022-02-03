@@ -35,6 +35,9 @@ struct RTCManagerConfig {
   bool show_me = false;
   bool simulcast = false;
 
+  bool initial_mute_video = false;
+  bool initial_mute_audio = false;
+
   bool disable_echo_cancellation = false;
   bool disable_auto_gain_control = false;
   bool disable_noise_suppression = false;
