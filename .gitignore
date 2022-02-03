@@ -48,3 +48,5 @@ webrtc_logs_0
 /build/ubuntu-20.04_x86_64/_build
 /build/ubuntu-20.04_x86_64/_install
 /build/ubuntu-20.04_x86_64/_cache
+
+*.yaml

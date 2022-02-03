@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m96.4664-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4664)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m97.4692-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4692)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -26,6 +26,7 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 - クラスター機能への対応
 - データチャネルメッセージング機能へ対応
 - フェイクネットワークへ対応
+- クライアント証明書へ対応
 - 最新の libwebrtc へ対応
 
 ## 使ってみる

@@ -230,6 +230,8 @@ int Zakuro::Run() {
   rtcm_config.openh264 = config_.openh264;
   rtcm_config.fake_network_send = config_.fake_network_send;
   rtcm_config.fake_network_receive = config_.fake_network_receive;
+  rtcm_config.initial_mute_video = config_.initial_mute_video;
+  rtcm_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
     rtcm_config.audio_type = RTCManagerConfig::AudioType::NoAudio;
   } else if (!config_.game.empty()) {
@@ -286,6 +288,8 @@ int Zakuro::Run() {
 
     SoraClientConfig sorac_config;
     sorac_config.insecure = config_.insecure;
+    sorac_config.client_cert = config_.client_cert;
+    sorac_config.client_key = config_.client_key;
     sorac_config.signaling_urls = config_.sora_signaling_urls;
     sorac_config.channel_id = config_.sora_channel_id;
     sorac_config.video = config_.sora_video;
