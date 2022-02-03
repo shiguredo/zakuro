@@ -26,6 +26,7 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 - クラスター機能への対応
 - データチャネルメッセージング機能へ対応
 - フェイクネットワークへ対応
+- クライアント証明書へ対応
 - 最新の libwebrtc へ対応
 
 ## 使ってみる
