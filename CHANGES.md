@@ -11,12 +11,25 @@
 
 ## develop
 
+- [ADD] `--client-cert` と `--client-key` でクライアント認証をできるようにする
+    - @melpon
+- [ADD] `--initial-mute-video` と `--initial-mute-audio` でミュート状態で接続できるようにする
+    - @melpon
+- [UPDATE] libwebrtc のバージョンを `m99.4844.0.0` に上げる
+    - @melpon
+- [UPDATE] Boost 1.78.0 に上げる
+    - @melpon
+
+## 2021.17
+
+- [ADD] DataChannel メッセージングのランダムパケットの先頭部分に ConnecitonID を含める
+    - `<<"ZAKURO", UnixTimeUs:64, LabelCounter:64, ConnectionID:26/binary, RandomBin/binary>>`
 - [UPDATE] libwebrtc のバージョンを `m97.4692.0.0` に上げる
     - @voluntas
 
 ## 2021.16
 
-- [CHANGE] DataChannel メッセージングのランダムパケットの先頭に ZAKURO という文字列をいれる 
+- [CHANGE] DataChannel メッセージングのランダムパケットの先頭に ZAKURO という文字列をいれる
     - @melpon
 - [UPDATE] `cmake` を `3.21.4` に上げる
     - @voluntas

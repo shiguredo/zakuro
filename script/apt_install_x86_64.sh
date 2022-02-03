@@ -24,8 +24,8 @@ apt-get -y install \
   libudev-dev \
   libxrandr-dev \
   lsb-release \
-  python \
-  python-dev \
+  python3 \
+  python3-dev \
   rsync \
   sudo \
   vim \

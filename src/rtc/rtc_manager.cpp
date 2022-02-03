@@ -116,7 +116,7 @@ RTCManager::RTCManager(
   dependencies.call_factory = CreateFakeNetworkCallFactory(
       config_.fake_network_send, config_.fake_network_receive);
   dependencies.sctp_factory.reset(
-      new SctpTransportFactory(network_thread_.get(), config_.use_dcsctp));
+      new SctpTransportFactory(network_thread_.get()));
 
   factory_ =
       webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));
@@ -224,6 +224,10 @@ void RTCManager::InitTracks(RTCConnection* conn) {
   std::string stream_id = Util::GenerateRandomChars();
 
   if (audio_track_) {
+    if (config_.initial_mute_audio) {
+      audio_track_->set_enabled(false);
+    }
+
     webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpSenderInterface>>
         audio_sender = connection->AddTrack(audio_track_, {stream_id});
     if (!audio_sender.ok()) {
@@ -232,6 +236,10 @@ void RTCManager::InitTracks(RTCConnection* conn) {
   }
 
   if (video_track_) {
+    if (config_.initial_mute_video) {
+      video_track_->set_enabled(false);
+    }
+
     webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpSenderInterface>>
         video_add_result = connection->AddTrack(video_track_, {stream_id});
     if (video_add_result.ok()) {

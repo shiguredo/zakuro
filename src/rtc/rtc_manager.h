@@ -35,6 +35,9 @@ struct RTCManagerConfig {
   bool show_me = false;
   bool simulcast = false;
 
+  bool initial_mute_video = false;
+  bool initial_mute_audio = false;
+
   bool disable_echo_cancellation = false;
   bool disable_auto_gain_control = false;
   bool disable_noise_suppression = false;
@@ -46,8 +49,6 @@ struct RTCManagerConfig {
 
   webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
   webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
-
-  bool use_dcsctp = false;
 
   // FRAMERATE が優先のときは RESOLUTION をデグレさせていく
   webrtc::DegradationPreference GetPriority() {

@@ -46,6 +46,8 @@ struct SoraClientConfig {
   boost::optional<bool> ignore_disconnect_websocket;
   int disconnect_wait_timeout = 5;
   boost::json::value data_channels;
+  std::string client_cert;
+  std::string client_key;
 };
 
 class SoraClient : public std::enable_shared_from_this<SoraClient>,
@@ -72,6 +74,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
   webrtc::PeerConnectionInterface::IceConnectionState GetRTCConnectionState()
       const;
   std::shared_ptr<RTCConnection> GetRTCConnection() const;
+  std::string GetConnectionID() const;
 
  private:
   void ReconnectAfter();
@@ -128,6 +131,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
 
  private:
   boost::asio::io_context& ioc_;
+  SoraClientConfig config_;
   std::vector<std::shared_ptr<Websocket>> connecting_wss_;
   std::string connected_signaling_url_;
   std::shared_ptr<RTCManager> manager_;
@@ -140,7 +144,7 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
   std::atomic_bool destructed_ = {false};
 
   std::shared_ptr<RTCConnection> connection_;
-  SoraClientConfig config_;
+  std::string connection_id_;
 
   int retry_count_;
   webrtc::PeerConnectionInterface::IceConnectionState rtc_state_;

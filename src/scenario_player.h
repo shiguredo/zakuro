@@ -168,12 +168,13 @@ class ScenarioPlayer {
       case ScenarioData::OP_SEND_DATA_CHANNEL_MESSAGE: {
         auto& op = boost::get<ScenarioData::OpSendDataChannelMessage>(opv);
         std::string data =
-            config_.binary_pool->Get(op.min_size - 22, op.max_size - 22);
+            config_.binary_pool->Get(op.min_size - 48, op.max_size - 48);
 
-        // 0-5: ZAKURO
-        // 6-13: 現在時刻（マイクロ秒単位の UNIX Time）
-        // 14-21: ラベルごとに一意に増えていくカウンター
-        char buf[22] = "ZAKURO";
+        // 0-5 (6 bytes): ZAKURO
+        // 6-13 (8 bytes): 現在時刻（マイクロ秒単位の UNIX Time）
+        // 14-21 (8 bytes): ラベルごとに一意に増えていくカウンター
+        // 22-47 (26 bytes): Connection ID
+        char buf[48] = "ZAKURO";
         char* p = buf + 6;
 
         uint64_t time = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -188,11 +189,16 @@ class ScenarioPlayer {
         for (int i = 0; i < 8; i++) {
           p[i] = (char)((counter >> ((7 - i) * 8)) & 0xff);
         }
+        p += 8;
+
+        auto conn_id = (*config_.vcs)[client_id]->GetConnectionID();
+        memcpy(p, conn_id.c_str(), std::min<int>(conn_id.size(), 26));
+
         data.insert(data.begin(), buf, buf + sizeof(buf));
 
         RTC_LOG(LS_INFO) << "Send DataChannel unixtime(us)=" << time
-                         << " counter=" << counter;
-
+                         << " counter=" << counter
+                         << " connection_id=" << conn_id;
         (*config_.vcs)[client_id]->SendMessage(op.label, data);
         counter += 1;
         break;

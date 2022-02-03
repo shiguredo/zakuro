@@ -62,3 +62,10 @@ void VirtualClient::SendMessage(const std::string& label,
   }
   sora_client_->SendMessage(label, data);
 }
+
+std::string VirtualClient::GetConnectionID() {
+  if (sora_client_ == nullptr) {
+    return "";
+  }
+  return sora_client_->GetConnectionID();
+}
