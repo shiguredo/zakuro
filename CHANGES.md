@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2022.1.0
+
 - [ADD] `--client-cert` と `--client-key` でクライアント認証をできるようにする
     - @melpon
 - [ADD] `--initial-mute-video` と `--initial-mute-audio` でミュート状態で接続できるようにする
@@ -20,7 +22,7 @@
 - [UPDATE] Boost 1.78.0 に上げる
     - @melpon
 
-## 2021.17
+## 2021.17.0
 
 - [ADD] DataChannel メッセージングのランダムパケットの先頭部分に ConnecitonID を含める
     - `<<"ZAKURO", UnixTimeUs:64, LabelCounter:64, ConnectionID:26/binary, RandomBin/binary>>`
