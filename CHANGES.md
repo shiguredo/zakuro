@@ -11,6 +11,15 @@
 
 ## develop
 
+## 2022.2.0
+
+- [UPDATE] `cmake` を `3.22.3` に上げる
+    - @voluntas
+- [UPDATE] libwebrtc のバージョンを `m99.4844.1.0` に上げる
+    - @voluntas
+- [FIX] turn = false でも利用可能にする
+    - @melpon
+
 ## 2022.1.0
 
 - [ADD] `--client-cert` と `--client-key` でクライアント認証をできるようにする
