@@ -394,17 +394,21 @@ std::shared_ptr<RTCConnection> SoraClient::CreateRTCConnection(
   webrtc::PeerConnectionInterface::RTCConfiguration rtc_config;
   webrtc::PeerConnectionInterface::IceServers ice_servers;
 
-  auto jservers = jconfig.at("iceServers");
-  for (auto jserver : jservers.as_array()) {
-    const std::string username = jserver.at("username").as_string().c_str();
-    const std::string credential = jserver.at("credential").as_string().c_str();
-    auto jurls = jserver.at("urls");
-    for (const auto url : jurls.as_array()) {
-      webrtc::PeerConnectionInterface::IceServer ice_server;
-      ice_server.uri = url.as_string().c_str();
-      ice_server.username = username;
-      ice_server.password = credential;
-      ice_servers.push_back(ice_server);
+  auto it = jconfig.as_object().find("iceServers");
+  if (it != jconfig.as_object().end()) {
+    const auto& jservers = it->value();
+    for (auto jserver : jservers.as_array()) {
+      const std::string username = jserver.at("username").as_string().c_str();
+      const std::string credential =
+          jserver.at("credential").as_string().c_str();
+      auto jurls = jserver.at("urls");
+      for (const auto url : jurls.as_array()) {
+        webrtc::PeerConnectionInterface::IceServer ice_server;
+        ice_server.uri = url.as_string().c_str();
+        ice_server.username = username;
+        ice_server.password = credential;
+        ice_servers.push_back(ice_server);
+      }
     }
   }
 
@@ -464,7 +468,10 @@ void SoraClient::OnRead(boost::system::error_code ec,
     }
 
     connection_id_ = json_message.at("connection_id").as_string().c_str();
-    connection_ = CreateRTCConnection(json_message.at("config"));
+    connection_ =
+        CreateRTCConnection(json_message.as_object().count("config") != 0
+                                ? json_message.at("config")
+                                : boost::json::object());
     const std::string sdp = json_message.at("sdp").as_string().c_str();
 
     connection_->SetOffer(sdp, [self = shared_from_this(), json_message]() {
