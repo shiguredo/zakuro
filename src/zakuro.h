@@ -54,8 +54,11 @@ struct ZakuroConfig {
   std::string sora_role = "";
   bool sora_multistream = false;
   bool sora_simulcast = false;
+  std::string sora_simulcast_rid;
   bool sora_spotlight = false;
   int sora_spotlight_number = 0;
+  std::string sora_spotlight_focus_rid;
+  std::string sora_spotlight_unfocus_rid;
   boost::optional<bool> sora_data_channel_signaling;
   int sora_data_channel_signaling_timeout = 180;
   boost::optional<bool> sora_ignore_disconnect_websocket;

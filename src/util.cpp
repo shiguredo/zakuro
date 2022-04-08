@@ -180,12 +180,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-simulcast", config.sora_simulcast,
                  "Use simulcast (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  app.add_option("--sora-simulcast-rid", config.sora_simulcast_rid,
+                 "Simulcast rid");
   app.add_option("--sora-spotlight", config.sora_spotlight,
                  "Use spotlight (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-spotlight-number", config.sora_spotlight_number,
                  "Number of spotlight")
       ->check(CLI::Range(0, 8));
+  app.add_option("--sora-spotlight-focus-rid", config.sora_spotlight_focus_rid,
+                 "Spotlight focus rid");
+  app.add_option("--sora-spotlight-unfocus-rid",
+                 config.sora_spotlight_unfocus_rid, "Spotlight unfocus rid");
   app.add_option("--sora-data-channel-signaling",
                  config.sora_data_channel_signaling,
                  "Use DataChannel for Sora signaling (default: none)")
@@ -512,8 +518,11 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       DEF_INTEGER(sora, "sora-", "audio-opus-params-clock-rate");
       DEF_BOOLEAN(sora, "sora-", "multistream");
       DEF_BOOLEAN(sora, "sora-", "simulcast");
+      DEF_STRING(sora, "sora-", "simulcast-rid");
       DEF_BOOLEAN(sora, "sora-", "spotlight");
       DEF_INTEGER(sora, "sora-", "spotlight-number");
+      DEF_STRING(sora, "sora-", "spotlight-focus-rid");
+      DEF_STRING(sora, "sora-", "spotlight-unfocus-rid");
       DEF_STRING(sora, "sora-", "data-channel-signaling");
       DEF_INTEGER(sora, "sora-", "data-channel-signaling-timeout");
       DEF_STRING(sora, "sora-", "ignore-disconnect-websocket");
