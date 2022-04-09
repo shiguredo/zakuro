@@ -11,6 +11,13 @@
 
 ## develop
 
+- [ADD] simulcast_rid を追加する
+    - @melpon
+- [ADD] spotlight_focus_rid を追加する
+    - @melpon
+- [ADD] spotlight_unfocus_rid を追加する
+    - @melpon
+
 ## 2022.2.0
 
 - [UPDATE] `cmake` を `3.22.3` に上げる
