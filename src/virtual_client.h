@@ -10,6 +10,14 @@
 #include "rtc/scalable_track_source.h"
 #include "sora/sora_client.h"
 
+struct VirtualClientStats {
+  std::string channel_id;
+  std::string connection_id;
+  std::string connected_url;
+  bool websocket_connected = false;
+  bool datachannel_connected = false;
+};
+
 class VirtualClient {
  public:
   VirtualClient(boost::asio::io_context& ioc,
@@ -22,7 +30,7 @@ class VirtualClient {
   void Clear();
   void SendMessage(const std::string& label, const std::string& data);
 
-  std::string GetConnectionID();
+  VirtualClientStats GetStats() const;
 
  private:
   boost::asio::io_context* ioc_;

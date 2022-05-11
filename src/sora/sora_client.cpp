@@ -49,6 +49,18 @@ std::string SoraClient::GetConnectionID() const {
   return connection_id_;
 }
 
+std::string SoraClient::GetConnectedSignalingURL() const {
+  return connected_signaling_url_;
+}
+
+bool SoraClient::IsConnectedWebsocket() const {
+  return ws_ != nullptr;
+}
+
+bool SoraClient::IsConnectedDataChannel() const {
+  return using_datachannel_;
+}
+
 SoraClient::SoraClient(boost::asio::io_context& ioc,
                        std::shared_ptr<RTCManager> manager,
                        SoraClientConfig config)

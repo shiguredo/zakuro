@@ -78,6 +78,9 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
       const;
   std::shared_ptr<RTCConnection> GetRTCConnection() const;
   std::string GetConnectionID() const;
+  std::string GetConnectedSignalingURL() const;
+  bool IsConnectedWebsocket() const;
+  bool IsConnectedDataChannel() const;
 
  private:
   void ReconnectAfter();

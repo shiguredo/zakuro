@@ -21,9 +21,11 @@ class Util {
                         std::string& config_file,
                         int& log_level,
                         int& port,
+                        std::string& connection_id_stats_file,
                         ZakuroConfig& config,
                         bool ignore_config);
-  static std::vector<std::vector<std::string>> NodeToArgs(const YAML::Node& inst);
+  static std::vector<std::vector<std::string>> NodeToArgs(
+      const YAML::Node& inst);
   static boost::json::value NodeToJson(const YAML::Node& node);
   static std::string GenerateRandomChars();
   static std::string GenerateRandomChars(size_t length);

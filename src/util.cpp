@@ -34,6 +34,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& config_file,
                      int& log_level,
                      int& port,
+                     std::string& connection_id_stats_file,
                      ZakuroConfig& config,
                      bool ignore_config) {
   std::vector<std::string> args = cargs;
@@ -55,6 +56,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
   app.add_option("--port", port, "Port number (default: -1)")
       ->check(CLI::Range(-1, 65535));
+  app.add_option("--output-file-connection-id", connection_id_stats_file,
+                 "Output to specified file with connection IDs");
 
   // インスタンス毎のオプション
   auto is_valid_resolution = CLI::Validator(

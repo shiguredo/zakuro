@@ -14,7 +14,10 @@
 
 #include "game/game_key_core.h"
 
+class ZakuroStats;
+
 struct ZakuroConfig {
+  int id = 0;
   std::string name = "zakuro";
   int vcs = 1;
   double hatch_rate = 1.0;
@@ -71,6 +74,8 @@ struct ZakuroConfig {
   webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
 
   std::shared_ptr<GameKeyCore> key_core;
+
+  std::shared_ptr<ZakuroStats> stats;
 
   struct Size {
     int width;

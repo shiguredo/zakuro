@@ -191,7 +191,7 @@ class ScenarioPlayer {
         }
         p += 8;
 
-        auto conn_id = (*config_.vcs)[client_id]->GetConnectionID();
+        auto conn_id = (*config_.vcs)[client_id]->GetStats().connection_id;
         memcpy(p, conn_id.c_str(), std::min<int>(conn_id.size(), 26));
 
         data.insert(data.begin(), buf, buf + sizeof(buf));

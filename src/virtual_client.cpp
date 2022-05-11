@@ -63,9 +63,15 @@ void VirtualClient::SendMessage(const std::string& label,
   sora_client_->SendMessage(label, data);
 }
 
-std::string VirtualClient::GetConnectionID() {
+VirtualClientStats VirtualClient::GetStats() const {
   if (sora_client_ == nullptr) {
-    return "";
+    return VirtualClientStats();
   }
-  return sora_client_->GetConnectionID();
+  VirtualClientStats st;
+  st.channel_id = sorac_config_.channel_id;
+  st.connection_id = sora_client_->GetConnectionID();
+  st.connected_url = sora_client_->GetConnectedSignalingURL();
+  st.datachannel_connected = sora_client_->IsConnectedDataChannel();
+  st.websocket_connected = sora_client_->IsConnectedWebsocket();
+  return st;
 }
