@@ -11,6 +11,10 @@
 
 ## develop
 
+- [UPDATE] `CLI11` を `2.2.0` に上げる
+    - @voluntas
+- [UPDATE] Boost 1.79.0 に上げる
+    - @voluntas
 - [ADD] simulcast_rid を追加する
     - @melpon
 - [ADD] spotlight_focus_rid を追加する
