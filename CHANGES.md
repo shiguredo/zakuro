@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] OpenH264 2.2.0 に上げる
+    - @voluntas
 - [UPDATE] `CLI11` を `2.2.0` に上げる
     - @voluntas
 - [UPDATE] Boost 1.79.0 に上げる
