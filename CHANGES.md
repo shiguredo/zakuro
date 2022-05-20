@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] `cmake` を `3.23.1` に上げる
+    - @voluntas
 - [UPDATE] OpenH264 2.2.0 に上げる
     - @voluntas
 - [UPDATE] `CLI11` を `2.2.0` に上げる
