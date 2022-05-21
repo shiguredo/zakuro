@@ -41,7 +41,7 @@ class CreateSessionDescriptionThunk
   static rtc::scoped_refptr<CreateSessionDescriptionThunk> Create(
       OnSuccessFunc on_success,
       OnFailureFunc on_failure) {
-    return new rtc::RefCountedObject<CreateSessionDescriptionThunk>(
+    return rtc::make_ref_counted<CreateSessionDescriptionThunk>(
         std::move(on_success), std::move(on_failure));
   }
 
@@ -81,7 +81,7 @@ class SetSessionDescriptionThunk
   static rtc::scoped_refptr<SetSessionDescriptionThunk> Create(
       OnSuccessFunc on_success,
       OnFailureFunc on_failure) {
-    return new rtc::RefCountedObject<SetSessionDescriptionThunk>(
+    return rtc::make_ref_counted<SetSessionDescriptionThunk>(
         std::move(on_success), std::move(on_failure));
   }
 
@@ -235,15 +235,13 @@ bool RTCConnection::IsVideoEnabled() {
   return IsMediaEnabled(GetLocalVideoTrack());
 }
 
-rtc::scoped_refptr<webrtc::MediaStreamInterface>
-RTCConnection::GetLocalStream() {
+webrtc::MediaStreamInterface* RTCConnection::GetLocalStream() {
   return connection_->local_streams()->at(0);
 }
 
 rtc::scoped_refptr<webrtc::AudioTrackInterface>
 RTCConnection::GetLocalAudioTrack() {
-  rtc::scoped_refptr<webrtc::MediaStreamInterface> local_stream =
-      GetLocalStream();
+  webrtc::MediaStreamInterface* local_stream = GetLocalStream();
   if (!local_stream) {
     return nullptr;
   }
@@ -260,8 +258,7 @@ RTCConnection::GetLocalAudioTrack() {
 
 rtc::scoped_refptr<webrtc::VideoTrackInterface>
 RTCConnection::GetLocalVideoTrack() {
-  rtc::scoped_refptr<webrtc::MediaStreamInterface> local_stream =
-      GetLocalStream();
+  webrtc::MediaStreamInterface* local_stream = GetLocalStream();
   if (!local_stream) {
     return nullptr;
   }

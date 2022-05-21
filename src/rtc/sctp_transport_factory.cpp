@@ -1,7 +1,6 @@
 #include "sctp_transport_factory.h"
 
 #include <media/sctp/dcsctp_transport.h>
-#include <media/sctp/usrsctp_transport.h>
 #include <rtc_base/system/unused.h>
 #include <system_wrappers/include/clock.h>
 #include <system_wrappers/include/field_trial.h>

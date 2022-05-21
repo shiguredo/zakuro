@@ -4,6 +4,7 @@
 // WebRTC
 #include <api/peer_connection_interface.h>
 #include <api/test/simulated_network.h>
+#include <call/degraded_call.h>
 #include <pc/video_track_source.h>
 
 #include "rtc_connection.h"
@@ -47,8 +48,8 @@ struct RTCManagerConfig {
 
   std::string priority = "BALANCE";
 
-  webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
-  webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
+  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_send;
+  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
 
   // FRAMERATE が優先のときは RESOLUTION をデグレさせていく
   webrtc::DegradationPreference GetPriority() {

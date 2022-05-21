@@ -477,9 +477,9 @@ class GameKuzushi {
     double b;
   };
   static Lab ToCIELAB(BLRgba32 rgb) {
-    double r = (double)rgb.r / 255;
-    double g = (double)rgb.g / 255;
-    double b = (double)rgb.b / 255;
+    double r = (double)rgb.r() / 255;
+    double g = (double)rgb.g() / 255;
+    double b = (double)rgb.b() / 255;
     double x = 0.4124 * r + 0.3576 * g + 0.1805 * b;
     double y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
     double z = 0.0193 * r + 0.1192 * g + 0.9505 * b;

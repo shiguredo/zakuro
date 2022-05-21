@@ -52,8 +52,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
   // （録音を無効にしたい場合は webrtc::AudioDeviceModule::kDummyAudio で ADM を作って渡せば良い）
   static rtc::scoped_refptr<ZakuroAudioDeviceModule> Create(
       ZakuroAudioDeviceModuleConfig config) {
-    return new rtc::RefCountedObject<ZakuroAudioDeviceModule>(
-        std::move(config));
+    return rtc::make_ref_counted<ZakuroAudioDeviceModule>(std::move(config));
   }
 
   void StartAudioThread();
@@ -202,12 +201,8 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
   }
 
   // Audio mixer initialization
-  virtual int32_t InitSpeaker() override {
-    return 0;
-  }
-  virtual bool SpeakerIsInitialized() const override {
-    return false;
-  }
+  virtual int32_t InitSpeaker() override { return 0; }
+  virtual bool SpeakerIsInitialized() const override { return false; }
   virtual int32_t InitMicrophone() override {
     microphone_initialized_ = true;
     return adm_ ? adm_->InitMicrophone() : 0;
@@ -222,12 +217,8 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
     *available = false;
     return 0;
   }
-  virtual int32_t SetSpeakerVolume(uint32_t volume) override {
-    return 0;
-  }
-  virtual int32_t SpeakerVolume(uint32_t* volume) const override {
-    return 0;
-  }
+  virtual int32_t SetSpeakerVolume(uint32_t volume) override { return 0; }
+  virtual int32_t SpeakerVolume(uint32_t* volume) const override { return 0; }
   virtual int32_t MaxSpeakerVolume(uint32_t* maxVolume) const override {
     return 0;
   }
@@ -258,9 +249,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
     *available = false;
     return 0;
   }
-  virtual int32_t SetSpeakerMute(bool enable) override {
-    return 0;
-  }
+  virtual int32_t SetSpeakerMute(bool enable) override { return 0; }
   virtual int32_t SpeakerMute(bool* enabled) const override {
     *enabled = false;
     return 0;
@@ -282,9 +271,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
     *available = false;
     return 0;
   }
-  virtual int32_t SetStereoPlayout(bool enable) override {
-    return 0;
-  }
+  virtual int32_t SetStereoPlayout(bool enable) override { return 0; }
   virtual int32_t StereoPlayout(bool* enabled) const override {
     *enabled = false;
     return 0;
@@ -310,9 +297,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
   }
 
   // Playout delay
-  virtual int32_t PlayoutDelay(uint16_t* delayMS) const override {
-    return 0;
-  }
+  virtual int32_t PlayoutDelay(uint16_t* delayMS) const override { return 0; }
 
   // Only supported on Android.
   virtual bool BuiltInAECIsAvailable() const override { return false; }

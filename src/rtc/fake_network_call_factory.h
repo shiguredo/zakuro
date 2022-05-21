@@ -6,24 +6,25 @@
 #include <api/test/simulated_network.h>
 #include <call/call.h>
 #include <call/call_config.h>
+#include <call/degraded_call.h>
 #include <rtc_base/system/no_unique_address.h>
 
 class FakeNetworkCallFactory : public webrtc::CallFactoryInterface {
  public:
   FakeNetworkCallFactory(
-      const webrtc::BuiltInNetworkBehaviorConfig& send_config,
-      const webrtc::BuiltInNetworkBehaviorConfig& receive_config);
+      const webrtc::DegradedCall::TimeScopedNetworkConfig& send_config,
+      const webrtc::DegradedCall::TimeScopedNetworkConfig& receive_config);
 
  private:
   ~FakeNetworkCallFactory() override {}
   webrtc::Call* CreateCall(const webrtc::CallConfig& config) override;
 
-  webrtc::BuiltInNetworkBehaviorConfig send_config_;
-  webrtc::BuiltInNetworkBehaviorConfig receive_config_;
+  webrtc::DegradedCall::TimeScopedNetworkConfig send_config_;
+  webrtc::DegradedCall::TimeScopedNetworkConfig receive_config_;
 };
 
 std::unique_ptr<webrtc::CallFactoryInterface> CreateFakeNetworkCallFactory(
-    const webrtc::BuiltInNetworkBehaviorConfig& send_config,
-    const webrtc::BuiltInNetworkBehaviorConfig& receive_config);
+    const webrtc::DegradedCall::TimeScopedNetworkConfig& send_config,
+    const webrtc::DegradedCall::TimeScopedNetworkConfig& receive_config);
 
 #endif
