@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] asmjit と blend2d を最新版に上げる
+    - @voluntas
 - [UPDATE] `cmake` を `3.23.1` に上げる
     - @voluntas
 - [UPDATE] OpenH264 2.2.0 に上げる
