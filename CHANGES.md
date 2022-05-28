@@ -11,8 +11,8 @@
 
 ## develop
 
-- [UPDATE] WebRTC を m102.5005.7.1 に上げる
-    - @melpon
+- [UPDATE] WebRTC を m102.5005.7.3 に上げる
+    - @melpon @voluntas
 - [UPDATE] asmjit と blend2d を最新版に上げる
     - @voluntas @melpon
 - [UPDATE] `cmake` を `3.23.1` に上げる
