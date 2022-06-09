@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2022.3.0
+
 - [UPDATE] WebRTC を m102.5005.7.6 に上げる
     - @melpon @voluntas
 - [UPDATE] asmjit と blend2d を最新版に上げる
