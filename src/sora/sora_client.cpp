@@ -49,6 +49,18 @@ std::string SoraClient::GetConnectionID() const {
   return connection_id_;
 }
 
+std::string SoraClient::GetConnectedSignalingURL() const {
+  return connected_signaling_url_;
+}
+
+bool SoraClient::IsConnectedWebsocket() const {
+  return ws_ != nullptr;
+}
+
+bool SoraClient::IsConnectedDataChannel() const {
+  return using_datachannel_;
+}
+
 SoraClient::SoraClient(boost::asio::io_context& ioc,
                        std::shared_ptr<RTCManager> manager,
                        SoraClientConfig config)
@@ -282,12 +294,21 @@ void SoraClient::DoSendConnect(bool redirect) {
   if (config_.simulcast) {
     json_message["simulcast"] = true;
   }
+  if (!config_.simulcast_rid.empty()) {
+    json_message["simulcast_rid"] = config_.simulcast_rid;
+  }
 
   if (config_.spotlight) {
     json_message["spotlight"] = true;
   }
   if (config_.spotlight && config_.spotlight_number > 0) {
     json_message["spotlight_number"] = config_.spotlight_number;
+  }
+  if (!config_.spotlight_focus_rid.empty()) {
+    json_message["spotlight_focus_rid"] = config_.spotlight_focus_rid;
+  }
+  if (!config_.spotlight_unfocus_rid.empty()) {
+    json_message["spotlight_unfocus_rid"] = config_.spotlight_unfocus_rid;
   }
 
   if (!config_.metadata.is_null()) {

@@ -31,6 +31,7 @@
 #include "virtual_client.h"
 #include "wav_reader.h"
 #include "zakuro.h"
+#include "zakuro_stats.h"
 
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
 
@@ -80,8 +81,10 @@ int main(int argc, char* argv[]) {
   std::string config_file;
   int log_level = rtc::LS_NONE;
   int port = -1;
+  std::string connection_id_stats_file;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, config, false);
+  Util::ParseArgs(args, config_file, log_level, port, connection_id_stats_file,
+                  config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -104,6 +107,11 @@ int main(int argc, char* argv[]) {
     if (zakuro_node["port"]) {
       common_args.push_back("--port");
       common_args.push_back(zakuro_node["port"].as<std::string>());
+    }
+    if (zakuro_node["output-file-connection-id"]) {
+      common_args.push_back("--output-file-connection-id");
+      common_args.push_back(
+          zakuro_node["output-file-connection-id"].as<std::string>());
     }
 
     std::vector<std::string> post_args;
@@ -143,7 +151,8 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, port, config, true);
+        Util::ParseArgs(args, config_file, log_level, port,
+                        connection_id_stats_file, config, true);
         configs.push_back(config);
       }
     }
@@ -180,12 +189,93 @@ int main(int argc, char* argv[]) {
     config.key_core = key_core;
   }
 
+  // 各 config に stats を設定
+  std::shared_ptr<ZakuroStats> stats(new ZakuroStats());
+  for (auto& config : configs) {
+    config.stats = stats;
+  }
+
+  // ユニークな番号を設定
+  for (int i = 0; i < configs.size(); i++) {
+    configs[i].id = i;
+  }
+
+  // 集めた stats を定期的にファイルに出力する
+  std::unique_ptr<std::thread> stats_th;
+  // C++20 にしないと latch が無いので mutex+CV で終了を検知する
+  std::mutex stats_mut;
+  std::condition_variable stats_cv;
+  int stats_countdown = configs.size();
+  if (!connection_id_stats_file.empty()) {
+    stats_th.reset(new std::thread([stats, &stats_cv, &stats_mut,
+                                    &stats_countdown,
+                                    &connection_id_stats_file]() {
+      while (true) {
+        std::unique_lock<std::mutex> lock(stats_mut);
+        bool countzero = stats_cv.wait_for(
+            lock, std::chrono::seconds(10),
+            [&stats_countdown]() { return stats_countdown == 0; });
+        // stats_countdown == 0 になったので終了
+        if (countzero) {
+          break;
+        }
+        // ファイルに書き込む
+        const auto& m = stats->Get();
+        /*
+        {
+          "wss://hoge1.jp/signaling": {
+            "channelid-1": [
+              "connectionid-1",
+              "connectionid-2"
+            ],
+            "channelid-2": [
+              "connectionid-3"
+            ]
+          },
+          "wss://hoge2.jp/signaling": {
+            "channelid-1": [
+              "connectionid-4"
+            ]
+          }
+        }
+        */
+        std::map<std::string, std::map<std::string, std::vector<std::string>>>
+            d;
+        for (const auto& p : m) {
+          for (const auto& stat : p.second.stats) {
+            d[stat.connected_url][stat.channel_id].push_back(
+                stat.connection_id);
+          }
+        }
+        // 頑張って object に変換する
+        boost::json::object obj;
+        for (const auto& p : d) {
+          boost::json::object obj2;
+          for (const auto& p2 : p.second) {
+            boost::json::array ar(p2.second.begin(), p2.second.end());
+            obj2[p2.first] = ar;
+          }
+          obj[p.first] = obj2;
+        }
+        std::string jstr = boost::json::serialize(obj);
+        // ファイルに出力
+        std::ofstream ofs(connection_id_stats_file);
+        ofs << jstr;
+      }
+    }));
+  }
+
   std::vector<std::unique_ptr<std::thread>> ths;
   for (const auto& config : configs) {
-    ths.push_back(std::unique_ptr<std::thread>(new std::thread([config]() {
-      Zakuro zakuro(config);
-      zakuro.Run();
-    })));
+    ths.push_back(std::unique_ptr<std::thread>(
+        new std::thread([config, &stats_cv, &stats_mut, &stats_countdown]() {
+          Zakuro zakuro(config);
+          zakuro.Run();
+          std::lock_guard<std::mutex> guard(stats_mut);
+          if (--stats_countdown == 0) {
+            stats_cv.notify_all();
+          }
+        })));
   }
   for (auto& th : ths) {
     th->join();

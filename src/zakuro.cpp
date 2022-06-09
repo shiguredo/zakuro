@@ -23,6 +23,7 @@
 #include "virtual_client.h"
 #include "wav_reader.h"
 #include "zakuro.h"
+#include "zakuro_stats.h"
 
 Zakuro::Zakuro(ZakuroConfig config) : config_(std::move(config)) {}
 
@@ -305,9 +306,12 @@ int Zakuro::Run() {
         config_.sora_signaling_notify_metadata;
     sorac_config.role = config_.sora_role;
     sorac_config.multistream = config_.sora_multistream;
+    sorac_config.simulcast = config_.sora_simulcast;
+    sorac_config.simulcast_rid = config_.sora_simulcast_rid;
     sorac_config.spotlight = config_.sora_spotlight;
     sorac_config.spotlight_number = config_.sora_spotlight_number;
-    sorac_config.simulcast = config_.sora_simulcast;
+    sorac_config.spotlight_focus_rid = config_.sora_spotlight_focus_rid;
+    sorac_config.spotlight_unfocus_rid = config_.sora_spotlight_unfocus_rid;
     sorac_config.data_channel_signaling = config_.sora_data_channel_signaling;
     sorac_config.data_channel_signaling_timeout =
         config_.sora_data_channel_signaling_timeout;
@@ -388,6 +392,24 @@ int Zakuro::Run() {
       trigger.reset(new FakeAudioKeyTrigger(ioc, config_.key_core, gam.get(),
                                             &scenario_player, vcs));
     }
+
+    // 定期的に VirtualClient の stats を取る
+    boost::asio::deadline_timer timer(ioc);
+    timer.expires_from_now(boost::posix_time::seconds(5));
+    std::function<void(const boost::system::error_code& ec)> f;
+    f = [&vcs, c = config_, &timer, &f](const boost::system::error_code& ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+        return;
+      }
+      std::vector<VirtualClientStats> ss;
+      for (auto& vc : vcs) {
+        ss.push_back(vc->GetStats());
+      }
+      c.stats->Set(c.id, c.name, ss);
+      timer.expires_from_now(boost::posix_time::seconds(10));
+      timer.async_wait(f);
+    };
+    timer.async_wait(f);
 
     ioc.run();
 

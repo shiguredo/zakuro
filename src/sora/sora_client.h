@@ -38,9 +38,12 @@ struct SoraClientConfig {
   boost::json::value signaling_notify_metadata;
   std::string role = "sendonly";
   bool multistream = false;
+  bool simulcast = false;
+  std::string simulcast_rid;
   bool spotlight = false;
   int spotlight_number = 0;
-  bool simulcast = false;
+  std::string spotlight_focus_rid;
+  std::string spotlight_unfocus_rid;
   boost::optional<bool> data_channel_signaling;
   int data_channel_signaling_timeout = 180;
   boost::optional<bool> ignore_disconnect_websocket;
@@ -75,6 +78,9 @@ class SoraClient : public std::enable_shared_from_this<SoraClient>,
       const;
   std::shared_ptr<RTCConnection> GetRTCConnection() const;
   std::string GetConnectionID() const;
+  std::string GetConnectedSignalingURL() const;
+  bool IsConnectedWebsocket() const;
+  bool IsConnectedDataChannel() const;
 
  private:
   void ReconnectAfter();

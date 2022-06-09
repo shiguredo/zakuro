@@ -11,6 +11,27 @@
 
 ## develop
 
+## 2022.3.0
+
+- [UPDATE] WebRTC を m102.5005.7.6 に上げる
+    - @melpon @voluntas
+- [UPDATE] asmjit と blend2d を最新版に上げる
+    - @voluntas @melpon
+- [UPDATE] `cmake` を `3.23.2` に上げる
+    - @voluntas
+- [UPDATE] OpenH264 2.2.0 に上げる
+    - @voluntas
+- [UPDATE] `CLI11` を `2.2.0` に上げる
+    - @voluntas
+- [UPDATE] Boost 1.79.0 に上げる
+    - @voluntas
+- [ADD] simulcast_rid を追加する
+    - @melpon
+- [ADD] spotlight_focus_rid を追加する
+    - @melpon
+- [ADD] spotlight_unfocus_rid を追加する
+    - @melpon
+
 ## 2022.2.0
 
 - [UPDATE] `cmake` を `3.22.3` に上げる

@@ -7,6 +7,7 @@
 
 // WebRTC
 #include <api/test/simulated_network.h>
+#include <call/degraded_call.h>
 
 // Boost
 #include <boost/json.hpp>
@@ -14,7 +15,10 @@
 
 #include "game/game_key_core.h"
 
+class ZakuroStats;
+
 struct ZakuroConfig {
+  int id = 0;
   std::string name = "zakuro";
   int vcs = 1;
   double hatch_rate = 1.0;
@@ -54,8 +58,11 @@ struct ZakuroConfig {
   std::string sora_role = "";
   bool sora_multistream = false;
   bool sora_simulcast = false;
+  std::string sora_simulcast_rid;
   bool sora_spotlight = false;
   int sora_spotlight_number = 0;
+  std::string sora_spotlight_focus_rid;
+  std::string sora_spotlight_unfocus_rid;
   boost::optional<bool> sora_data_channel_signaling;
   int sora_data_channel_signaling_timeout = 180;
   boost::optional<bool> sora_ignore_disconnect_websocket;
@@ -64,10 +71,12 @@ struct ZakuroConfig {
   boost::json::value sora_signaling_notify_metadata;
   boost::json::value sora_data_channels;
 
-  webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
-  webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
+  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_send;
+  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
 
   std::shared_ptr<GameKeyCore> key_core;
+
+  std::shared_ptr<ZakuroStats> stats;
 
   struct Size {
     int width;

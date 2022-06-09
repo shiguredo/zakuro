@@ -39,7 +39,7 @@ class FakeVideoCapturer : public ScalableVideoTrackSource {
  public:
   static rtc::scoped_refptr<FakeVideoCapturer> Create(
       FakeVideoCapturerConfig config) {
-    return new rtc::RefCountedObject<FakeVideoCapturer>(std::move(config));
+    return rtc::make_ref_counted<FakeVideoCapturer>(std::move(config));
   }
 
   ~FakeVideoCapturer();
