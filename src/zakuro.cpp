@@ -293,6 +293,8 @@ int Zakuro::Run() {
     sorac_config.client_key = config_.client_key;
     sorac_config.signaling_urls = config_.sora_signaling_urls;
     sorac_config.channel_id = config_.sora_channel_id;
+    sorac_config.disable_signaling_url_randomization =
+        config_.sora_disable_signaling_url_randomization;
     sorac_config.video = config_.sora_video;
     sorac_config.audio = config_.sora_audio;
     sorac_config.video_codec_type = config_.sora_video_codec_type;
@@ -380,7 +382,7 @@ int Zakuro::Run() {
 
     for (int i = 0; i < config_.vcs; i++) {
       ScenarioData cdata;
-      int first_wait_ms = (int)(1000 * i / config_.hatch_rate);
+      int first_wait_ms = (int)(1000 * i / config_.vcs_hatch_rate);
       cdata.Sleep(first_wait_ms, first_wait_ms);
       cdata.ops.insert(cdata.ops.end(), data.ops.begin(), data.ops.end());
       // 先頭に1個付け足したので +1 する

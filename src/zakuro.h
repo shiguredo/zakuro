@@ -21,7 +21,7 @@ struct ZakuroConfig {
   int id = 0;
   std::string name = "zakuro";
   int vcs = 1;
-  double hatch_rate = 1.0;
+  double vcs_hatch_rate = 1.0;
 
   bool no_video_device = false;
   bool no_audio_device = false;
@@ -45,6 +45,7 @@ struct ZakuroConfig {
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;
+  bool sora_disable_signaling_url_randomization = false;
   bool sora_video = true;
   bool sora_audio = true;
   // 空文字の場合コーデックは Sora 側で決める

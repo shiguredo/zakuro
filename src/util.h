@@ -22,6 +22,7 @@ class Util {
                         int& log_level,
                         int& port,
                         std::string& connection_id_stats_file,
+                        double& instance_hatch_rate,
                         ZakuroConfig& config,
                         bool ignore_config);
   static std::vector<std::vector<std::string>> NodeToArgs(

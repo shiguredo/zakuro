@@ -82,9 +82,10 @@ int main(int argc, char* argv[]) {
   int log_level = rtc::LS_NONE;
   int port = -1;
   std::string connection_id_stats_file;
+  double instance_hatch_rate = 1.0;
   ZakuroConfig config;
   Util::ParseArgs(args, config_file, log_level, port, connection_id_stats_file,
-                  config, false);
+                  instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -112,6 +113,11 @@ int main(int argc, char* argv[]) {
       common_args.push_back("--output-file-connection-id");
       common_args.push_back(
           zakuro_node["output-file-connection-id"].as<std::string>());
+    }
+    if (zakuro_node["instance-hatch-rate"]) {
+      common_args.push_back("--instance-hatch-rate");
+      common_args.push_back(
+          zakuro_node["instance-hatch-rate"].as<std::string>());
     }
 
     std::vector<std::string> post_args;
@@ -152,7 +158,8 @@ int main(int argc, char* argv[]) {
         config_file = "";
         config = ZakuroConfig();
         Util::ParseArgs(args, config_file, log_level, port,
-                        connection_id_stats_file, config, true);
+                        connection_id_stats_file, instance_hatch_rate, config,
+                        true);
         configs.push_back(config);
       }
     }
@@ -266,9 +273,13 @@ int main(int argc, char* argv[]) {
   }
 
   std::vector<std::unique_ptr<std::thread>> ths;
-  for (const auto& config : configs) {
+  for (int i = 0; i < configs.size(); i++) {
+    const auto& config = configs[i];
     ths.push_back(std::unique_ptr<std::thread>(
-        new std::thread([config, &stats_cv, &stats_mut, &stats_countdown]() {
+        new std::thread([i, config, &stats_cv, &stats_mut, &stats_countdown,
+                         instance_hatch_rate]() {
+          int wait_ms = (int)(1000 * i / instance_hatch_rate);
+          std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
           Zakuro zakuro(config);
           zakuro.Run();
           std::lock_guard<std::mutex> guard(stats_mut);

@@ -26,6 +26,7 @@ struct SoraClientConfig {
   std::vector<std::string> signaling_urls;
   std::string channel_id;
 
+  bool disable_signaling_url_randomization = false;
   bool insecure = false;
   bool video = true;
   bool audio = true;

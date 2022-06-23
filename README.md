@@ -56,6 +56,8 @@ Options:
                               Log severity level threshold
   --port INT:INT in [-1 - 65535]
                               Port number (default: -1)
+  --output-file-connection-id TEXT
+                              Output to specified file with connection IDs
   --name TEXT                 Client Name
   --vcs INT:INT in [1 - 100]  Virtual Clients
   --hatch-rate FLOAT:FLOAT in [0.1 - 100]
@@ -68,7 +70,7 @@ Options:
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
   --sandstorm                 Fake Sandstorm Video
-  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
+  --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
   --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT])
   --framerate INT:INT in [1 - 60]
                               Video framerate
@@ -79,6 +81,12 @@ Options:
   --openh264 TEXT:FILE        OpenH264 dynamic library path. "OpenH264 Video Codec provided by Cisco Systems, Inc."
   --game TEXT:{kuzushi}       Play game
   --scenario TEXT:{reconnect} Scenario type
+  --client-cert TEXT:FILE     Cert file path for client certification (PEM format)
+  --client-key TEXT:FILE      Private key file path for client certification (PEM format)
+  --initial-mute-video BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Mute video initialy
+  --initial-mute-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
+                              Mute audio initialy
   --sora-signaling-url TEXT ...
                               Signaling URLs
   --sora-channel-id TEXT      Channel ID
@@ -102,10 +110,15 @@ Options:
                               Use multistream (default: false)
   --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use simulcast (default: false)
+  --sora-simulcast-rid TEXT   Simulcast rid
   --sora-spotlight BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use spotlight (default: false)
   --sora-spotlight-number INT:INT in [0 - 8]
                               Number of spotlight
+  --sora-spotlight-focus-rid TEXT
+                              Spotlight focus rid
+  --sora-spotlight-unfocus-rid TEXT
+                              Spotlight unfocus rid
   --sora-data-channel-signaling TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
                               Use DataChannel for Sora signaling (default: none)
   --sora-data-channel-signaling-timeout INT:POSITIVE
@@ -164,8 +177,8 @@ Options:
 Apache License 2.0
 
 ```
-Copyright 2020-2021, Wandbox LLC (Original Author)
-Copyright 2020-2021, Shiguredo Inc.
+Copyright 2020-2022, Wandbox LLC (Original Author)
+Copyright 2020-2022, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
