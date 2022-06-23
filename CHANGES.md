@@ -11,10 +11,15 @@
 
 ## develop
 
-## 2022.3.0
-
 - [CHANGE] `--hatch-rate` を `--vcs-hatch-rate` に変更
     - @melpon
+- [ADD] `--instance-hatch-rate` を追加
+    - @melpon
+- [ADD] シグナリング URL への接続順序をランダム化して、それを無効化するオプション `--sora-disable-signaling-url-randomization` を追加
+    - @melpon
+
+## 2022.3.0
+
 - [UPDATE] WebRTC を m102.5005.7.6 に上げる
     - @melpon @voluntas
 - [UPDATE] WebRTC を m102.5005.7.1 に上げる
@@ -34,10 +39,6 @@
 - [ADD] spotlight_focus_rid を追加する
     - @melpon
 - [ADD] spotlight_unfocus_rid を追加する
-    - @melpon
-- [ADD] `--instance-hatch-rate` を追加
-    - @melpon
-- [ADD] シグナリング URL への接続順序をランダム化して、それを無効化するオプション `--sora-disable-signaling-url-randomization` を追加
     - @melpon
 
 ## 2022.2.0
