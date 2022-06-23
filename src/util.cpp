@@ -35,6 +35,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      int& log_level,
                      int& port,
                      std::string& connection_id_stats_file,
+                     double& instance_hatch_rate,
                      ZakuroConfig& config,
                      bool ignore_config) {
   std::vector<std::string> args = cargs;
@@ -58,6 +59,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::Range(-1, 65535));
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
+  app.add_option("--instance-hatch-rate", instance_hatch_rate,
+                 "Spawned instance per seconds")
+      ->check(CLI::Range(0.1, 100.0));
 
   // インスタンス毎のオプション
   auto is_valid_resolution = CLI::Validator(
@@ -87,7 +91,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--name", config.name, "Client Name");
   app.add_option("--vcs", config.vcs, "Virtual Clients")
       ->check(CLI::Range(1, 100));
-  app.add_option("--hatch-rate", config.hatch_rate,
+  app.add_option("--vcs-hatch-rate", config.vcs_hatch_rate,
                  "Spawned virtual clients per seconds")
       ->check(CLI::Range(0.1, 100.0));
 
@@ -465,7 +469,7 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
 
     DEF_STRING(inst, "", "name");
     DEF_INTEGER(inst, "", "vcs");
-    DEF_DOUBLE(inst, "", "hatch-rate");
+    DEF_DOUBLE(inst, "", "vcs-hatch-rate");
     DEF_FLAG(inst, "", "no-video-device");
     DEF_FLAG(inst, "", "no-audio-device");
     DEF_FLAG(inst, "", "fake-capture-device");

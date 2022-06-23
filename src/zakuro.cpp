@@ -380,7 +380,7 @@ int Zakuro::Run() {
 
     for (int i = 0; i < config_.vcs; i++) {
       ScenarioData cdata;
-      int first_wait_ms = (int)(1000 * i / config_.hatch_rate);
+      int first_wait_ms = (int)(1000 * i / config_.vcs_hatch_rate);
       cdata.Sleep(first_wait_ms, first_wait_ms);
       cdata.ops.insert(cdata.ops.end(), data.ops.begin(), data.ops.end());
       // 先頭に1個付け足したので +1 する

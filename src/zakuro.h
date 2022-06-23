@@ -21,7 +21,7 @@ struct ZakuroConfig {
   int id = 0;
   std::string name = "zakuro";
   int vcs = 1;
-  double hatch_rate = 1.0;
+  double vcs_hatch_rate = 1.0;
 
   bool no_video_device = false;
   bool no_audio_device = false;
