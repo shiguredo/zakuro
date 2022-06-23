@@ -37,6 +37,8 @@
     - @melpon
 - [ADD] `--instance-hatch-rate` を追加
     - @melpon
+- [ADD] シグナリング URL への接続順序をランダム化して、それを無効化するオプション `--sora-disable-signaling-url-randomization` を追加
+    - @melpon
 
 ## 2022.2.0
 

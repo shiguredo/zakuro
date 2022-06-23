@@ -156,6 +156,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-signaling-url", config.sora_signaling_urls,
                  "Signaling URLs")
       ->take_all();
+  app.add_flag("--sora-disable-signaling-url-randomization",
+               config.sora_disable_signaling_url_randomization);
   app.add_option("--sora-channel-id", config.sora_channel_id, "Channel ID");
   app.add_option("--sora-role", config.sora_role, "Role")
       ->check(CLI::IsMember({"sendonly", "recvonly", "sendrecv"}));
@@ -513,6 +515,7 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
           has_error = true;
         }
       }
+      DEF_BOOLEAN(sora, "sora-", "disable-signaling-url-randomization");
 
       DEF_STRING(sora, "sora-", "channel-id");
       DEF_STRING(sora, "sora-", "role");

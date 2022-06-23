@@ -1,6 +1,8 @@
 #include "sora_client.h"
 
+#include <algorithm>
 #include <fstream>
+#include <random>
 #include <sstream>
 
 // boost
@@ -147,7 +149,15 @@ void SoraClient::Connect() {
   ws_.reset();
   connecting_wss_.clear();
 
-  for (const auto& url : config_.signaling_urls) {
+  auto signaling_urls = config_.signaling_urls;
+  if (!config_.disable_signaling_url_randomization) {
+    // ランダムに並び替える
+    std::random_device seed_gen;
+    std::mt19937 engine(seed_gen());
+    std::shuffle(signaling_urls.begin(), signaling_urls.end(), engine);
+  }
+
+  for (const auto& url : signaling_urls) {
     URLParts parts;
     bool ssl;
     if (!ParseURL(url, parts, ssl)) {
