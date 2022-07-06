@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2022.5.0 (2022-07-06)
+
 - [UPDATE] WebRTC を m103.5060.5.0 に上げる
     - @melpon @voluntas @torikizi
 
