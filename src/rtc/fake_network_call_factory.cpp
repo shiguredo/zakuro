@@ -32,8 +32,7 @@ webrtc::Call* FakeNetworkCallFactory::CreateCall(
       webrtc::SharedModuleThread::Create(
           webrtc::ProcessThread::Create("ModuleProcessThread"), nullptr),
       config.rtp_transport_controller_send_factory->Create(
-          transport_config, webrtc::Clock::GetRealTimeClock(),
-          webrtc::ProcessThread::Create("PacerThread")));
+          transport_config, webrtc::Clock::GetRealTimeClock()));
 
   if (send_config_changed || receive_config_changed) {
     std::vector<webrtc::DegradedCall::TimeScopedNetworkConfig> send_config = {
