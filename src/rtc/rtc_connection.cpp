@@ -130,14 +130,14 @@ void RTCConnection::CreateOffer(OnCreateSuccessFunc on_success,
     desc->ToString(&sdp);
     RTC_LOG(LS_INFO) << "Created session description : " << sdp;
     connection_->SetLocalDescription(
-        SetSessionDescriptionThunk::Create(nullptr, nullptr), desc);
+        SetSessionDescriptionThunk::Create(nullptr, nullptr).get(), desc);
     if (on_success) {
       on_success(desc);
     }
   };
   connection_->CreateOffer(
       CreateSessionDescriptionThunk::Create(std::move(with_set_local_desc),
-                                            std::move(on_failure)),
+                                            std::move(on_failure)).get(),
       options);
 }
 
@@ -156,7 +156,7 @@ void RTCConnection::SetOffer(const std::string sdp,
   }
   connection_->SetRemoteDescription(
       SetSessionDescriptionThunk::Create(std::move(on_success),
-                                         std::move(on_failure)),
+                                         std::move(on_failure)).get(),
       session_description.release());
 }
 
@@ -168,14 +168,14 @@ void RTCConnection::CreateAnswer(OnCreateSuccessFunc on_success,
     desc->ToString(&sdp);
     RTC_LOG(LS_INFO) << "Created session description : " << sdp;
     connection_->SetLocalDescription(
-        SetSessionDescriptionThunk::Create(nullptr, nullptr), desc);
+        SetSessionDescriptionThunk::Create(nullptr, nullptr).get(), desc);
     if (on_success) {
       on_success(desc);
     }
   };
   connection_->CreateAnswer(
       CreateSessionDescriptionThunk::Create(std::move(with_set_local_desc),
-                                            std::move(on_failure)),
+                                            std::move(on_failure)).get(),
       webrtc::PeerConnectionInterface::RTCOfferAnswerOptions());
 }
 
@@ -194,7 +194,7 @@ void RTCConnection::SetAnswer(const std::string sdp,
   }
   connection_->SetRemoteDescription(
       SetSessionDescriptionThunk::Create(std::move(on_success),
-                                         std::move(on_failure)),
+                                         std::move(on_failure)).get(),
       session_description.release());
 }
 
