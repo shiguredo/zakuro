@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] WebRTC を m103.5060.5.0 に上げる
+    - @melpon @voluntas @torikizi
+
 ## 2022.4.0
 
 - [CHANGE] `--hatch-rate` を `--vcs-hatch-rate` に変更
