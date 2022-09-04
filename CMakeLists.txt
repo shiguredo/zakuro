@@ -137,6 +137,8 @@ target_compile_definitions(zakuro
     # しかし、 libwebrtc の libc++ では std::filesystem が提供されていないため下記のオプションを追加して利用しないようにする。 
     CLI11_HAS_FILESYSTEM=0
     OPENSSL_IS_BORINGSSL
+    # https://github.com/boostorg/container_hash/issues/22 と同じ問題が clang-15 でも起きるので、これを手動で定義して回避する
+    BOOST_NO_CXX98_FUNCTION_BASE
 )
 
 target_compile_options(zakuro
@@ -293,7 +295,8 @@ elseif (TARGET_OS STREQUAL "linux")
   target_compile_definitions(zakuro
     PRIVATE
       WEBRTC_POSIX
-      _LIBCPP_ABI_UNSTABLE
+      _LIBCPP_ABI_NAMESPACE=Cr
+      _LIBCPP_ABI_VERSION=2
       _LIBCPP_DISABLE_AVAILABILITY
   )
   target_sources(zakuro

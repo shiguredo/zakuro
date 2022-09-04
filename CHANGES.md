@@ -11,12 +11,17 @@
 
 ## develop
 
+- [UPDATE] WebRTC を m105.5195.0.0 に上げる
+    - @melpon
+- [UPDATE] Boost を 1.80.0 に上げる
+    - @melpon
+
 ## 2022.5.0 (2022-07-06)
 
 - [UPDATE] WebRTC を m103.5060.5.0 に上げる
     - @melpon @voluntas @torikizi
 
-## 2022.4.0
+## 2022.3.0
 
 - [CHANGE] `--hatch-rate` を `--vcs-hatch-rate` に変更
     - @melpon

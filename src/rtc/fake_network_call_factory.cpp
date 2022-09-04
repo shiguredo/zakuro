@@ -29,8 +29,6 @@ webrtc::Call* FakeNetworkCallFactory::CreateCall(
 
   webrtc::Call* call = webrtc::Call::Create(
       config, webrtc::Clock::GetRealTimeClock(),
-      webrtc::SharedModuleThread::Create(
-          webrtc::ProcessThread::Create("ModuleProcessThread"), nullptr),
       config.rtp_transport_controller_send_factory->Create(
           transport_config, webrtc::Clock::GetRealTimeClock()));
 
