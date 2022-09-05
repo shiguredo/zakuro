@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2022.6.0 (2022-09-05)
+
 - [UPDATE] asmjit と blend2d を最新版に上げる
     - @voluntas
 - [UPDATE] `cmake` を `3.24.1` に上げる
