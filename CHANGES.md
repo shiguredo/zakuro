@@ -15,6 +15,8 @@
     - @voluntas
 - [UPDATE] `cmake` を `3.24.1` に上げる
     - @voluntas
+- [UPDATE] yaml-cpp 0.7.0 に上げる
+    - @voluntas
 - [UPDATE] OpenH264 2.3.0 に上げる
     - @voluntas
 - [UPDATE] WebRTC を m105.5195.0.0 に上げる
