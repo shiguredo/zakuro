@@ -143,8 +143,8 @@ RTCManager::RTCManager(
     if (config_.disable_highpass_filter)
       ao.highpass_filter = false;
     RTC_LOG(LS_INFO) << __FUNCTION__ << ": " << ao.ToString();
-    audio_track_ = factory_->CreateAudioTrack(Util::GenerateRandomChars(),
-                                              factory_->CreateAudioSource(ao).get());
+    audio_track_ = factory_->CreateAudioTrack(
+        Util::GenerateRandomChars(), factory_->CreateAudioSource(ao).get());
     if (!audio_track_) {
       RTC_LOG(LS_WARNING) << __FUNCTION__ << ": Cannot create audio_track";
     }
@@ -154,8 +154,8 @@ RTCManager::RTCManager(
     rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> video_source =
         webrtc::VideoTrackSourceProxy::Create(
             signaling_thread_.get(), worker_thread_.get(), video_track_source);
-    video_track_ =
-        factory_->CreateVideoTrack(Util::GenerateRandomChars(), video_source.get());
+    video_track_ = factory_->CreateVideoTrack(Util::GenerateRandomChars(),
+                                              video_source.get());
     if (video_track_) {
       if (config_.fixed_resolution) {
         video_track_->set_content_hint(

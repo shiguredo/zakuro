@@ -281,7 +281,6 @@ int32_t DynamicH264VideoEncoder::InitEncode(
     configurations_[i].width = codec_.simulcastStream[idx].width;
     configurations_[i].height = codec_.simulcastStream[idx].height;
     configurations_[i].max_frame_rate = static_cast<float>(codec_.maxFramerate);
-    configurations_[i].frame_dropping_on = codec_.H264()->frameDroppingOn;
     configurations_[i].key_frame_interval = codec_.H264()->keyFrameInterval;
     configurations_[i].num_temporal_layers =
         codec_.simulcastStream[idx].numberOfTemporalLayers;

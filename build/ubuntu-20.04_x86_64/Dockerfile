@@ -39,7 +39,8 @@ RUN \
   && echo 'using clang : : /root/llvm/clang/bin/clang++ : ;' > project-config.jam \
   && ./b2 \
     cxxflags=' \
-      -D_LIBCPP_ABI_UNSTABLE \
+      -D_LIBCPP_ABI_NAMESPACE=Cr \
+      -D_LIBCPP_ABI_VERSION=2 \
       -D_LIBCPP_DISABLE_AVAILABILITY  \
       -nostdinc++ \
       -isystem/root/llvm/libcxx/include \
@@ -86,7 +87,8 @@ RUN cd /root \
       -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang \
       -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ \
       -DCMAKE_CXX_FLAGS=" \
-        -D_LIBCPP_ABI_UNSTABLE \
+        -D_LIBCPP_ABI_NAMESPACE=Cr \
+        -D_LIBCPP_ABI_VERSION=2 \
         -D_LIBCPP_DISABLE_AVAILABILITY  \
         -nostdinc++ \
         -isystem/root/llvm/libcxx/include \
@@ -122,7 +124,8 @@ RUN \
       -DCMAKE_C_COMPILER=/root/llvm/clang/bin/clang \
       -DCMAKE_CXX_COMPILER=/root/llvm/clang/bin/clang++ \
       -DCMAKE_CXX_FLAGS=" \
-        -D_LIBCPP_ABI_UNSTABLE \
+        -D_LIBCPP_ABI_NAMESPACE=Cr \
+        -D_LIBCPP_ABI_VERSION=2 \
         -D_LIBCPP_DISABLE_AVAILABILITY  \
         -nostdinc++ \
         -isystem/root/llvm/libcxx/include \
