@@ -11,6 +11,12 @@
 
 ## develop
 
+- [UPDATE] asmjit と blend2d を最新版に上げる
+    - @voluntas
+- [UPDATE] `cmake` を `3.24.1` に上げる
+    - @voluntas
+- [UPDATE] OpenH264 2.3.0 に上げる
+    - @voluntas
 - [UPDATE] WebRTC を m105.5195.0.0 に上げる
     - @melpon
 - [UPDATE] Boost を 1.80.0 に上げる
