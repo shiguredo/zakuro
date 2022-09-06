@@ -11,6 +11,9 @@
 
 ## develop
 
+- [CHANGE] VCS を 100 から 1000 に増やす
+    - @voluntas
+
 ## 2022.6.0 (2022-09-05)
 
 - [UPDATE] asmjit と blend2d を最新版に上げる
