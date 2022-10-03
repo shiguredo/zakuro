@@ -9,11 +9,11 @@
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/json.hpp>
 
-#include "ssl_verifier.h"
-#include "url_parts.h"
-#include "util.h"
-#include "zakuro_version.h"
-#include "zlib_helper.h"
+#include "../ssl_verifier.h"
+#include "../url_parts.h"
+#include "../util.h"
+#include "../zakuro_version.h"
+#include "../zlib_helper.h"
 
 bool SoraClient::ParseURL(const std::string& url,
                           URLParts& parts,

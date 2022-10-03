@@ -1,82 +1,35 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.23)
 
 # Only interpret if() arguments as variables or keywords when unquoted.
 cmake_policy(SET CMP0054 NEW)
 # MSVC runtime library flags are selected by an abstraction.
 cmake_policy(SET CMP0091 NEW)
 
-set(ZAKURO_PACKAGE_NAME "" CACHE STRING "ビルド設定を自動化するパッケージ名")
-set(TARGET_OS "" CACHE STRING "ビルド対象の動作する OS。\n有効な値は macos, linux")
-set(BOOST_ROOT_DIR "" CACHE PATH "Boost のインストール先ディレクトリ\n空文字だった場合はデフォルト検索パスの Boost を利用する")
-set(CLI11_ROOT_DIR "" CACHE PATH "CLI11 のインストール先ディレクトリ")
-set(BLEND2D_ROOT_DIR "" CACHE PATH "Blend2D のインストール先ディレクトリ")
-set(OPENH264_ROOT_DIR "" CACHE PATH "OpenH264 のインストール先ディレクトリ")
-set(WEBRTC_INCLUDE_DIR "" CACHE PATH "WebRTC のインクルードディレクトリ")
-set(WEBRTC_LIBRARY_DIR "" CACHE PATH "WebRTC のライブラリディレクトリ")
-set(WEBRTC_LIBRARY_NAME "webrtc" CACHE STRING "WebRTC のライブラリ名")
-set(CLANG_ROOT "" CACHE PATH "コンパイルに利用する clang コンパイラの配置場所")
-set(USE_LIBCXX OFF CACHE BOOL "libstdc++ の代わりに libc++ を使うかどうか")
-set(LIBCXX_INCLUDE_DIR "" CACHE PATH "libc++ を使う場合の libc++ のインクルードディレクトリ\n空文字だった場合はデフォルト検索パスの libc++ を利用する")
-set(ZAKURO_VERSION "unspecified" CACHE STRING "Zakuro のバージョン")
-set(ZAKURO_COMMIT "<commit>" CACHE STRING "Zakuro のコミットハッシュ")
-set(WEBRTC_BUILD_VERSION "unspecified" CACHE STRING "webrtc-build のバージョン")
-set(WEBRTC_READABLE_VERSION "unspecified" CACHE STRING "WebRTC の読みやすいバージョン")
-set(WEBRTC_COMMIT "<commit>" CACHE STRING "WebRTC のコミットハッシュ")
-
-if(ZAKURO_PACKAGE_NAME STREQUAL "macos")
-
-  set(_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/macos/_install)
-
-  set(TARGET_OS "macos")
-  set(BOOST_ROOT_DIR ${_INSTALL_DIR}/boost)
-  set(CLI11_ROOT_DIR ${_INSTALL_DIR}/CLI11)
-  set(BLEND2D_ROOT_DIR ${_INSTALL_DIR}/blend2d)
-  set(OPENH264_ROOT_DIR ${_INSTALL_DIR}/openh264)
-  set(YAML_CPP_ROOT_DIR ${_INSTALL_DIR}/yaml-cpp)
-  set(WEBRTC_INCLUDE_DIR ${_INSTALL_DIR}/webrtc/include)
-  set(WEBRTC_LIBRARY_DIR ${_INSTALL_DIR}/webrtc/lib)
-  #set(CLANG_ROOT ${_INSTALL_DIR}/llvm/clang)
-
-  set(LIBCXX_INCLUDE_DIR ${_INSTALL_DIR}/llvm/libcxx/include)
-
-elseif(ZAKURO_PACKAGE_NAME STREQUAL "ubuntu-20.04_x86_64")
-
-  set(TARGET_OS "linux")
-  set(TARGET_OS_LINUX "ubuntu-20.04")
-  set(BOOST_ROOT_DIR /root/boost)
-  set(CLI11_ROOT_DIR /root/CLI11)
-  set(BLEND2D_ROOT_DIR /root/blend2d)
-  set(OPENH264_ROOT_DIR /root/openh264)
-  set(YAML_CPP_ROOT_DIR /root/yaml-cpp)
-  set(WEBRTC_INCLUDE_DIR /root/webrtc/include)
-  set(WEBRTC_LIBRARY_DIR /root/webrtc/lib)
-
-  set(CLANG_ROOT /root/llvm/clang)
-  set(LIBCXX_INCLUDE_DIR /root/llvm/libcxx/include)
-
-else()
-endif()
-
-if (NOT "${CLANG_ROOT}" STREQUAL "")
-  set(CMAKE_C_COMPILER ${CLANG_ROOT}/bin/clang)
-  set(CMAKE_CXX_COMPILER ${CLANG_ROOT}/bin/clang++)
-endif()
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-list(APPEND CMAKE_PREFIX_PATH ${BOOST_ROOT_DIR} ${YAML_CPP_ROOT_DIR})
-
 project(zakuro C CXX)
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
+list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR} ${YAML_ROOT_DIR})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${SORA_DIR}/share/cmake)
 
+set(Boost_USE_STATIC_LIBS ON)
+
+set(WEBRTC_LIBRARY_NAME webrtc)
+find_package(Boost REQUIRED COMPONENTS json filesystem)
 find_package(WebRTC REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem json)
-find_package(CLI11 REQUIRED)
+find_package(Sora REQUIRED)
+find_package(Threads REQUIRED)
 find_package(Blend2D REQUIRED)
+find_package(CLI11 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
+if (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64")
+  find_package(Libva REQUIRED)
+  find_package(Libdrm REQUIRED)
+endif()
+
 add_executable(zakuro)
+
+set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
+set_target_properties(zakuro PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 string(SUBSTRING "${ZAKURO_COMMIT}" 0 8 ZAKURO_COMMIT_SHORT)
 string(SUBSTRING "${WEBRTC_COMMIT}" 0 8 WEBRTC_COMMIT_SHORT)
@@ -118,14 +71,11 @@ target_sources(zakuro
     src/zakuro.cpp
 )
 
-target_include_directories(zakuro PRIVATE src)
-set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 99)
 
 target_link_libraries(zakuro
   PRIVATE
-    WebRTC::WebRTC
+    Sora::sora
     Boost::filesystem
-    Boost::json
     CLI11::CLI11
     Blend2D::Blend2D
     yaml-cpp
@@ -139,12 +89,6 @@ target_compile_definitions(zakuro
     OPENSSL_IS_BORINGSSL
     # https://github.com/boostorg/container_hash/issues/22 と同じ問題が clang-15 でも起きるので、これを手動で定義して回避する
     BOOST_NO_CXX98_FUNCTION_BASE
-)
-
-target_compile_options(zakuro
-  PRIVATE
-    "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
-    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:LIBCXX_INCLUDE_DIR>>:-isystem${LIBCXX_INCLUDE_DIR}>"
 )
 
 # リソースファイルを作る
@@ -218,9 +162,9 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   string(REGEX REPLACE "[-.]" "_" file_name_linux "${file}")
 
   # バイナリの組み込み
-  if (TARGET_OS STREQUAL "macos")
+  if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
     target_link_options(zakuro PRIVATE "SHELL:-sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file}")
-  elseif (TARGET_OS STREQUAL "linux")
+  elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64")
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
       COMMAND ld
@@ -252,7 +196,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/embedded_binary.generated.priv.h
   @ONLY)
 
-if (TARGET_OS STREQUAL "macos")
+if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_sources(zakuro
     PRIVATE
       src/mac_helper/mac_capturer.mm
@@ -263,62 +207,9 @@ if (TARGET_OS STREQUAL "macos")
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
-  target_link_libraries(zakuro
-    PRIVATE
-      "-framework Foundation"
-      "-framework AVFoundation"
-      "-framework QuartzCore"
-      "-framework CoreServices"
-      "-framework CoreFoundation"
-      "-framework AudioUnit"
-      "-framework AudioToolbox"
-      "-framework CoreAudio"
-      "-framework CoreGraphics"
-      "-framework CoreMedia"
-      "-framework CoreVideo"
-      "-framework VideoToolbox"
-      "-framework AppKit"
-      "-framework Metal"
-      "-framework MetalKit"
-      "-framework OpenGL"
-  )
-
-  target_compile_definitions(zakuro
-    PRIVATE
-      WEBRTC_POSIX
-      WEBRTC_MAC
-  )
-
-elseif (TARGET_OS STREQUAL "linux")
-  find_package(Threads REQUIRED)
-
-  target_compile_definitions(zakuro
-    PRIVATE
-      WEBRTC_POSIX
-      _LIBCPP_ABI_NAMESPACE=Cr
-      _LIBCPP_ABI_VERSION=2
-      _LIBCPP_DISABLE_AVAILABILITY
-  )
+elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64")
   target_sources(zakuro
     PRIVATE
       src/v4l2_video_capturer/v4l2_video_capturer.cpp
-  )
-
-  set_target_properties(zakuro PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  target_link_libraries(zakuro
-    PRIVATE
-      X11
-      Xau
-      xcb
-      plds4
-      Xext
-      expat
-      dl
-      nss3
-      nssutil3
-      plc4
-      nspr4
-      rt
-      Threads::Threads
   )
 endif()

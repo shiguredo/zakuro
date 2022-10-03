@@ -19,9 +19,10 @@
 // WebRTC
 #include <modules/video_capture/video_capture_defines.h>
 #include <modules/video_capture/video_capture_impl.h>
-#include <rtc/scalable_track_source.h>
 #include <rtc_base/platform_thread.h>
 #include <rtc_base/synchronization/mutex.h>
+
+#include "../rtc/scalable_track_source.h"
 
 struct V4L2VideoCapturerConfig {
   std::string video_device;

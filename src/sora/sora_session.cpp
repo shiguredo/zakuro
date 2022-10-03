@@ -5,7 +5,7 @@
 #include <boost/beast/version.hpp>
 #include <boost/json.hpp>
 
-#include "util.h"
+#include "../util.h"
 
 SoraSession::SoraSession(boost::asio::ip::tcp::socket socket,
                          std::vector<std::unique_ptr<VirtualClient>>* vcs,

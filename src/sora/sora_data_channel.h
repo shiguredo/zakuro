@@ -12,7 +12,7 @@
 #include <api/data_channel_interface.h>
 #include <rtc_base/synchronization/mutex.h>
 
-#include "rtc/rtc_data_manager.h"
+#include "../rtc/rtc_data_manager.h"
 
 class SoraDataChannelObserver {
  public:

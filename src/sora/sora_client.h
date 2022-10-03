@@ -15,12 +15,12 @@
 #include <boost/json.hpp>
 #include <boost/optional.hpp>
 
-#include "rtc/rtc_manager.h"
-#include "rtc/rtc_message_sender.h"
+#include "../rtc/rtc_manager.h"
+#include "../rtc/rtc_message_sender.h"
+#include "../url_parts.h"
+#include "../watchdog.h"
+#include "../websocket.h"
 #include "sora_data_channel_on_asio.h"
-#include "url_parts.h"
-#include "watchdog.h"
-#include "websocket.h"
 
 struct SoraClientConfig {
   std::vector<std::string> signaling_urls;

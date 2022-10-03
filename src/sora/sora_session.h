@@ -18,9 +18,9 @@
 #include <boost/beast/http/write.hpp>
 #include <boost/json.hpp>
 
-#include "rtc/rtc_manager.h"
+#include "../rtc/rtc_manager.h"
+#include "../virtual_client.h"
 #include "sora_client.h"
-#include "virtual_client.h"
 
 struct SoraSessionConfig {};
 

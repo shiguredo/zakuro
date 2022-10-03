@@ -3,7 +3,7 @@
 // WebRTC
 #include <rtc_base/boringssl_certificate.h>
 
-#include "ssl_verifier.h"
+#include "../ssl_verifier.h"
 
 RTCSSLVerifier::RTCSSLVerifier(bool insecure) : insecure_(insecure) {}
 

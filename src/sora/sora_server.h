@@ -11,9 +11,9 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include "rtc/rtc_manager.h"
+#include "../rtc/rtc_manager.h"
+#include "../virtual_client.h"
 #include "sora_client.h"
-#include "virtual_client.h"
 
 struct SoraServerConfig {};
 
