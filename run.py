@@ -676,6 +676,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("target", choices=['macos_arm64', 'ubuntu-20.04_x86_64'])
     parser.add_argument("--debug", action='store_true')
+    parser.add_argument("--package", action='store_true')
 
     args = parser.parse_args()
 
@@ -683,6 +684,7 @@ def main():
     source_dir = os.path.join(BASE_DIR, '_source', args.target, configuration_dir)
     build_dir = os.path.join(BASE_DIR, '_build', args.target, configuration_dir)
     install_dir = os.path.join(BASE_DIR, '_install', args.target, configuration_dir)
+    package_dir = os.path.join(BASE_DIR, '_package', args.target, configuration_dir)
     mkdir_p(source_dir)
     mkdir_p(build_dir)
     mkdir_p(install_dir)
@@ -717,6 +719,39 @@ def main():
 
         cmd(['cmake', BASE_DIR, *cmake_args])
         cmd(['cmake', '--build', '.', f'-j{multiprocessing.cpu_count()}', '--config', configuration])
+
+    if args.package:
+        mkdir_p(package_dir)
+        rm_rf(os.path.join(package_dir, 'zakuro'))
+        rm_rf(os.path.join(package_dir, 'zakuro.env'))
+
+        with cd(BASE_DIR):
+            version = read_version_file('VERSION')
+            zakuro_version = version['ZAKURO_VERSION']
+
+        mkdir_p(os.path.join(package_dir, 'zakuro'))
+        with cd(os.path.join(package_dir, 'zakuro')):
+            shutil.copyfile(os.path.join(build_dir, 'zakuro', 'zakuro'), 'zakuro')
+            shutil.copyfile(os.path.join(BASE_DIR, 'LICENSE'), 'LICENSE')
+            with open('NOTICE', 'w') as f:
+                f.write(open(os.path.join(BASE_DIR, 'NOTICE')).read())
+                f.write(open(os.path.join(install_dir, 'webrtc', 'NOTICE')).read())
+                download('http://www.openh264.org/BINARY_LICENSE.txt')
+                f.write('# OpenH264 Binary License\n')
+                f.write('```\n')
+                f.write(open('BINARY_LICENSE.txt').read())
+                f.write('```\n')
+                rm_rf('BINARY_LICENSE.txt')
+
+        with cd(install_dir):
+            archive_name = f'zakuro-{zakuro_version}_{args.target}.tar.gz'
+            archive_path = os.path.join(package_dir, archive_name)
+            with tarfile.open(archive_path, 'w:gz') as f:
+                for file in enum_all_files('zakuro', '.'):
+                    f.add(name=file, arcname=file)
+            with open(os.path.join(package_dir, 'zakuro.env'), 'w') as f:
+                f.write("CONTENT_TYPE=application/gzip\n")
+                f.write(f'PACKAGE_NAME={archive_name}\n')
 
 
 if __name__ == '__main__':
