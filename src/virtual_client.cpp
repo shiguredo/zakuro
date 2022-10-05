@@ -115,7 +115,6 @@ void VirtualClient::ConfigureDependencies(
     webrtc::PeerConnectionFactoryDependencies& dependencies) {
   cricket::MediaEngineDependencies media_dependencies;
 
-  RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
   media_dependencies.task_queue_factory = dependencies.task_queue_factory.get();
   media_dependencies.adm =
       worker_thread()->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(
@@ -161,7 +160,6 @@ void VirtualClient::ConfigureDependencies(
       webrtc::CreateBuiltinAudioEncoderFactory();
   media_dependencies.audio_decoder_factory =
       webrtc::CreateBuiltinAudioDecoderFactory();
-  RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
 
   auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
   sw_config.use_simulcast_adapter = true;
@@ -179,7 +177,6 @@ void VirtualClient::ConfigureDependencies(
   media_dependencies.audio_mixer = nullptr;
   media_dependencies.audio_processing =
       webrtc::AudioProcessingBuilder().Create();
-  RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
 
   dependencies.media_engine =
       cricket::CreateMediaEngine(std::move(media_dependencies));
@@ -187,33 +184,26 @@ void VirtualClient::ConfigureDependencies(
   dependencies.call_factory = CreateFakeNetworkCallFactory(
       config_.fake_network_send, config_.fake_network_receive);
   dependencies.sctp_factory.reset(new SctpTransportFactory(network_thread()));
-  RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
 }
 
 void VirtualClient::OnSetOffer(std::string offer) {
-  RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
   std::string stream_id = rtc::CreateRandomString(16);
   if (audio_track_ != nullptr) {
     if (config_.initial_mute_audio) {
       audio_track_->set_enabled(false);
     }
-    RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
     webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpSenderInterface>>
         audio_result = signaling_->GetPeerConnection()->AddTrack(audio_track_,
                                                                  {stream_id});
   }
-  RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
   if (video_track_ != nullptr) {
     if (config_.initial_mute_video) {
       video_track_->set_enabled(false);
     }
-    RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
     webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpSenderInterface>>
         video_result = signaling_->GetPeerConnection()->AddTrack(video_track_,
                                                                  {stream_id});
-    RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
     if (video_result.ok()) {
-      RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
       rtc::scoped_refptr<webrtc::RtpSenderInterface> video_sender =
           video_result.value();
       webrtc::RtpParameters parameters = video_sender->GetParameters();
@@ -227,13 +217,9 @@ void VirtualClient::OnSetOffer(std::string offer) {
         parameters.degradation_preference =
             webrtc::DegradationPreference::BALANCED;
       }
-      RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
       video_sender->SetParameters(parameters);
-      RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
     }
-    RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
   }
-  RTC_LOG(LS_INFO) << "TRACE: " << __LINE__;
 }
 void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
                                  std::string message) {

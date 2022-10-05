@@ -662,8 +662,7 @@ VideoEncoder::EncoderInfo DynamicH264VideoEncoder::GetEncoderInfo() const {
       VideoEncoder::ScalingSettings(kLowH264QpThreshold, kHighH264QpThreshold);
   info.is_hardware_accelerated = false;
   info.supports_simulcast = true;
-  // TODO(melpon): M88 あたりでコメントインする
-  //info.preferred_pixel_formats = {VideoFrameBuffer::Type::kI420};
+  info.preferred_pixel_formats = {VideoFrameBuffer::Type::kI420};
   return info;
 }
 
