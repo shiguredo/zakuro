@@ -28,7 +28,7 @@ jobs:
       - name: Get package name
         shell: bash
         run: |
-          source _package/${{ matrix.name }}/release/sora.env
+          source _package/${{ matrix.name }}/release/zakuro.env
           echo "::set-output name=name::${PACKAGE_NAME}"
         id: package_name
       - name: Upload Artifact
