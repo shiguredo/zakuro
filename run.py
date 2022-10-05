@@ -527,7 +527,7 @@ def get_common_cmake_args(install_dir, platform):
             '-DCMAKE_CXX_FLAGS=' + ' '.join([
                 '-D_LIBCPP_ABI_NAMESPACE=Cr',
                 '-D_LIBCPP_ABI_VERSION=2',
-                '-D_LIBCPP_DISABLE_AVAILABILITY ',
+                '-D_LIBCPP_DISABLE_AVAILABILITY',
                 '-nostdinc++',
                 f'-isystem{install_dir}/llvm/libcxx/include',
             ])

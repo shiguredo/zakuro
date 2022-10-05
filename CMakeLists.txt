@@ -40,35 +40,21 @@ target_include_directories(zakuro PRIVATE ${OPENH264_ROOT_DIR}/include)
 
 target_sources(zakuro
   PRIVATE
+    src/dynamic_h264_video_encoder.cpp
     src/embedded_binary.cpp
+    src/fake_network_call_factory.cpp
     src/fake_video_capturer.cpp
     src/main.cpp
-    src/rtc/device_video_capturer.cpp
-    src/rtc/dynamic_h264_video_encoder.cpp
-    src/rtc/fake_network_call_factory.cpp
-    src/rtc/nop_video_decoder.cpp
-    src/rtc/peer_connection_observer.cpp
-    src/rtc/rtc_connection.cpp
-    src/rtc/rtc_manager.cpp
-    src/rtc/rtc_ssl_verifier.cpp
-    src/rtc/scalable_track_source.cpp
-    src/rtc/sctp_transport_factory.cpp
-    src/rtc/software_video_encoder.cpp
-    src/rtc/zakuro_audio_device_module.cpp
-    src/sora/sora_client.cpp
-    src/sora/sora_server.cpp
-    src/sora/sora_session.cpp
-    src/ssl_verifier.cpp
-    src/url_parts.cpp
+    src/nop_video_decoder.cpp
+    src/sctp_transport_factory.cpp
     src/util.cpp
     src/virtual_client.cpp
-    src/watchdog.cpp
     src/wav_reader.cpp
-    src/websocket.cpp
     src/xorshift.cpp
     src/y4m_reader.cpp
-    src/zakuro_version.cpp
     src/zakuro.cpp
+    src/zakuro_audio_device_module.cpp
+    src/zakuro_version.cpp
 )
 
 
@@ -197,19 +183,9 @@ configure_file(
   @ONLY)
 
 if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
-  target_sources(zakuro
-    PRIVATE
-      src/mac_helper/mac_capturer.mm
-      src/mac_helper/macos_version.mm
-  )
-
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64")
-  target_sources(zakuro
-    PRIVATE
-      src/v4l2_video_capturer/v4l2_video_capturer.cpp
-  )
 endif()

@@ -4,6 +4,9 @@
 #include <memory>
 #include <thread>
 
+// Sora C++ SDK
+#include <sora/scalable_track_source.h>
+
 // WebRTC
 #include <api/video/i420_buffer.h>
 #include <rtc_base/ref_counted_object.h>
@@ -11,11 +14,10 @@
 // Blend2D
 #include <blend2d.h>
 
-#include "rtc/scalable_track_source.h"
 #include "xorshift.h"
 #include "y4m_reader.h"
 
-struct FakeVideoCapturerConfig {
+struct FakeVideoCapturerConfig : sora::ScalableVideoTrackSourceConfig {
   int width;
   int height;
   int fps;
@@ -32,7 +34,7 @@ struct FakeVideoCapturerConfig {
       render;
 };
 
-class FakeVideoCapturer : public ScalableVideoTrackSource {
+class FakeVideoCapturer : public sora::ScalableVideoTrackSource {
   FakeVideoCapturer(FakeVideoCapturerConfig config);
   friend class rtc::RefCountedObject<FakeVideoCapturer>;
 
