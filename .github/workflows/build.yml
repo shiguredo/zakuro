@@ -21,6 +21,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+      - name: Install deps
+        run: |
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libva-dev libdrm-dev
       - run: python3 run.py ${{ matrix.name }} --package
       - name: Get package name
         shell: bash
