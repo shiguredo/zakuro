@@ -266,11 +266,6 @@ int Zakuro::Run() {
       return 2;
     }
   }
-  RTC_LOG(LS_INFO) << "DataChannel Infos: size=" << dcs.schannels.size();
-  for (auto& dc : dcs.schannels) {
-    RTC_LOG(LS_INFO) << "  label=" << dc.label;
-    RTC_LOG(LS_INFO) << "  direction=" << dc.direction;
-  }
 
   VirtualClientConfig vc_config;
   sora::SoraSignalingConfig& sora_config = vc_config.sora_config;
