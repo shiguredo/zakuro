@@ -616,7 +616,10 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
         elif platform == 'macos_arm64':
             install_cmake_args['platform'] = 'macos-universal'
         install_cmake(**install_cmake_args)
-        add_path(os.path.join(install_dir, 'cmake', 'bin'))
+        if platform == 'macos_arm64':
+            add_path(os.path.join(install_dir, 'cmake', 'CMake.app', 'Contents', 'bin'))
+        else:
+            add_path(os.path.join(install_dir, 'cmake', 'bin'))
 
         # Sora C++ SDK
         install_sora_args = {
