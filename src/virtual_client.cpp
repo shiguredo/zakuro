@@ -103,11 +103,10 @@ VirtualClientStats VirtualClient::GetStats() const {
   }
   VirtualClientStats st;
   st.channel_id = config_.sora_config.channel_id;
-  // TODO(melpon): Sora C++ SDK に関数を追加して実装する
-  //st.connection_id = singaling_->GetConnectionID();
-  //st.connected_url = singaling_->GetConnectedSignalingURL();
-  //st.datachannel_connected = singaling_->IsConnectedDataChannel();
-  //st.websocket_connected = singaling_->IsConnectedWebsocket();
+  st.connection_id = signaling_->GetConnectionID();
+  st.connected_url = signaling_->GetConnectedSignalingURL();
+  st.datachannel_connected = signaling_->IsConnectedDataChannel();
+  st.websocket_connected = signaling_->IsConnectedWebsocket();
   return st;
 }
 
