@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] Sora C++ SDK を利用するように変更
+    - @melpon
 - [UPDATE] WebRTC を m105.5195.0.0 に上げる
     - @melpon
 - [UPDATE] Boost を 1.80.0 に上げる
