@@ -178,7 +178,7 @@ zakuro:
             interval: 1000
             # 省略時は 48 (bytes)
             size_min: 100
-            # 省略時は 16 (bytes)
+            # 省略時は 48 (bytes)
             size_max: 5000
 ```
 
