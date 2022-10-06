@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] `CLI11` を `2.3.0` に上げる
+    - @voluntas
+
 ## 2022.7.0 (2022-10-06)
 
 - [UPDATE] Sora C++ SDK を利用するように変更
