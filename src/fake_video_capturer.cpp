@@ -8,7 +8,7 @@
 #include "embedded_binary.h"
 
 FakeVideoCapturer::FakeVideoCapturer(FakeVideoCapturerConfig config)
-    : config_(config) {
+    : sora::ScalableVideoTrackSource(config), config_(config) {
   StartCapture();
 }
 

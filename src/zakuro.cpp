@@ -8,17 +8,13 @@
 #include <thread>
 #include <vector>
 
-#if defined(__APPLE__)
-#include "mac_helper/mac_capturer.h"
-#else
-#include "v4l2_video_capturer/v4l2_video_capturer.h"
-#endif
+// Sora C++ SDK
+#include <sora/camera_device_capturer.h>
 
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "scenario_player.h"
-#include "sora/sora_server.h"
 #include "util.h"
 #include "virtual_client.h"
 #include "wav_reader.h"
@@ -39,7 +35,7 @@ struct DataChannels {
     int size_max = MESSAGE_SIZE_MIN;
   };
   std::vector<Channel> channels;
-  boost::json::value remain;
+  std::vector<sora::SoraSignalingConfig::DataChannel> schannels;
 };
 
 static bool ParseDataChannels(boost::json::value data_channels,
@@ -52,6 +48,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
   }
   for (auto& j : dcs.as_array()) {
     DataChannels::Channel ch;
+    sora::SoraSignalingConfig::DataChannel sch;
 
     if (!j.is_object()) {
       std::cout << __LINE__ << std::endl;
@@ -71,6 +68,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
         return false;
       }
       ch.label = boost::json::value_to<std::string>(it->value());
+      sch.label = boost::json::value_to<std::string>(it->value());
     }
 
     // direction
@@ -86,6 +84,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
         return false;
       }
       direction = boost::json::value_to<std::string>(it->value());
+      sch.direction = boost::json::value_to<std::string>(it->value());
     }
 
     // interval
@@ -147,13 +146,53 @@ static bool ParseDataChannels(boost::json::value data_channels,
       ch.size_max = ch.size_min;
     }
 
+    // boost::optional<bool> ordered;
+    {
+      auto it = obj.find("interval");
+      if (it != obj.end()) {
+        sch.ordered = boost::json::value_to<bool>(it->value());
+      }
+    }
+
+    // boost::optional<int32_t> max_packet_life_time;
+    {
+      auto it = obj.find("max_packet_life_time");
+      if (it != obj.end()) {
+        sch.max_packet_life_time = boost::json::value_to<int32_t>(it->value());
+      }
+    }
+
+    // boost::optional<int32_t> max_retransmits;
+    {
+      auto it = obj.find("max_retransmits");
+      if (it != obj.end()) {
+        sch.max_retransmits = boost::json::value_to<int32_t>(it->value());
+      }
+    }
+
+    // boost::optional<std::string> protocol;
+    {
+      auto it = obj.find("protocol");
+      if (it != obj.end()) {
+        sch.protocol = boost::json::value_to<std::string>(it->value());
+      }
+    }
+
+    // boost::optional<bool> compress;
+    {
+      auto it = obj.find("compress");
+      if (it != obj.end()) {
+        sch.compress = boost::json::value_to<bool>(it->value());
+      }
+    }
+
     // direction が sendonly, sendrecv の場合だけ channels に追加する
     // recvonly の場合は送信する必要が無いので追加しない
     if (direction == "sendonly" || direction == "sendrecv") {
       m.channels.push_back(ch);
     }
+    m.schannels.push_back(sch);
   }
-  m.remain = dcs;
   return true;
 }
 
@@ -174,96 +213,48 @@ int Zakuro::Run() {
     gam.reset(new GameAudioManager());
   }
 
-  auto capturer = ([&]() -> rtc::scoped_refptr<ScalableVideoTrackSource> {
-    if (config_.no_video_device) {
-      return nullptr;
-    }
+  auto capturer =
+      ([&]() -> rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> {
+        if (config_.no_video_device) {
+          return nullptr;
+        }
 
-    auto size = config_.GetSize();
-    if (config_.video_device.empty()) {
-      FakeVideoCapturerConfig config;
-      config.width = size.width;
-      config.height = size.height;
-      config.fps = config_.framerate;
-      if (!config_.game.empty()) {
-        config.type = FakeVideoCapturerConfig::Type::External;
-        config.render =
-            [&kuzushi](BLContext& ctx,
-                       std::chrono::high_resolution_clock::time_point now) {
-              kuzushi->Render(ctx, now);
-            };
-      } else if (config_.fake_video_capture.empty()) {
-        config.type = config_.sandstorm
-                          ? FakeVideoCapturerConfig::Type::Sandstorm
-                          : FakeVideoCapturerConfig::Type::Safari;
-      } else {
-        config.type = FakeVideoCapturerConfig::Type::Y4MFile;
-        config.y4m_path = config_.fake_video_capture;
-      }
-      return FakeVideoCapturer::Create(std::move(config));
-    } else {
-#if defined(__APPLE__)
-      return MacCapturer::Create(size.width, size.height, config_.framerate,
-                                 config_.video_device);
-#else
-      V4L2VideoCapturerConfig config;
-      config.video_device = config_.video_device;
-      config.width = size.width;
-      config.height = size.height;
-      config.framerate = config_.framerate;
-      return V4L2VideoCapturer::Create(std::move(config));
-#endif
-    }
-  })();
+        auto size = config_.GetSize();
+        if (config_.video_device.empty()) {
+          FakeVideoCapturerConfig config;
+          config.width = size.width;
+          config.height = size.height;
+          config.fps = config_.framerate;
+          if (!config_.game.empty()) {
+            config.type = FakeVideoCapturerConfig::Type::External;
+            config.render =
+                [&kuzushi](BLContext& ctx,
+                           std::chrono::high_resolution_clock::time_point now) {
+                  kuzushi->Render(ctx, now);
+                };
+          } else if (config_.fake_video_capture.empty()) {
+            config.type = config_.sandstorm
+                              ? FakeVideoCapturerConfig::Type::Sandstorm
+                              : FakeVideoCapturerConfig::Type::Safari;
+          } else {
+            config.type = FakeVideoCapturerConfig::Type::Y4MFile;
+            config.y4m_path = config_.fake_video_capture;
+          }
+          return FakeVideoCapturer::Create(std::move(config));
+        } else {
+          sora::CameraDeviceCapturerConfig config;
+          config.width = size.width;
+          config.height = size.height;
+          config.fps = config_.framerate;
+          config.device_name = config_.video_device;
+          return sora::CreateCameraDeviceCapturer(config);
+        }
+      })();
 
   if (!capturer && !config_.no_video_device) {
     std::cerr << "[" << config_.name << "] failed to create capturer"
               << std::endl;
     return 1;
-  }
-
-  RTCManagerConfig rtcm_config;
-  rtcm_config.insecure = config_.insecure;
-  rtcm_config.no_video_device = config_.no_video_device;
-  rtcm_config.fixed_resolution = config_.fixed_resolution;
-  rtcm_config.simulcast = config_.sora_simulcast;
-  rtcm_config.priority = config_.priority;
-  rtcm_config.openh264 = config_.openh264;
-  rtcm_config.fake_network_send = config_.fake_network_send;
-  rtcm_config.fake_network_receive = config_.fake_network_receive;
-  rtcm_config.initial_mute_video = config_.initial_mute_video;
-  rtcm_config.initial_mute_audio = config_.initial_mute_audio;
-  if (config_.no_audio_device) {
-    rtcm_config.audio_type = RTCManagerConfig::AudioType::NoAudio;
-  } else if (!config_.game.empty()) {
-    rtcm_config.audio_type = RTCManagerConfig::AudioType::External;
-  } else if (fake_audio_key_trigger) {
-    rtcm_config.audio_type = RTCManagerConfig::AudioType::External;
-  } else if (!config_.fake_audio_capture.empty()) {
-    WavReader wav_reader;
-    int r = wav_reader.Load(config_.fake_audio_capture);
-    if (r != 0) {
-      std::cerr << "[" << config_.name << "] failed to load fake audio: path="
-                << config_.fake_audio_capture << " result=" << r << std::endl;
-      return 1;
-    }
-    rtcm_config.audio_type = RTCManagerConfig::AudioType::SpecifiedFakeAudio;
-    rtcm_config.fake_audio.reset(new FakeAudioData());
-    rtcm_config.fake_audio->sample_rate = wav_reader.sample_rate;
-    rtcm_config.fake_audio->channels = wav_reader.channels;
-    rtcm_config.fake_audio->data = std::move(wav_reader.data);
-  } else {
-    rtcm_config.audio_type = RTCManagerConfig::AudioType::AutoGenerateFakeAudio;
-  }
-  std::vector<RTCManagerConfig> rtcm_configs;
-  for (int i = 0; i < config_.vcs; i++) {
-    RTCManagerConfig config = rtcm_config;
-    if (config.audio_type == RTCManagerConfig::AudioType::External) {
-      config.render_audio = gam->AddGameAudio(16000);
-      config.sample_rate = 16000;
-      config.channels = 1;
-    }
-    rtcm_configs.push_back(std::move(config));
   }
 
   // DataChannel メッセージング
@@ -276,7 +267,88 @@ int Zakuro::Run() {
     }
   }
 
-  std::vector<std::unique_ptr<VirtualClient>> vcs;
+  VirtualClientConfig vc_config;
+  sora::SoraSignalingConfig& sora_config = vc_config.sora_config;
+  vc_config.use_hardware_encoder = false;
+  vc_config.use_audio_device = false;
+  vc_config.capturer = capturer;
+  vc_config.no_video_device = config_.no_video_device;
+  vc_config.fixed_resolution = config_.fixed_resolution;
+  vc_config.priority = config_.priority;
+  vc_config.openh264 = config_.openh264;
+  vc_config.fake_network_send = config_.fake_network_send;
+  vc_config.fake_network_receive = config_.fake_network_receive;
+  vc_config.initial_mute_video = config_.initial_mute_video;
+  vc_config.initial_mute_audio = config_.initial_mute_audio;
+  if (config_.no_audio_device) {
+    vc_config.audio_type = VirtualClientConfig::AudioType::NoAudio;
+  } else if (!config_.game.empty()) {
+    vc_config.audio_type = VirtualClientConfig::AudioType::External;
+  } else if (fake_audio_key_trigger) {
+    vc_config.audio_type = VirtualClientConfig::AudioType::External;
+  } else if (!config_.fake_audio_capture.empty()) {
+    WavReader wav_reader;
+    int r = wav_reader.Load(config_.fake_audio_capture);
+    if (r != 0) {
+      std::cerr << "[" << config_.name << "] failed to load fake audio: path="
+                << config_.fake_audio_capture << " result=" << r << std::endl;
+      return 1;
+    }
+    vc_config.audio_type = VirtualClientConfig::AudioType::SpecifiedFakeAudio;
+    vc_config.fake_audio.reset(new FakeAudioData());
+    vc_config.fake_audio->sample_rate = wav_reader.sample_rate;
+    vc_config.fake_audio->channels = wav_reader.channels;
+    vc_config.fake_audio->data = std::move(wav_reader.data);
+  } else {
+    vc_config.audio_type =
+        VirtualClientConfig::AudioType::AutoGenerateFakeAudio;
+  }
+  sora_config.insecure = config_.insecure;
+  sora_config.client_cert = config_.client_cert;
+  sora_config.client_key = config_.client_key;
+  sora_config.signaling_urls = config_.sora_signaling_urls;
+  sora_config.channel_id = config_.sora_channel_id;
+  sora_config.disable_signaling_url_randomization =
+      config_.sora_disable_signaling_url_randomization;
+  sora_config.video = config_.sora_video;
+  sora_config.audio = config_.sora_audio;
+  sora_config.video_codec_type = config_.sora_video_codec_type;
+  sora_config.audio_codec_type = config_.sora_audio_codec_type;
+  sora_config.video_bit_rate = config_.sora_video_bit_rate;
+  sora_config.audio_bit_rate = config_.sora_audio_bit_rate;
+  sora_config.audio_opus_params_clock_rate =
+      config_.sora_audio_opus_params_clock_rate;
+  sora_config.metadata = config_.sora_metadata;
+  sora_config.signaling_notify_metadata =
+      config_.sora_signaling_notify_metadata;
+  sora_config.role = config_.sora_role;
+  sora_config.multistream = config_.sora_multistream;
+  sora_config.simulcast = config_.sora_simulcast;
+  sora_config.simulcast_rid = config_.sora_simulcast_rid;
+  sora_config.spotlight = config_.sora_spotlight;
+  sora_config.spotlight_number = config_.sora_spotlight_number;
+  sora_config.spotlight_focus_rid = config_.sora_spotlight_focus_rid;
+  sora_config.spotlight_unfocus_rid = config_.sora_spotlight_unfocus_rid;
+  sora_config.data_channel_signaling = config_.sora_data_channel_signaling;
+  sora_config.data_channel_signaling_timeout =
+      config_.sora_data_channel_signaling_timeout;
+  sora_config.ignore_disconnect_websocket =
+      config_.sora_ignore_disconnect_websocket;
+  sora_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
+  sora_config.data_channels = dcs.schannels;
+
+  std::vector<VirtualClientConfig> vc_configs;
+  for (int i = 0; i < config_.vcs; i++) {
+    VirtualClientConfig config = vc_config;
+    if (config.audio_type == VirtualClientConfig::AudioType::External) {
+      config.render_audio = gam->AddGameAudio(16000);
+      config.sample_rate = 16000;
+      config.channels = 1;
+    }
+    vc_configs.push_back(std::move(config));
+  }
+
+  std::vector<std::shared_ptr<VirtualClient>> vcs;
 
   {
     boost::asio::io_context ioc{1};
@@ -287,44 +359,12 @@ int Zakuro::Run() {
     signals.async_wait(
         [&](const boost::system::error_code&, int) { ioc.stop(); });
 
-    SoraClientConfig sorac_config;
-    sorac_config.insecure = config_.insecure;
-    sorac_config.client_cert = config_.client_cert;
-    sorac_config.client_key = config_.client_key;
-    sorac_config.signaling_urls = config_.sora_signaling_urls;
-    sorac_config.channel_id = config_.sora_channel_id;
-    sorac_config.disable_signaling_url_randomization =
-        config_.sora_disable_signaling_url_randomization;
-    sorac_config.video = config_.sora_video;
-    sorac_config.audio = config_.sora_audio;
-    sorac_config.video_codec_type = config_.sora_video_codec_type;
-    sorac_config.audio_codec_type = config_.sora_audio_codec_type;
-    sorac_config.video_bit_rate = config_.sora_video_bit_rate;
-    sorac_config.audio_bit_rate = config_.sora_audio_bit_rate;
-    sorac_config.audio_opus_params_clock_rate =
-        config_.sora_audio_opus_params_clock_rate;
-    sorac_config.metadata = config_.sora_metadata;
-    sorac_config.signaling_notify_metadata =
-        config_.sora_signaling_notify_metadata;
-    sorac_config.role = config_.sora_role;
-    sorac_config.multistream = config_.sora_multistream;
-    sorac_config.simulcast = config_.sora_simulcast;
-    sorac_config.simulcast_rid = config_.sora_simulcast_rid;
-    sorac_config.spotlight = config_.sora_spotlight;
-    sorac_config.spotlight_number = config_.sora_spotlight_number;
-    sorac_config.spotlight_focus_rid = config_.sora_spotlight_focus_rid;
-    sorac_config.spotlight_unfocus_rid = config_.sora_spotlight_unfocus_rid;
-    sorac_config.data_channel_signaling = config_.sora_data_channel_signaling;
-    sorac_config.data_channel_signaling_timeout =
-        config_.sora_data_channel_signaling_timeout;
-    sorac_config.ignore_disconnect_websocket =
-        config_.sora_ignore_disconnect_websocket;
-    sorac_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
-    sorac_config.data_channels = dcs.remain;
+    for (auto& config : vc_configs) {
+      config.sora_config.io_context = &ioc;
+    }
 
     for (int i = 0; i < config_.vcs; i++) {
-      auto vc = std::unique_ptr<VirtualClient>(
-          new VirtualClient(ioc, capturer, rtcm_configs[i], sorac_config));
+      auto vc = sora::CreateSoraClient<VirtualClient>(vc_configs[i]);
       vcs.push_back(std::move(vc));
     }
 

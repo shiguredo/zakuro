@@ -1,6 +1,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <csignal>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -16,17 +17,10 @@
 #include <blend2d.h>
 #include <yaml-cpp/yaml.h>
 
-#if defined(__APPLE__)
-#include "mac_helper/mac_capturer.h"
-#else
-#include "v4l2_video_capturer/v4l2_video_capturer.h"
-#endif
-
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "scenario_player.h"
-#include "sora/sora_server.h"
 #include "util.h"
 #include "virtual_client.h"
 #include "wav_reader.h"

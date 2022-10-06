@@ -11,6 +11,15 @@
 
 ## develop
 
+## 2022.7.0 (2022-10-06)
+
+- [UPDATE] Sora C++ SDK を利用するように変更
+    - @melpon
+- [CHANGE] VCS を 100 から 1000 に増やす
+    - @voluntas
+
+## 2022.6.0 (2022-09-05)
+
 - [UPDATE] asmjit と blend2d を最新版に上げる
     - @voluntas
 - [UPDATE] `cmake` を `3.24.1` に上げる

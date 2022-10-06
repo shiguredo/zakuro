@@ -90,7 +90,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
 
   app.add_option("--name", config.name, "Client Name");
   app.add_option("--vcs", config.vcs, "Virtual Clients")
-      ->check(CLI::Range(1, 100));
+      ->check(CLI::Range(1, 1000));
   app.add_option("--vcs-hatch-rate", config.vcs_hatch_rate,
                  "Spawned virtual clients per seconds")
       ->check(CLI::Range(0.1, 100.0));

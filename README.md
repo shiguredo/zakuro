@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m97.4692-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/4692)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m105.5195-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/5195)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -20,14 +20,16 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 
 ## 特徴
 
-- WebRTC SFU Sora 開発版に対応
+- 最新の WebRTC SFU Sora に対応
 - YAML による設定ファイルへ対応
 - 動的インスタンス作成へ対応
 - クラスター機能への対応
+- フェイク音声/映像に対応
 - データチャネルメッセージング機能へ対応
 - フェイクネットワークへ対応
 - クライアント証明書へ対応
 - 最新の libwebrtc へ対応
+- Sora C++ SDK ベース
 
 ## 使ってみる
 

@@ -75,7 +75,7 @@ struct ScenarioData {
 struct ScenarioPlayerConfig {
   boost::asio::io_context* ioc;
   GameAudioManager* gam;
-  const std::vector<std::unique_ptr<VirtualClient>>* vcs;
+  const std::vector<std::shared_ptr<VirtualClient>>* vcs;
   std::shared_ptr<BinaryPool> binary_pool;
 };
 

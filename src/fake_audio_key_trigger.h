@@ -21,7 +21,7 @@ class FakeAudioKeyTrigger {
                       std::shared_ptr<GameKeyCore> key_core,
                       GameAudioManager* gam,
                       ScenarioPlayer* sp,
-                      std::vector<std::unique_ptr<VirtualClient>>& vcs)
+                      std::vector<std::shared_ptr<VirtualClient>>& vcs)
       : ioc_(ioc), key_(key_core), gam_(gam), sp_(sp), vcs_(vcs) {
     th_.reset(new std::thread([this]() {
       std::string seq;
@@ -98,7 +98,7 @@ class FakeAudioKeyTrigger {
   boost::asio::io_context& ioc_;
   GameAudioManager* gam_;
   ScenarioPlayer* sp_;
-  std::vector<std::unique_ptr<VirtualClient>>& vcs_;
+  std::vector<std::shared_ptr<VirtualClient>>& vcs_;
 };
 
 #endif
