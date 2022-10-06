@@ -40,7 +40,7 @@ limitations under the License.
 
 ## Zakuro に含まれている音声ファイルについて教えてください
 
-Zakuro のスポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](http://www14.big.or.jp/~amiami/happy/) 様の声素材を使用しています。
+Zakuro のスポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](https://amitaro.net/) 様の声素材を使用しています。
 
 ## Zakuro の動作環境を教えて下さい
 

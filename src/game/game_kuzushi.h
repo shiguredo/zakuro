@@ -10,10 +10,10 @@
 // Blend2D
 #include <blend2d.h>
 
-#include "embedded_binary.h"
+#include "../embedded_binary.h"
+#include "../xorshift.h"
 #include "game_audio.h"
 #include "game_key.h"
-#include "xorshift.h"
 
 class GameKuzushi {
  public:

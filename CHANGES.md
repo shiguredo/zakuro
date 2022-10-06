@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] Sora C++ SDK を利用するように変更
+    - @melpon
 - [CHANGE] VCS を 100 から 1000 に増やす
     - @voluntas
 
