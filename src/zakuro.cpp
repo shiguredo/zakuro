@@ -148,7 +148,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
 
     // boost::optional<bool> ordered;
     {
-      auto it = obj.find("interval");
+      auto it = obj.find("ordered");
       if (it != obj.end()) {
         sch.ordered = boost::json::value_to<bool>(it->value());
       }

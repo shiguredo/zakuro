@@ -11,6 +11,8 @@
 
 ## develop
 
+- [FIX] "data-channels" の "interval" 項目を指定するとエラーになる問題を修正
+    - @sile
 - [UPDATE] `CLI11` を `2.3.0` に上げる
     - @voluntas
 
