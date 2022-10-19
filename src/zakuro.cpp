@@ -316,8 +316,6 @@ int Zakuro::Run() {
   sora_config.audio_codec_type = config_.sora_audio_codec_type;
   sora_config.video_bit_rate = config_.sora_video_bit_rate;
   sora_config.audio_bit_rate = config_.sora_audio_bit_rate;
-  sora_config.audio_opus_params_clock_rate =
-      config_.sora_audio_opus_params_clock_rate;
   sora_config.metadata = config_.sora_metadata;
   sora_config.signaling_notify_metadata =
       config_.sora_signaling_notify_metadata;
