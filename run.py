@@ -746,7 +746,7 @@ def main():
                 f.write('```\n')
                 rm_rf('BINARY_LICENSE.txt')
 
-        with cd(install_dir):
+        with cd(package_dir):
             archive_name = f'zakuro-{zakuro_version}_{args.target}.tar.gz'
             archive_path = os.path.join(package_dir, archive_name)
             with tarfile.open(archive_path, 'w:gz') as f:
