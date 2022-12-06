@@ -20,6 +20,7 @@
 #include "wav_reader.h"
 #include "zakuro.h"
 #include "zakuro_stats.h"
+#include "zakuro_version.h"
 
 Zakuro::Zakuro(ZakuroConfig config) : config_(std::move(config)) {}
 
@@ -303,6 +304,7 @@ int Zakuro::Run() {
     vc_config.audio_type =
         VirtualClientConfig::AudioType::AutoGenerateFakeAudio;
   }
+  sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
   sora_config.client_cert = config_.client_cert;
   sora_config.client_key = config_.client_key;
