@@ -11,6 +11,10 @@
 
 ## develop
 
+- [UPDATE] `CMake` を `3.25.1` に上げる
+    - @voluntas
+- [UPDATE] `OpenH264` を `2.3.1` に上げる
+    - @voluntas
 - [UPDATE] `CLI11` を `2.3.1` に上げる
     - @voluntas
 - [FIX] 廃止になった `--sora-audio-opus-params-clock-rate` を削除する
