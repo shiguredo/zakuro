@@ -14,7 +14,7 @@ https://github.com/shiguredo/zakuro/releases
 
 ```shell
 $ sudo apt update
-$ sudo apt install libnspr4 libnss3 libxext-dev libx11-dev libdrm-dev libva-dev pkg-config
+$ sudo apt install libnspr4 libnss3 libxext6 libx11-6 libdrm2 libva2 libva-drm2
 ```
 
 ## 負荷をかけてみる
