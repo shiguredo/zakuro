@@ -20,6 +20,7 @@
 #include "wav_reader.h"
 #include "zakuro.h"
 #include "zakuro_stats.h"
+#include "zakuro_version.h"
 
 Zakuro::Zakuro(ZakuroConfig config) : config_(std::move(config)) {}
 
@@ -148,7 +149,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
 
     // boost::optional<bool> ordered;
     {
-      auto it = obj.find("interval");
+      auto it = obj.find("ordered");
       if (it != obj.end()) {
         sch.ordered = boost::json::value_to<bool>(it->value());
       }
@@ -303,6 +304,7 @@ int Zakuro::Run() {
     vc_config.audio_type =
         VirtualClientConfig::AudioType::AutoGenerateFakeAudio;
   }
+  sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
   sora_config.client_cert = config_.client_cert;
   sora_config.client_key = config_.client_key;
@@ -316,8 +318,6 @@ int Zakuro::Run() {
   sora_config.audio_codec_type = config_.sora_audio_codec_type;
   sora_config.video_bit_rate = config_.sora_video_bit_rate;
   sora_config.audio_bit_rate = config_.sora_audio_bit_rate;
-  sora_config.audio_opus_params_clock_rate =
-      config_.sora_audio_opus_params_clock_rate;
   sora_config.metadata = config_.sora_metadata;
   sora_config.signaling_notify_metadata =
       config_.sora_signaling_notify_metadata;

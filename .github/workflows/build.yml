@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           source _package/${{ matrix.name }}/release/zakuro.env
-          echo "::set-output name=name::${PACKAGE_NAME}"
+          echo "name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
         id: package_name
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
@@ -90,9 +90,9 @@ jobs:
         run: |
           source ${{ matrix.name }}.env/zakuro.env
           source create-release.env/create-release.env
-          echo "::set-output name=package_name::$PACKAGE_NAME"
-          echo "::set-output name=content_type::$CONTENT_TYPE"
-          echo "::set-output name=upload_url::$UPLOAD_URL"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          echo "content_type=$CONTENT_TYPE" >> $GITHUB_OUTPUT
+          echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
         id: env
       - uses: actions/download-artifact@v3
         with:
