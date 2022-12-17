@@ -725,15 +725,16 @@ def main():
 
     if args.package:
         mkdir_p(package_dir)
-        rm_rf(os.path.join(package_dir, 'zakuro'))
+        zakuro_package_dir = os.path.join(package_dir, f'zakuro-{zakuro_version}_{args.target}')
+        rm_rf(zakuro_package_dir)
         rm_rf(os.path.join(package_dir, 'zakuro.env'))
 
         with cd(BASE_DIR):
             version = read_version_file('VERSION')
             zakuro_version = version['ZAKURO_VERSION']
 
-        mkdir_p(os.path.join(package_dir, 'zakuro'))
-        with cd(os.path.join(package_dir, 'zakuro')):
+        mkdir_p(zakuro_package_dir)
+        with cd(zakuro_package_dir):
             shutil.copyfile(os.path.join(build_dir, 'zakuro', 'zakuro'), 'zakuro')
             shutil.copyfile(os.path.join(BASE_DIR, 'LICENSE'), 'LICENSE')
             with open('NOTICE', 'w') as f:
@@ -750,7 +751,7 @@ def main():
             archive_name = f'zakuro-{zakuro_version}_{args.target}.tar.gz'
             archive_path = os.path.join(package_dir, archive_name)
             with tarfile.open(archive_path, 'w:gz') as f:
-                for file in enum_all_files('zakuro', '.'):
+                for file in enum_all_files(f'zakuro-{zakuro_version}_{args.target}', '.'):
                     f.add(name=file, arcname=file)
             with open(os.path.join(package_dir, 'zakuro.env'), 'w') as f:
                 f.write("CONTENT_TYPE=application/gzip\n")

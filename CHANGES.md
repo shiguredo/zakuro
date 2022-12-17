@@ -23,6 +23,8 @@
     - @sile
 - [FIX] クライアント名が消えてたのを修正
     - @melpon
+- [FIX] パッケージを展開した際の名前が `zakuro` になってしまっていたのを `zakuro-{version}_{platform}` にする
+    - @melpon
 
 ## 2022.7.1 (2022-10-31)
 
