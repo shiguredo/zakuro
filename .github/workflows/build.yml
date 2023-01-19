@@ -53,6 +53,16 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install deps
         run: |
+          # 標準のリポジトリだと mesa-va-drivers パッケージが無い（404 NotFound）というエラーを出されてしまうので、
+          # CUDA のリポジトリを追加してインストール可能にする
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          # CUDA 10 なので ubuntu1804 で正しい
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
+          sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
+          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
+          sudo apt-get update
           DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libva-dev libdrm-dev
       - run: python3 run.py ${{ matrix.name }} --package
       - name: Get package name
