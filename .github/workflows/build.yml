@@ -11,7 +11,7 @@ on:
   pull_request:
 
 jobs:
-  build-linux:
+  build-linux-2004:
     strategy:
       fail-fast: false
       matrix:
@@ -41,11 +41,42 @@ jobs:
         with:
           name: ${{ matrix.name }}.env
           path: _package/${{ matrix.name }}/release/zakuro.env
+  build-linux-2204:
+    strategy:
+      fail-fast: false
+      matrix:
+        name:
+          - ubuntu-22.04_x86_64
+    name: Build zakuro for ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install deps
+        run: |
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libva-dev libdrm-dev
+      - run: python3 run.py ${{ matrix.name }} --package
+      - name: Get package name
+        shell: bash
+        run: |
+          source _package/${{ matrix.name }}/release/zakuro.env
+          echo "name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+        id: package_name
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.package_name.outputs.name }}
+          path: _package/${{ matrix.name }}/release/${{ steps.package_name.outputs.name }}
+      - name: Upload Environment
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}.env
+          path: _package/${{ matrix.name }}/release/zakuro.env
   create-release:
     name: Create Release
     if: contains(github.ref, 'tags/202')
     needs:
-      - build-linux
+      - build-linux-2004
+      - build-linux-2204
     runs-on: ubuntu-latest
     steps:
       - name: Create Release
@@ -76,6 +107,7 @@ jobs:
       matrix:
         name:
           - ubuntu-20.04_x86_64
+          - ubuntu-22.04_x86_64
     steps:
       - uses: actions/download-artifact@v3
         with:

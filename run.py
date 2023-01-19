@@ -520,7 +520,7 @@ def install_yaml(version, source_dir, build_dir, install_dir, cmake_args):
 def get_common_cmake_args(install_dir, platform):
     # クロスコンパイルの設定。
     # 本来は toolchain ファイルに書く内容
-    if platform == 'ubuntu-20.04_x86_64':
+    if platform in ('ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'):
         return [
             f'-DCMAKE_C_COMPILER={install_dir}/llvm/clang/bin/clang',
             f'-DCMAKE_CXX_COMPILER={install_dir}/llvm/clang/bin/clang++',
@@ -564,7 +564,7 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
         }
         install_webrtc(**install_webrtc_args)
 
-        if platform == 'ubuntu-20.04_x86_64':
+        if platform in ('ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'):
             webrtc_info = get_webrtc_info(False, source_dir, build_dir, install_dir)
             webrtc_version = read_version_file(webrtc_info.version_file)
 
@@ -611,7 +611,7 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
             'platform': '',
             'ext': 'tar.gz'
         }
-        if platform == 'ubuntu-20.04_x86_64':
+        if platform in ('ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'):
             install_cmake_args['platform'] = 'linux-x86_64'
         elif platform == 'macos_arm64':
             install_cmake_args['platform'] = 'macos-universal'
@@ -677,7 +677,7 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("target", choices=['macos_arm64', 'ubuntu-20.04_x86_64'])
+    parser.add_argument("target", choices=['macos_arm64', 'ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'])
     parser.add_argument("--debug", action='store_true')
     parser.add_argument("--package", action='store_true')
 
