@@ -17,6 +17,8 @@
     - @voluntas
 - [UPDATE] `CLI11` を `2.3.1` に上げる
     - @voluntas
+- [ADD] Ubuntu 22.04 x86_64 のビルドを追加
+    - @melpon
 - [FIX] 廃止になった `--sora-audio-opus-params-clock-rate` を削除する
     - @torikizi
 - [FIX] "data-channels" の "interval" 項目を指定するとエラーになる問題を修正
