@@ -17,6 +17,8 @@
     - @voluntas
 - [UPDATE] `CLI11` を `2.3.1` に上げる
     - @voluntas
+- [UPDATE] actions/create-release と actions/upload-release を softprops/action-gh-release に変更する
+    - @melpon
 - [ADD] Ubuntu 22.04 x86_64 のビルドを追加
     - @melpon
 - [FIX] 廃止になった `--sora-audio-opus-params-clock-rate` を削除する
