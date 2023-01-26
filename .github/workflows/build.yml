@@ -74,6 +74,7 @@ jobs:
           echo "package_paths<<EOF" >> $GITHUB_OUTPUT
           cat package_paths.env >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+        id: env
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
