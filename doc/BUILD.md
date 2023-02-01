@@ -19,7 +19,7 @@ $ python3 run.py ubuntu-20.04_x86_64
 
 ## Ubuntu 22.04 (x86_64) 向けバイナリを作成する
 
-build ディレクトリ以下で `python3 run.py ubuntu-20.04_x86_64` と打つことで Zakuro の Ubuntu 22.04 x86_64 向けバイナリが生成されます。
+build ディレクトリ以下で `python3 run.py ubuntu-22.04_x86_64` と打つことで Zakuro の Ubuntu 22.04 x86_64 向けバイナリが生成されます。
 
 ```shell
 $ python3 run.py ubuntu-22.04_x86_64
