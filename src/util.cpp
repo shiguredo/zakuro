@@ -266,10 +266,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--fake-network-send-packet-overhead",
                  config.fake_network_send.packet_overhead,
                  "Additional bytes to add to packet size for sending");
-  app.add_option("--fake-network-send-codel-active-queue-management",
-                 config.fake_network_send.codel_active_queue_management,
-                 "Enable CoDel active queue management for sending")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--fake-network-receive-queue-length-packets",
                  config.fake_network_receive.queue_length_packets,
                  "Queue length in number of packets for receiving");
@@ -295,10 +291,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--fake-network-receive-packet-overhead",
                  config.fake_network_receive.packet_overhead,
                  "Additional bytes to add to packet size for receiving");
-  app.add_option("--fake-network-receive-codel-active-queue-management",
-                 config.fake_network_receive.codel_active_queue_management,
-                 "Enable CoDel active queue management for receiving")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
 
   try {
     app.parse(args);
@@ -746,7 +738,7 @@ http::response<http::string_body> Util::BadRequest(
   res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   res.set(http::field::content_type, "text/html");
   res.keep_alive(req.keep_alive());
-  res.body() = why.to_string();
+  res.body() = std::string(why);
   res.prepare_payload();
   return res;
 }
@@ -758,7 +750,7 @@ http::response<http::string_body> Util::NotFound(
   res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   res.set(http::field::content_type, "text/html");
   res.keep_alive(req.keep_alive());
-  res.body() = "The resource '" + target.to_string() + "' was not found.";
+  res.body() = "The resource '" + std::string(target) + "' was not found.";
   res.prepare_payload();
   return res;
 }
@@ -771,7 +763,7 @@ http::response<http::string_body> Util::ServerError(
   res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   res.set(http::field::content_type, "text/html");
   res.keep_alive(req.keep_alive());
-  res.body() = "An error occurred: '" + what.to_string() + "'";
+  res.body() = "An error occurred: '" + std::string(what) + "'";
   res.prepare_payload();
   return res;
 }

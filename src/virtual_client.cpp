@@ -64,11 +64,9 @@ void VirtualClient::Connect() {
   sora::SoraSignalingConfig config = config_.sora_config;
   config.pc_factory = factory();
   config.observer = shared_from_this();
-  config.network_manager = signaling_thread()->Invoke<rtc::NetworkManager*>(
-      RTC_FROM_HERE,
+  config.network_manager = signaling_thread()->BlockingCall(
       [this]() { return connection_context()->default_network_manager(); });
-  config.socket_factory = signaling_thread()->Invoke<rtc::PacketSocketFactory*>(
-      RTC_FROM_HERE,
+  config.socket_factory = signaling_thread()->BlockingCall(
       [this]() { return connection_context()->default_socket_factory(); });
 
   signaling_ = sora::SoraSignaling::Create(config);
@@ -115,46 +113,41 @@ void VirtualClient::ConfigureDependencies(
   cricket::MediaEngineDependencies media_dependencies;
 
   media_dependencies.task_queue_factory = dependencies.task_queue_factory.get();
-  media_dependencies.adm =
-      worker_thread()->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(
-          RTC_FROM_HERE, [&] {
-            ZakuroAudioDeviceModuleConfig admconfig;
-            admconfig.task_queue_factory =
-                dependencies.task_queue_factory.get();
-            if (config_.audio_type == VirtualClientConfig::AudioType::Device) {
+  media_dependencies.adm = worker_thread()->BlockingCall([&] {
+    ZakuroAudioDeviceModuleConfig admconfig;
+    admconfig.task_queue_factory = dependencies.task_queue_factory.get();
+    if (config_.audio_type == VirtualClientConfig::AudioType::Device) {
 #if defined(__linux__)
-              webrtc::AudioDeviceModule::AudioLayer audio_layer =
-                  webrtc::AudioDeviceModule::kLinuxAlsaAudio;
+      webrtc::AudioDeviceModule::AudioLayer audio_layer =
+          webrtc::AudioDeviceModule::kLinuxAlsaAudio;
 #else
-              webrtc::AudioDeviceModule::AudioLayer audio_layer =
-                  webrtc::AudioDeviceModule::kPlatformDefaultAudio;
+      webrtc::AudioDeviceModule::AudioLayer audio_layer =
+          webrtc::AudioDeviceModule::kPlatformDefaultAudio;
 #endif
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-              admconfig.adm = webrtc::AudioDeviceModule::Create(
-                  audio_layer, dependencies.task_queue_factory.get());
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::NoAudio) {
-              webrtc::AudioDeviceModule::AudioLayer audio_layer =
-                  webrtc::AudioDeviceModule::kDummyAudio;
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-              admconfig.adm = webrtc::AudioDeviceModule::Create(
-                  audio_layer, dependencies.task_queue_factory.get());
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::SpecifiedFakeAudio) {
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
-              admconfig.fake_audio = config_.fake_audio;
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::AutoGenerateFakeAudio) {
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::External) {
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
-              admconfig.render = config_.render_audio;
-              admconfig.sample_rate = config_.sample_rate;
-              admconfig.channels = config_.channels;
-            }
-            return ZakuroAudioDeviceModule::Create(std::move(admconfig));
-          });
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+      admconfig.adm = webrtc::AudioDeviceModule::Create(
+          audio_layer, dependencies.task_queue_factory.get());
+    } else if (config_.audio_type == VirtualClientConfig::AudioType::NoAudio) {
+      webrtc::AudioDeviceModule::AudioLayer audio_layer =
+          webrtc::AudioDeviceModule::kDummyAudio;
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+      admconfig.adm = webrtc::AudioDeviceModule::Create(
+          audio_layer, dependencies.task_queue_factory.get());
+    } else if (config_.audio_type ==
+               VirtualClientConfig::AudioType::SpecifiedFakeAudio) {
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
+      admconfig.fake_audio = config_.fake_audio;
+    } else if (config_.audio_type ==
+               VirtualClientConfig::AudioType::AutoGenerateFakeAudio) {
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
+    } else if (config_.audio_type == VirtualClientConfig::AudioType::External) {
+      admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
+      admconfig.render = config_.render_audio;
+      admconfig.sample_rate = config_.sample_rate;
+      admconfig.channels = config_.channels;
+    }
+    return ZakuroAudioDeviceModule::Create(std::move(admconfig));
+  });
   media_dependencies.audio_encoder_factory =
       webrtc::CreateBuiltinAudioEncoderFactory();
   media_dependencies.audio_decoder_factory =
