@@ -749,7 +749,7 @@ def main():
 
     if args.package:
         mkdir_p(package_dir)
-        zakuro_package_dir = os.path.join(package_dir, f'zakuro-{zakuro_version}_{args.target}')
+        zakuro_package_dir = os.path.join(package_dir, f'zakuro-{zakuro_version}')
         rm_rf(zakuro_package_dir)
         rm_rf(os.path.join(package_dir, 'zakuro.env'))
 
@@ -775,7 +775,7 @@ def main():
             archive_name = f'zakuro-{zakuro_version}_{args.target}.tar.gz'
             archive_path = os.path.join(package_dir, archive_name)
             with tarfile.open(archive_path, 'w:gz') as f:
-                for file in enum_all_files(f'zakuro-{zakuro_version}_{args.target}', '.'):
+                for file in enum_all_files(f'zakuro-{zakuro_version}', '.'):
                     f.add(name=file, arcname=file)
             with open(os.path.join(package_dir, 'zakuro.env'), 'w') as f:
                 f.write("CONTENT_TYPE=application/gzip\n")
