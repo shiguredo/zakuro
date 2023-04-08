@@ -4,7 +4,7 @@
 #include <memory>
 
 // Sora C++ SDK
-#include <sora/sora_default_client.h>
+#include <sora/sora_client_context.h>
 
 // WebRTC
 #include <call/degraded_call.h>
@@ -22,7 +22,7 @@ struct VirtualClientStats {
   bool datachannel_connected = false;
 };
 
-struct VirtualClientConfig : sora::SoraDefaultClientConfig {
+struct VirtualClientConfig {
   rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> capturer;
   sora::SoraSignalingConfig sora_config;
 
@@ -59,9 +59,9 @@ struct VirtualClientConfig : sora::SoraDefaultClientConfig {
 };
 
 class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
-                      public sora::SoraDefaultClient {
+                      public sora::SoraSignalingObserver {
  public:
-  VirtualClient(VirtualClientConfig config);
+  static std::shared_ptr<VirtualClient> Create(VirtualClientConfig config);
 
   void Connect();
   void Close();
@@ -70,22 +70,19 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
 
   VirtualClientStats GetStats() const;
 
-  void ConfigureDependencies(
-      webrtc::PeerConnectionFactoryDependencies& dependencies) override;
-
   void OnSetOffer(std::string offer) override;
   void OnDisconnect(sora::SoraSignalingErrorCode ec,
                     std::string message) override;
-  //void OnNotify(std::string text);
-  //void OnPush(std::string text);
-  //void OnMessage(std::string label, std::string data);
+  void OnNotify(std::string text) override {}
+  void OnPush(std::string text) override {}
+  void OnMessage(std::string label, std::string data) override {}
 
-  //virtual void OnTrack(
-  //    rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver);
-  //virtual void OnRemoveTrack(
-  //    rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver);
+  void OnTrack(rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)
+      override {}
+  void OnRemoveTrack(
+      rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override {}
 
-  //virtual void OnDataChannel(std::string label);
+  void OnDataChannel(std::string label) override {}
 
  private:
   VirtualClientConfig config_;
@@ -94,6 +91,8 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   std::shared_ptr<sora::SoraSignaling> signaling_;
   rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
+  // 最後に解放したいので、最後に宣言する
+  std::shared_ptr<sora::SoraClientContext> context_;
 };
 
 #endif

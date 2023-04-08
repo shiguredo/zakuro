@@ -270,8 +270,6 @@ int Zakuro::Run() {
 
   VirtualClientConfig vc_config;
   sora::SoraSignalingConfig& sora_config = vc_config.sora_config;
-  vc_config.use_hardware_encoder = false;
-  vc_config.use_audio_device = false;
   vc_config.capturer = capturer;
   vc_config.no_video_device = config_.no_video_device;
   vc_config.fixed_resolution = config_.fixed_resolution;
@@ -364,7 +362,7 @@ int Zakuro::Run() {
     }
 
     for (int i = 0; i < config_.vcs; i++) {
-      auto vc = sora::CreateSoraClient<VirtualClient>(vc_configs[i]);
+      auto vc = VirtualClient::Create(vc_configs[i]);
       vcs.push_back(std::move(vc));
     }
 

@@ -13,9 +13,9 @@
 
 - [CHANGE] `--fake-network-send-codel-active-queue-management` と `--fake-network-receive-codel-active-queue-management` オプションを削除
     - @melpon
-- [UPDATE] WebRTC を m111.5563.4.3 に上げる
+- [UPDATE] WebRTC を m111.5563.4.4 に上げる
     - @melpon
-- [UPDATE] Sora C++ SDK を 2023.2.0 に上げる
+- [UPDATE] Sora C++ SDK を 2023.4.0 に上げる
     - @melpon
 - [UPDATE] `CMake` を `3.25.1` に上げる
     - @voluntas
