@@ -746,6 +746,8 @@ def main():
 
         cmd(['cmake', BASE_DIR, *cmake_args])
         cmd(['cmake', '--build', '.', f'-j{multiprocessing.cpu_count()}', '--config', configuration])
+        # Lyra の model_coeffs をコピー
+        shutil.copytree(os.path.join(install_dir, 'lyra/share', 'model_coeffs'), os.path.join(build_dir, 'zakuro', 'model_coeffs'))
 
     if args.package:
         mkdir_p(package_dir)
@@ -760,6 +762,7 @@ def main():
         mkdir_p(zakuro_package_dir)
         with cd(zakuro_package_dir):
             shutil.copyfile(os.path.join(build_dir, 'zakuro', 'zakuro'), 'zakuro')
+            shutil.copytree(os.path.join(install_dir, 'lyra/share', 'model_coeffs'), 'model_coeffs')
             shutil.copyfile(os.path.join(BASE_DIR, 'LICENSE'), 'LICENSE')
             with open('NOTICE', 'w') as f:
                 f.write(open(os.path.join(BASE_DIR, 'NOTICE')).read())
