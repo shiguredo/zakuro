@@ -173,7 +173,14 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264"}));
   app.add_option("--sora-audio-codec-type", config.sora_audio_codec_type,
                  "Audio codec for send")
-      ->check(CLI::IsMember({"", "OPUS"}));
+      ->check(CLI::IsMember({"", "OPUS", "LYRA"}));
+  app.add_option("--sora-audio-codec-lyra-bitrate", config.sora_audio_codec_lyra_bit_rate,
+                 "Lyra audio codec bitrate")
+      ->check(CLI::Range(0, 9200));
+  app.add_option("--sora-audio-codec-lyra-usedtx", config.sora_audio_codec_lyra_dtx,
+                 "Lyra usedtx");
+  app.add_option("--sora-check_lyra_version", config.sora_audio_codec_lyra_dtx,
+                 "Lyra version check");
   app.add_option("--sora-video-bit-rate", config.sora_video_bit_rate,
                  "Video bit rate")
       ->check(CLI::Range(0, 30000));
