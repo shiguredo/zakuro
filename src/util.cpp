@@ -177,9 +177,11 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-audio-codec-lyra-bitrate", config.sora_audio_codec_lyra_bit_rate,
                  "Lyra audio codec bitrate")
       ->check(CLI::Range(0, 9200));
-  app.add_option("--sora-audio-codec-lyra-usedtx", config.sora_audio_codec_lyra_dtx,
-                 "Lyra usedtx");
-  app.add_option("--sora-check_lyra_version", config.sora_audio_codec_lyra_dtx,
+  app.add_option("--sora-audio-codec-lyra-usedtx", config.sora_audio_codec_lyra_usedtx,
+                 "Lyra usedtx (default: none)")
+                 ->type_name("TEXT")
+                 ->transform(CLI::CheckedTransformer(optional_bool_map, CLI::ignore_case));
+  app.add_option("--sora-check_lyra_version", config.sora_check_lyra_version,
                  "Lyra version check");
   app.add_option("--sora-video-bit-rate", config.sora_video_bit_rate,
                  "Video bit rate")

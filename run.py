@@ -747,7 +747,8 @@ def main():
         cmd(['cmake', BASE_DIR, *cmake_args])
         cmd(['cmake', '--build', '.', f'-j{multiprocessing.cpu_count()}', '--config', configuration])
         # Lyra の model_coeffs をコピー
-        shutil.copytree(os.path.join(install_dir, 'lyra/share', 'model_coeffs'), os.path.join(build_dir, 'zakuro', 'model_coeffs'))
+        if not os.path.join(build_dir, 'zakuro', 'model_coeffs'):
+            shutil.copytree(os.path.join(install_dir, 'lyra/share', 'model_coeffs'), os.path.join(build_dir, 'zakuro', 'model_coeffs'))
 
     if args.package:
         mkdir_p(package_dir)
