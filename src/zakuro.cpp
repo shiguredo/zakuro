@@ -314,6 +314,9 @@ int Zakuro::Run() {
   sora_config.audio = config_.sora_audio;
   sora_config.video_codec_type = config_.sora_video_codec_type;
   sora_config.audio_codec_type = config_.sora_audio_codec_type;
+  sora_config.audio_codec_lyra_bitrate = config_.sora_audio_codec_lyra_bit_rate;
+  sora_config.audio_codec_lyra_usedtx = config_.sora_audio_codec_lyra_usedtx;
+  sora_config.check_lyra_version = config_.sora_check_lyra_version;
   sora_config.video_bit_rate = config_.sora_video_bit_rate;
   sora_config.audio_bit_rate = config_.sora_audio_bit_rate;
   sora_config.metadata = config_.sora_metadata;

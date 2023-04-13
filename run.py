@@ -342,13 +342,16 @@ def install_rootfs(version, install_dir, conf):
                 continue
             # 相対パスに置き換える
             relpath = os.path.relpath(targetpath, dir)
-            logging.debug(f'{linkpath[len(rootfs_dir):]} targets {target} to {relpath}')
+            logging.debug(
+                f'{linkpath[len(rootfs_dir):]} targets {target} to {relpath}')
             os.remove(linkpath)
             os.symlink(relpath, linkpath)
 
     # なぜかシンボリックリンクが登録されていないので作っておく
-    link = os.path.join(rootfs_dir, 'usr', 'lib', 'aarch64-linux-gnu', 'tegra', 'libnvbuf_fdmap.so')
-    file = os.path.join(rootfs_dir, 'usr', 'lib', 'aarch64-linux-gnu', 'tegra', 'libnvbuf_fdmap.so.1.0.0')
+    link = os.path.join(rootfs_dir, 'usr', 'lib',
+                        'aarch64-linux-gnu', 'tegra', 'libnvbuf_fdmap.so')
+    file = os.path.join(rootfs_dir, 'usr', 'lib',
+                        'aarch64-linux-gnu', 'tegra', 'libnvbuf_fdmap.so.1.0.0')
     if os.path.exists(file) and not os.path.exists(link):
         os.symlink(os.path.basename(file), link)
 
@@ -477,7 +480,8 @@ def install_sora(version, source_dir, install_dir, platform: str):
 def install_cli11(version, install_dir):
     cli11_install_dir = os.path.join(install_dir, 'cli11')
     rm_rf(cli11_install_dir)
-    git_clone_shallow('https://github.com/CLIUtils/CLI11.git', version, cli11_install_dir)
+    git_clone_shallow('https://github.com/CLIUtils/CLI11.git',
+                      version, cli11_install_dir)
 
 
 @versioned
@@ -486,9 +490,11 @@ def install_blend2d(version, source_dir, build_dir, install_dir, blend2d_version
     rm_rf(os.path.join(build_dir, 'blend2d'))
     rm_rf(os.path.join(install_dir, 'blend2d'))
 
-    git_clone_shallow('https://github.com/blend2d/blend2d', blend2d_version, os.path.join(source_dir, 'blend2d'))
+    git_clone_shallow('https://github.com/blend2d/blend2d',
+                      blend2d_version, os.path.join(source_dir, 'blend2d'))
     mkdir_p(os.path.join(source_dir, 'blend2d', '3rdparty'))
-    git_clone_shallow('https://github.com/asmjit/asmjit', asmjit_version, os.path.join(source_dir, 'blend2d', '3rdparty', 'asmjit'))
+    git_clone_shallow('https://github.com/asmjit/asmjit', asmjit_version,
+                      os.path.join(source_dir, 'blend2d', '3rdparty', 'asmjit'))
 
     mkdir_p(os.path.join(build_dir, 'blend2d'))
     with cd(os.path.join(build_dir, 'blend2d')):
@@ -505,9 +511,11 @@ def install_blend2d(version, source_dir, build_dir, install_dir, blend2d_version
 def install_openh264(version, source_dir, install_dir):
     rm_rf(os.path.join(source_dir, 'openh264'))
     rm_rf(os.path.join(install_dir, 'openh264'))
-    git_clone_shallow('https://github.com/cisco/openh264.git', version, os.path.join(source_dir, 'openh264'))
+    git_clone_shallow('https://github.com/cisco/openh264.git',
+                      version, os.path.join(source_dir, 'openh264'))
     with cd(os.path.join(source_dir, 'openh264')):
-        cmd(['make', f'PREFIX={os.path.join(install_dir, "openh264")}', 'install-headers'])
+        cmd([
+            'make', f'PREFIX={os.path.join(install_dir, "openh264")}', 'install-headers'])
 
 
 @versioned
@@ -515,7 +523,8 @@ def install_yaml(version, source_dir, build_dir, install_dir, cmake_args):
     rm_rf(os.path.join(source_dir, 'yaml'))
     rm_rf(os.path.join(install_dir, 'yaml'))
     rm_rf(os.path.join(build_dir, 'yaml'))
-    git_clone_shallow('https://github.com/jbeder/yaml-cpp.git', version, os.path.join(source_dir, 'yaml'))
+    git_clone_shallow('https://github.com/jbeder/yaml-cpp.git',
+                      version, os.path.join(source_dir, 'yaml'))
 
     mkdir_p(os.path.join(build_dir, 'yaml'))
     with cd(os.path.join(build_dir, 'yaml')):
@@ -577,7 +586,8 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
         install_webrtc(**install_webrtc_args)
 
         if platform in ('ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'):
-            webrtc_info = get_webrtc_info(False, source_dir, build_dir, install_dir)
+            webrtc_info = get_webrtc_info(
+                False, source_dir, build_dir, install_dir)
             webrtc_version = read_version_file(webrtc_info.version_file)
 
             # LLVM
@@ -640,7 +650,8 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
             install_cmake_args['platform'] = 'macos-universal'
         install_cmake(**install_cmake_args)
         if platform == 'macos_arm64':
-            add_path(os.path.join(install_dir, 'cmake', 'CMake.app', 'Contents', 'bin'))
+            add_path(os.path.join(install_dir, 'cmake',
+                     'CMake.app', 'Contents', 'bin'))
         else:
             add_path(os.path.join(install_dir, 'cmake', 'bin'))
 
@@ -700,17 +711,22 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("target", choices=['macos_arm64', 'ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'])
+    parser.add_argument("target", choices=[
+                        'macos_arm64', 'ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'])
     parser.add_argument("--debug", action='store_true')
     parser.add_argument("--package", action='store_true')
 
     args = parser.parse_args()
 
     configuration_dir = 'debug' if args.debug else 'release'
-    source_dir = os.path.join(BASE_DIR, '_source', args.target, configuration_dir)
-    build_dir = os.path.join(BASE_DIR, '_build', args.target, configuration_dir)
-    install_dir = os.path.join(BASE_DIR, '_install', args.target, configuration_dir)
-    package_dir = os.path.join(BASE_DIR, '_package', args.target, configuration_dir)
+    source_dir = os.path.join(
+        BASE_DIR, '_source', args.target, configuration_dir)
+    build_dir = os.path.join(
+        BASE_DIR, '_build', args.target, configuration_dir)
+    install_dir = os.path.join(
+        BASE_DIR, '_install', args.target, configuration_dir)
+    package_dir = os.path.join(
+        BASE_DIR, '_package', args.target, configuration_dir)
     mkdir_p(source_dir)
     mkdir_p(build_dir)
     mkdir_p(install_dir)
@@ -721,7 +737,8 @@ def main():
 
     mkdir_p(os.path.join(build_dir, 'zakuro'))
     with cd(os.path.join(build_dir, 'zakuro')):
-        webrtc_info = get_webrtc_info(False, source_dir, build_dir, install_dir)
+        webrtc_info = get_webrtc_info(
+            False, source_dir, build_dir, install_dir)
 
         with cd(BASE_DIR):
             version = read_version_file('VERSION')
@@ -733,23 +750,37 @@ def main():
         cmake_args.append(f'-DZAKURO_PLATFORM={args.target}')
         cmake_args.append(f'-DZAKURO_VERSION={zakuro_version}')
         cmake_args.append(f'-DZAKURO_COMMIT={zakuro_commit}')
-        cmake_args.append(f"-DSORA_DIR={cmake_path(os.path.join(install_dir, 'sora'))}")
-        cmake_args.append(f"-DBOOST_ROOT={cmake_path(os.path.join(install_dir, 'boost'))}")
-        cmake_args.append(f"-DLYRA_DIR={cmake_path(os.path.join(install_dir, 'lyra'))}")
-        cmake_args.append(f"-DWEBRTC_INCLUDE_DIR={cmake_path(webrtc_info.webrtc_include_dir)}")
-        cmake_args.append(f"-DWEBRTC_LIBRARY_DIR={cmake_path(webrtc_info.webrtc_library_dir)}")
-        cmake_args.append(f"-DCLI11_ROOT_DIR={cmake_path(os.path.join(install_dir, 'cli11'))}")
-        cmake_args.append(f"-DBLEND2D_ROOT_DIR={cmake_path(os.path.join(install_dir, 'blend2d'))}")
-        cmake_args.append(f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}")
-        cmake_args.append(f"-DYAML_ROOT_DIR={cmake_path(os.path.join(install_dir, 'yaml'))}")
+        cmake_args.append(
+            f"-DSORA_DIR={cmake_path(os.path.join(install_dir, 'sora'))}")
+        cmake_args.append(
+            f"-DBOOST_ROOT={cmake_path(os.path.join(install_dir, 'boost'))}")
+        cmake_args.append(
+            f"-DLYRA_DIR={cmake_path(os.path.join(install_dir, 'lyra'))}")
+        cmake_args.append(
+            f"-DWEBRTC_INCLUDE_DIR={cmake_path(webrtc_info.webrtc_include_dir)}")
+        cmake_args.append(
+            f"-DWEBRTC_LIBRARY_DIR={cmake_path(webrtc_info.webrtc_library_dir)}")
+        cmake_args.append(
+            f"-DCLI11_ROOT_DIR={cmake_path(os.path.join(install_dir, 'cli11'))}")
+        cmake_args.append(
+            f"-DBLEND2D_ROOT_DIR={cmake_path(os.path.join(install_dir, 'blend2d'))}")
+        cmake_args.append(
+            f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}")
+        cmake_args.append(
+            f"-DYAML_ROOT_DIR={cmake_path(os.path.join(install_dir, 'yaml'))}")
         cmake_args += get_common_cmake_args(install_dir, args.target)
 
         cmd(['cmake', BASE_DIR, *cmake_args])
-        cmd(['cmake', '--build', '.', f'-j{multiprocessing.cpu_count()}', '--config', configuration])
+        cmd(['cmake', '--build', '.',
+            f'-j{multiprocessing.cpu_count()}', '--config', configuration])
+        # Lyra の model_coeffs をコピー
+        shutil.copytree(os.path.join(install_dir, 'lyra/share', 'model_coeffs'),
+                        os.path.join(build_dir, 'zakuro', 'model_coeffs'), dirs_exist_ok=True)
 
     if args.package:
         mkdir_p(package_dir)
-        zakuro_package_dir = os.path.join(package_dir, f'zakuro-{zakuro_version}')
+        zakuro_package_dir = os.path.join(
+            package_dir, f'zakuro-{zakuro_version}')
         rm_rf(zakuro_package_dir)
         rm_rf(os.path.join(package_dir, 'zakuro.env'))
 
@@ -759,7 +790,10 @@ def main():
 
         mkdir_p(zakuro_package_dir)
         with cd(zakuro_package_dir):
-            shutil.copyfile(os.path.join(build_dir, 'zakuro', 'zakuro'), 'zakuro')
+            shutil.copyfile(os.path.join(
+                build_dir, 'zakuro', 'zakuro'), 'zakuro')
+            shutil.copytree(os.path.join(
+                install_dir, 'lyra/share', 'model_coeffs'), 'model_coeffs')
             shutil.copyfile(os.path.join(BASE_DIR, 'LICENSE'), 'LICENSE')
             with open('NOTICE', 'w') as f:
                 f.write(open(os.path.join(BASE_DIR, 'NOTICE')).read())
