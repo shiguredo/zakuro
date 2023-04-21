@@ -45,6 +45,8 @@ struct ZakuroConfig {
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;
+  std::string sora_client_id;
+  std::string sora_bundle_id;
   bool sora_disable_signaling_url_randomization = false;
   bool sora_video = true;
   bool sora_audio = true;

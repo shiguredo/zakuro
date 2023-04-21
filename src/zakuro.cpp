@@ -308,6 +308,8 @@ int Zakuro::Run() {
   sora_config.client_key = config_.client_key;
   sora_config.signaling_urls = config_.sora_signaling_urls;
   sora_config.channel_id = config_.sora_channel_id;
+  sora_config.client_id = config_.sora_client_id;
+  sora_config.bundle_id = config_.sora_bundle_id;
   sora_config.disable_signaling_url_randomization =
       config_.sora_disable_signaling_url_randomization;
   sora_config.video = config_.sora_video;
