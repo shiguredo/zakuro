@@ -739,6 +739,7 @@ def main():
     with cd(os.path.join(build_dir, 'zakuro')):
         webrtc_info = get_webrtc_info(
             False, source_dir, build_dir, install_dir)
+        webrtc_version = read_version_file(webrtc_info.version_file)
 
         with cd(BASE_DIR):
             version = read_version_file('VERSION')
@@ -750,24 +751,18 @@ def main():
         cmake_args.append(f'-DZAKURO_PLATFORM={args.target}')
         cmake_args.append(f'-DZAKURO_VERSION={zakuro_version}')
         cmake_args.append(f'-DZAKURO_COMMIT={zakuro_commit}')
-        cmake_args.append(
-            f"-DSORA_DIR={cmake_path(os.path.join(install_dir, 'sora'))}")
-        cmake_args.append(
-            f"-DBOOST_ROOT={cmake_path(os.path.join(install_dir, 'boost'))}")
-        cmake_args.append(
-            f"-DLYRA_DIR={cmake_path(os.path.join(install_dir, 'lyra'))}")
-        cmake_args.append(
-            f"-DWEBRTC_INCLUDE_DIR={cmake_path(webrtc_info.webrtc_include_dir)}")
-        cmake_args.append(
-            f"-DWEBRTC_LIBRARY_DIR={cmake_path(webrtc_info.webrtc_library_dir)}")
-        cmake_args.append(
-            f"-DCLI11_ROOT_DIR={cmake_path(os.path.join(install_dir, 'cli11'))}")
-        cmake_args.append(
-            f"-DBLEND2D_ROOT_DIR={cmake_path(os.path.join(install_dir, 'blend2d'))}")
-        cmake_args.append(
-            f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}")
-        cmake_args.append(
-            f"-DYAML_ROOT_DIR={cmake_path(os.path.join(install_dir, 'yaml'))}")
+        cmake_args.append(f"-DWEBRTC_BUILD_VERSION={webrtc_version['WEBRTC_BUILD_VERSION']}")
+        cmake_args.append(f"-DWEBRTC_READABLE_VERSION={webrtc_version['WEBRTC_READABLE_VERSION']}")
+        cmake_args.append(f"-DWEBRTC_COMMIT={webrtc_version['WEBRTC_COMMIT']}")
+        cmake_args.append(f"-DSORA_DIR={cmake_path(os.path.join(install_dir, 'sora'))}")
+        cmake_args.append(f"-DBOOST_ROOT={cmake_path(os.path.join(install_dir, 'boost'))}")
+        cmake_args.append(f"-DLYRA_DIR={cmake_path(os.path.join(install_dir, 'lyra'))}")
+        cmake_args.append(f"-DWEBRTC_INCLUDE_DIR={cmake_path(webrtc_info.webrtc_include_dir)}")
+        cmake_args.append(f"-DWEBRTC_LIBRARY_DIR={cmake_path(webrtc_info.webrtc_library_dir)}")
+        cmake_args.append(f"-DCLI11_ROOT_DIR={cmake_path(os.path.join(install_dir, 'cli11'))}")
+        cmake_args.append(f"-DBLEND2D_ROOT_DIR={cmake_path(os.path.join(install_dir, 'blend2d'))}")
+        cmake_args.append(f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}")
+        cmake_args.append(f"-DYAML_ROOT_DIR={cmake_path(os.path.join(install_dir, 'yaml'))}")
         cmake_args += get_common_cmake_args(install_dir, args.target)
 
         cmd(['cmake', BASE_DIR, *cmake_args])

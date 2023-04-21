@@ -7,6 +7,8 @@
 
 #include <sora/version.h>
 
+#include "zakuro_version.gen.h"
+
 // バージョンやコミットハッシュ情報
 // 通常は外から渡すが、渡されていなかった場合の対応
 #ifndef ZAKURO_VERSION
