@@ -60,9 +60,11 @@ Options:
                               Port number (default: -1)
   --output-file-connection-id TEXT
                               Output to specified file with connection IDs
+  --instance-hatch-rate FLOAT:FLOAT in [0.1 - 100]
+                              Spawned instance per seconds
   --name TEXT                 Client Name
-  --vcs INT:INT in [1 - 100]  Virtual Clients
-  --hatch-rate FLOAT:FLOAT in [0.1 - 100]
+  --vcs INT:INT in [1 - 1000] Virtual Clients
+  --vcs-hatch-rate FLOAT:FLOAT in [0.1 - 100]
                               Spawned virtual clients per seconds
   --no-video-device           Do not use video device
   --no-audio-device           Do not use audio device
@@ -91,7 +93,10 @@ Options:
                               Mute audio initialy
   --sora-signaling-url TEXT ...
                               Signaling URLs
+  --sora-disable-signaling-url-randomization
   --sora-channel-id TEXT      Channel ID
+  --sora-client-id TEXT       Client ID
+  --sora-bundle-id TEXT       Bundle ID
   --sora-role TEXT:{sendonly,recvonly,sendrecv}
                               Role
   --sora-video BOOLEAN:value in {false->0,true->1} OR {0,1}
@@ -100,8 +105,14 @@ Options:
                               Send audio to sora (default: true)
   --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264}
                               Video codec for send
-  --sora-audio-codec-type TEXT:{OPUS}
+  --sora-audio-codec-type TEXT:{OPUS,LYRA}
                               Audio codec for send
+  --sora-audio-codec-lyra-bitrate INT:INT in [0 - 9200]
+                              Lyra audio codec bitrate
+  --sora-audio-codec-lyra-usedtx TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
+                              Lyra usedtx (default: none)
+  --sora-check-lyra-version BOOLEAN
+                              Lyra version check
   --sora-video-bit-rate INT:INT in [0 - 30000]
                               Video bit rate
   --sora-audio-bit-rate INT:INT in [0 - 510]
@@ -149,8 +160,6 @@ Options:
                               The average length of a burst of lost packets for sending
   --fake-network-send-packet-overhead INT
                               Additional bytes to add to packet size for sending
-  --fake-network-send-codel-active-queue-management BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              Enable CoDel active queue management for sending
   --fake-network-receive-queue-length-packets UINT
                               Queue length in number of packets for receiving
   --fake-network-receive-queue-delay-ms INT
@@ -167,8 +176,6 @@ Options:
                               The average length of a burst of lost packets for receiving
   --fake-network-receive-packet-overhead INT
                               Additional bytes to add to packet size for receiving
-  --fake-network-receive-codel-active-queue-management BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              Enable CoDel active queue management for receiving
 ```
 
 
