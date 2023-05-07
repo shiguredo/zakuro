@@ -27,11 +27,14 @@ class ZakuroStats {
     std::chrono::steady_clock::time_point last_updated_at;
   };
 
-  const std::map<int, Data>& Get() const { return data_; }
+  std::map<int, Data> Get() const {
+    std::lock_guard<std::mutex> guard(m_);
+    return data_;
+  }
 
  private:
   std::map<int, Data> data_;
-  std::mutex m_;
+  mutable std::mutex m_;
 };
 
 #endif
