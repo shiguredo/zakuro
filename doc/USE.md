@@ -71,7 +71,7 @@ Zakuro ではエンコーダとデコーダに負荷をかけるために砂嵐�
 
 ### インスタンスハッチレート
 
-`--instance-hatch-rate 1`
+`--vcs-hatch-rate 1`
 
 ### VCS ハッチレート
 
