@@ -285,6 +285,7 @@ int main(int argc, char* argv[]) {
   for (auto& th : ths) {
     th->join();
   }
+  stats_th->join();
 
   return 0;
 }
