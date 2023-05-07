@@ -56,6 +56,8 @@ struct VirtualClientConfig {
   webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
 
   std::string openh264;
+
+  std::shared_ptr<sora::SoraClientContext> context;
 };
 
 class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
@@ -91,8 +93,6 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   std::shared_ptr<sora::SoraSignaling> signaling_;
   rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
-  // 最後に解放したいので、最後に宣言する
-  std::shared_ptr<sora::SoraClientContext> context_;
 };
 
 #endif

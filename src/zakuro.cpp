@@ -10,11 +10,16 @@
 
 // Sora C++ SDK
 #include <sora/camera_device_capturer.h>
+#include <sora/sora_video_encoder_factory.h>
 
+#include "dynamic_h264_video_encoder.h"
 #include "fake_audio_key_trigger.h"
+#include "fake_network_call_factory.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
+#include "nop_video_decoder.h"
 #include "scenario_player.h"
+#include "sctp_transport_factory.h"
 #include "util.h"
 #include "virtual_client.h"
 #include "wav_reader.h"
@@ -302,6 +307,81 @@ int Zakuro::Run() {
     vc_config.audio_type =
         VirtualClientConfig::AudioType::AutoGenerateFakeAudio;
   }
+
+  // Sora client context
+  sora::SoraClientContextConfig context_config;
+  context_config.use_hardware_encoder = false;
+  context_config.use_audio_device = false;
+
+  context_config.configure_media_dependencies =
+      [vc = vc_config](
+          const webrtc::PeerConnectionFactoryDependencies& dependencies,
+          cricket::MediaEngineDependencies& media_dependencies) {
+        media_dependencies.adm = dependencies.worker_thread->BlockingCall([&] {
+          ZakuroAudioDeviceModuleConfig admconfig;
+          admconfig.task_queue_factory = dependencies.task_queue_factory.get();
+          if (vc.audio_type == VirtualClientConfig::AudioType::Device) {
+#if defined(__linux__)
+            webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                webrtc::AudioDeviceModule::kLinuxAlsaAudio;
+#else
+            webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                webrtc::AudioDeviceModule::kPlatformDefaultAudio;
+#endif
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+            admconfig.adm = webrtc::AudioDeviceModule::Create(
+                audio_layer, dependencies.task_queue_factory.get());
+          } else if (vc.audio_type == VirtualClientConfig::AudioType::NoAudio) {
+            webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                webrtc::AudioDeviceModule::kDummyAudio;
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+            admconfig.adm = webrtc::AudioDeviceModule::Create(
+                audio_layer, dependencies.task_queue_factory.get());
+          } else if (vc.audio_type ==
+                     VirtualClientConfig::AudioType::SpecifiedFakeAudio) {
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
+            admconfig.fake_audio = vc.fake_audio;
+          } else if (vc.audio_type ==
+                     VirtualClientConfig::AudioType::AutoGenerateFakeAudio) {
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
+          } else if (vc.audio_type ==
+                     VirtualClientConfig::AudioType::External) {
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
+            admconfig.render = vc.render_audio;
+            admconfig.sample_rate = vc.sample_rate;
+            admconfig.channels = vc.channels;
+          }
+          return ZakuroAudioDeviceModule::Create(std::move(admconfig));
+        });
+
+        auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
+        sw_config.use_simulcast_adapter = true;
+        sw_config.encoders.push_back(sora::VideoEncoderConfig(
+            webrtc::kVideoCodecH264,
+            [openh264 = vc.openh264](
+                auto format) -> std::unique_ptr<webrtc::VideoEncoder> {
+              return webrtc::DynamicH264VideoEncoder::Create(
+                  cricket::VideoCodec(format), openh264);
+            }));
+        media_dependencies.video_encoder_factory =
+            absl::make_unique<sora::SoraVideoEncoderFactory>(
+                std::move(sw_config));
+        media_dependencies.video_decoder_factory.reset(
+            new NopVideoDecoderFactory());
+      };
+
+  context_config.configure_dependencies =
+      [vc =
+           vc_config](webrtc::PeerConnectionFactoryDependencies& dependencies) {
+        dependencies.call_factory = CreateFakeNetworkCallFactory(
+            vc.fake_network_send, vc.fake_network_receive);
+        dependencies.sctp_factory.reset(
+            new SctpTransportFactory(dependencies.network_thread));
+      };
+
+  auto context = sora::SoraClientContext::Create(context_config);
+
+  vc_config.context = context;
   sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
   sora_config.client_cert = config_.client_cert;
