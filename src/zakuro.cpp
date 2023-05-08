@@ -286,10 +286,11 @@ int Zakuro::Run() {
   vc_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
     vc_config.audio_type = VirtualClientConfig::AudioType::NoAudio;
-  } else if (!config_.game.empty()) {
+  } else if (!config_.game.empty() || fake_audio_key_trigger) {
     vc_config.audio_type = VirtualClientConfig::AudioType::External;
-  } else if (fake_audio_key_trigger) {
-    vc_config.audio_type = VirtualClientConfig::AudioType::External;
+    vc_config.render_audio = gam->AddGameAudio(16000);
+    vc_config.sample_rate = 16000;
+    vc_config.channels = 1;
   } else if (!config_.fake_audio_capture.empty()) {
     WavReader wav_reader;
     int r = wav_reader.Load(config_.fake_audio_capture);
@@ -379,9 +380,8 @@ int Zakuro::Run() {
             new SctpTransportFactory(dependencies.network_thread));
       };
 
-  auto context = sora::SoraClientContext::Create(context_config);
+  vc_config.context = sora::SoraClientContext::Create(context_config);
 
-  vc_config.context = context;
   sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
   sora_config.client_cert = config_.client_cert;
@@ -422,13 +422,7 @@ int Zakuro::Run() {
 
   std::vector<VirtualClientConfig> vc_configs;
   for (int i = 0; i < config_.vcs; i++) {
-    VirtualClientConfig config = vc_config;
-    if (config.audio_type == VirtualClientConfig::AudioType::External) {
-      config.render_audio = gam->AddGameAudio(16000);
-      config.sample_rate = 16000;
-      config.channels = 1;
-    }
-    vc_configs.push_back(std::move(config));
+    vc_configs.push_back(vc_config);
   }
 
   std::vector<std::shared_ptr<VirtualClient>> vcs;
