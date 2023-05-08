@@ -137,11 +137,11 @@ zakuro:
         simulcast: true
 ```
 
-### instance_num と ${} によるシナリオの動的生成
+### instance-num と ${} によるシナリオの動的生成
 
 ```yaml
   instances:
-    - instance_num: 2
+    - instance-num: 2
       name: zakuro
       vcs: 2
       sora:
