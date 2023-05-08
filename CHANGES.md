@@ -13,9 +13,9 @@
 
 - [CHANGE] `--fake-network-send-codel-active-queue-management` と `--fake-network-receive-codel-active-queue-management` オプションを削除
     - @melpon
-- [UPDATE] WebRTC を m111.5563.4.4 に上げる
+- [UPDATE] WebRTC を m114.5735.0.1 に上げる
     - @melpon
-- [UPDATE] Sora C++ SDK を 2023.4.0 に上げる
+- [UPDATE] Sora C++ SDK を 2023.5.0 に上げる
     - @melpon
 - [UPDATE] `CMake` を `3.25.1` に上げる
     - @voluntas
@@ -23,6 +23,8 @@
     - @voluntas
 - [UPDATE] `CLI11` を `2.3.1` に上げる
     - @voluntas
+- [UPDATE] Boost を 1.82.0 に上げる
+    - @melpon
 - [UPDATE] actions/create-release と actions/upload-release を softprops/action-gh-release に変更する
     - @melpon
 - [ADD] Ubuntu 22.04 x86_64 のビルドを追加
