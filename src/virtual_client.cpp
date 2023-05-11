@@ -67,11 +67,11 @@ void VirtualClient::Connect() {
   config.pc_factory = config_.context->peer_connection_factory();
   config.observer = shared_from_this();
   config.network_manager =
-      config_.context->signaling_thread()->BlockingCall([this]() {
+      config_.context->signaling_thread()->Invoke<rtc::NetworkManager*>(RTC_FROM_HERE, [this]() {
         return config_.context->connection_context()->default_network_manager();
       });
   config.socket_factory =
-      config_.context->signaling_thread()->BlockingCall([this]() {
+      config_.context->signaling_thread()->Invoke<rtc::PacketSocketFactory*>(RTC_FROM_HERE, [this]() {
         return config_.context->connection_context()->default_socket_factory();
       });
 

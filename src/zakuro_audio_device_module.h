@@ -10,7 +10,6 @@
 #include <vector>
 
 // webrtc
-#include "api/make_ref_counted.h"
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "rtc_base/ref_counted_object.h"

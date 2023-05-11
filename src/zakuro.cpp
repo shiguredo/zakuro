@@ -318,7 +318,7 @@ int Zakuro::Run() {
       [vc = vc_config](
           const webrtc::PeerConnectionFactoryDependencies& dependencies,
           cricket::MediaEngineDependencies& media_dependencies) {
-        media_dependencies.adm = dependencies.worker_thread->BlockingCall([&] {
+        media_dependencies.adm = dependencies.worker_thread->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(RTC_FROM_HERE, [&] {
           ZakuroAudioDeviceModuleConfig admconfig;
           admconfig.task_queue_factory = dependencies.task_queue_factory.get();
           if (vc.audio_type == VirtualClientConfig::AudioType::Device) {

@@ -52,8 +52,8 @@ struct VirtualClientConfig {
   int sample_rate;
   int channels;
 
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_send;
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
+  webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
+  webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
 
   std::string openh264;
 

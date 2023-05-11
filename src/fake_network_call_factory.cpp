@@ -12,13 +12,14 @@
 #include <system_wrappers/include/field_trial.h>
 
 FakeNetworkCallFactory::FakeNetworkCallFactory(
-    const webrtc::DegradedCall::TimeScopedNetworkConfig& send_config,
-    const webrtc::DegradedCall::TimeScopedNetworkConfig& receive_config)
+    const webrtc::BuiltInNetworkBehaviorConfig& send_config,
+    const webrtc::BuiltInNetworkBehaviorConfig& receive_config)
     : send_config_(send_config), receive_config_(receive_config) {}
 
 webrtc::Call* FakeNetworkCallFactory::CreateCall(
     const webrtc::Call::Config& config) {
-  webrtc::DegradedCall::TimeScopedNetworkConfig default_config;
+  webrtc::BuiltInNetworkBehaviorConfig default_config;
+  
 
   webrtc::RtpTransportConfig transport_config = config.ExtractTransportConfig();
 
@@ -29,23 +30,20 @@ webrtc::Call* FakeNetworkCallFactory::CreateCall(
 
   webrtc::Call* call = webrtc::Call::Create(
       config, webrtc::Clock::GetRealTimeClock(),
+      webrtc::SharedModuleThread::Create(webrtc::ProcessThread::Create("ModuleProcessThread"), nullptr),
       config.rtp_transport_controller_send_factory->Create(
-          transport_config, webrtc::Clock::GetRealTimeClock()));
+          transport_config, webrtc::Clock::GetRealTimeClock(), webrtc::ProcessThread::Create("PacerThread")));
 
   if (send_config_changed || receive_config_changed) {
-    std::vector<webrtc::DegradedCall::TimeScopedNetworkConfig> send_config = {
-        send_config_};
-    std::vector<webrtc::DegradedCall::TimeScopedNetworkConfig> receive_config =
-        {receive_config_};
     return new webrtc::DegradedCall(std::unique_ptr<webrtc::Call>(call),
-                                    send_config, receive_config);
+                                    send_config_, receive_config_, config.task_queue_factory);
   }
 
   return call;
 }
 std::unique_ptr<webrtc::CallFactoryInterface> CreateFakeNetworkCallFactory(
-    const webrtc::DegradedCall::TimeScopedNetworkConfig& send_config,
-    const webrtc::DegradedCall::TimeScopedNetworkConfig& receive_config) {
+    const webrtc::BuiltInNetworkBehaviorConfig& send_config,
+    const webrtc::BuiltInNetworkBehaviorConfig& receive_config) {
   return std::unique_ptr<webrtc::CallFactoryInterface>(
       new FakeNetworkCallFactory(send_config, receive_config));
 }

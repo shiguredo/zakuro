@@ -76,8 +76,8 @@ struct ZakuroConfig {
   boost::json::value sora_signaling_notify_metadata;
   boost::json::value sora_data_channels;
 
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_send;
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
+  webrtc::BuiltInNetworkBehaviorConfig fake_network_send;
+  webrtc::BuiltInNetworkBehaviorConfig fake_network_receive;
 
   std::shared_ptr<GameKeyCore> key_core;
 

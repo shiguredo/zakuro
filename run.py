@@ -426,14 +426,13 @@ def install_llvm(version, install_dir,
 
 @versioned
 def install_boost(version, source_dir, install_dir, sora_version, platform: str):
-    win = platform.startswith("windows_")
-    filename = f'boost-{version}_sora-cpp-sdk-{sora_version}_{platform}.{"zip" if win else "tar.gz"}'
-    rm_rf(os.path.join(source_dir, filename))
-    archive = download(
-        f'https://github.com/shiguredo/sora-cpp-sdk/releases/download/{sora_version}/{filename}',
-        output_dir=source_dir)
+    rm_rf(os.path.join(source_dir, 'sora-cpp-sdk'))
+    with cd(source_dir):
+        cmd(['git', 'clone', 'https://github.com/shiguredo/sora-cpp-sdk.git', '--depth', '1', '-b', 'support/libwebrtc-m99'])
+    with cd(os.path.join(source_dir, 'sora-cpp-sdk')):
+        cmd(['python3', 'run.py', platform])
     rm_rf(os.path.join(install_dir, 'boost'))
-    extract(archive, output_dir=install_dir, output_dirname='boost')
+    cmd(['cp', '-r', os.path.join(source_dir, 'sora-cpp-sdk', '_install', platform, 'release', 'boost'), os.path.join(install_dir, 'boost')])
 
 
 @versioned
@@ -466,14 +465,8 @@ def install_cmake(version, source_dir, install_dir, platform: str, ext):
 
 @versioned
 def install_sora(version, source_dir, install_dir, platform: str):
-    win = platform.startswith("windows_")
-    filename = f'sora-cpp-sdk-{version}_{platform}.{"zip" if win else "tar.gz"}'
-    rm_rf(os.path.join(source_dir, filename))
-    archive = download(
-        f'https://github.com/shiguredo/sora-cpp-sdk/releases/download/{version}/{filename}',
-        output_dir=source_dir)
     rm_rf(os.path.join(install_dir, 'sora'))
-    extract(archive, output_dir=install_dir, output_dirname='sora')
+    cmd(['cp', '-r', os.path.join(source_dir, 'sora-cpp-sdk', '_install', platform, 'release', 'sora'), os.path.join(install_dir, 'sora')])
 
 
 @versioned
@@ -546,8 +539,7 @@ def get_common_cmake_args(install_dir, platform):
             f'-DCMAKE_C_COMPILER={install_dir}/llvm/clang/bin/clang',
             f'-DCMAKE_CXX_COMPILER={install_dir}/llvm/clang/bin/clang++',
             '-DCMAKE_CXX_FLAGS=' + ' '.join([
-                '-D_LIBCPP_ABI_NAMESPACE=Cr',
-                '-D_LIBCPP_ABI_VERSION=2',
+                '-D_LIBCPP_ABI_UNSTABLE',
                 '-D_LIBCPP_DISABLE_AVAILABILITY',
                 '-nostdinc++',
                 f'-isystem{install_dir}/llvm/libcxx/include',
@@ -625,15 +617,15 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
         install_boost(**install_boost_args)
 
         # Lyra
-        install_lyra_args = {
-            'version': version['LYRA_VERSION'],
-            'version_file': os.path.join(install_dir, 'lyra.version'),
-            'source_dir': source_dir,
-            'install_dir': install_dir,
-            'sora_version': version['SORA_CPP_SDK_VERSION'],
-            'platform': platform,
-        }
-        install_lyra(**install_lyra_args)
+        #install_lyra_args = {
+        #    'version': version['LYRA_VERSION'],
+        #    'version_file': os.path.join(install_dir, 'lyra.version'),
+        #    'source_dir': source_dir,
+        #    'install_dir': install_dir,
+        #    'sora_version': version['SORA_CPP_SDK_VERSION'],
+        #    'platform': platform,
+        #}
+        #install_lyra(**install_lyra_args)
 
         # CMake
         install_cmake_args = {
@@ -769,8 +761,8 @@ def main():
         cmd(['cmake', '--build', '.',
             f'-j{multiprocessing.cpu_count()}', '--config', configuration])
         # Lyra の model_coeffs をコピー
-        shutil.copytree(os.path.join(install_dir, 'lyra/share', 'model_coeffs'),
-                        os.path.join(build_dir, 'zakuro', 'model_coeffs'), dirs_exist_ok=True)
+        #shutil.copytree(os.path.join(install_dir, 'lyra/share', 'model_coeffs'),
+        #                os.path.join(build_dir, 'zakuro', 'model_coeffs'), dirs_exist_ok=True)
 
     if args.package:
         mkdir_p(package_dir)
@@ -787,8 +779,8 @@ def main():
         with cd(zakuro_package_dir):
             shutil.copyfile(os.path.join(
                 build_dir, 'zakuro', 'zakuro'), 'zakuro')
-            shutil.copytree(os.path.join(
-                install_dir, 'lyra/share', 'model_coeffs'), 'model_coeffs')
+            #shutil.copytree(os.path.join(
+            #    install_dir, 'lyra/share', 'model_coeffs'), 'model_coeffs')
             shutil.copyfile(os.path.join(BASE_DIR, 'LICENSE'), 'LICENSE')
             with open('NOTICE', 'w') as f:
                 f.write(open(os.path.join(BASE_DIR, 'NOTICE')).read())
