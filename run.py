@@ -575,6 +575,8 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
             'install_dir': install_dir,
             'platform': platform,
         }
+        if platform in ('ubuntu-22.04_x86_64',):
+            install_webrtc_args['platform'] = 'ubuntu-20.04_x86_64'
         install_webrtc(**install_webrtc_args)
 
         if platform in ('ubuntu-20.04_x86_64', 'ubuntu-22.04_x86_64'):
