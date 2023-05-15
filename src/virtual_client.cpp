@@ -26,6 +26,7 @@ std::shared_ptr<VirtualClient> VirtualClient::Create(
 
 void VirtualClient::Connect() {
   if (closing_) {
+    need_reconnect_ = true;
     return;
   }
 

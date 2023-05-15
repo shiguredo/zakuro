@@ -94,6 +94,11 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--vcs-hatch-rate", config.vcs_hatch_rate,
                  "Spawned virtual clients per seconds")
       ->check(CLI::Range(0.1, 100.0));
+  app.add_option(
+      "--duration", config.duration,
+      "(Experimental) Duration of virtual client running in seconds");
+  app.add_option("--repeat-interval", config.repeat_interval,
+                 "(Experimental) Interval to reconnect after disconnection");
 
   app.add_flag("--no-video-device", config.no_video_device,
                "Do not use video device");
@@ -474,6 +479,8 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "name");
     DEF_INTEGER(inst, "", "vcs");
     DEF_DOUBLE(inst, "", "vcs-hatch-rate");
+    DEF_DOUBLE(inst, "", "duration");
+    DEF_DOUBLE(inst, "", "repeat-interval");
     DEF_FLAG(inst, "", "no-video-device");
     DEF_FLAG(inst, "", "no-audio-device");
     DEF_FLAG(inst, "", "fake-capture-device");
