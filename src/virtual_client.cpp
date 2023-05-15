@@ -18,11 +18,10 @@
 
 std::shared_ptr<VirtualClient> VirtualClient::Create(
     VirtualClientConfig config) {
-  auto vc = std::make_shared<VirtualClient>();
-  vc->config_ = std::move(config);
-
-  return vc;
+  return std::shared_ptr<VirtualClient>(new VirtualClient(config));
 }
+VirtualClient::VirtualClient(const VirtualClientConfig& config)
+    : config_(config), retry_timer_(*config.sora_config.io_context) {}
 
 void VirtualClient::Connect() {
   if (closing_) {
@@ -36,6 +35,8 @@ void VirtualClient::Connect() {
     signaling_->Disconnect();
     return;
   }
+
+  retry_timer_.cancel();
 
   if (config_.audio_type != VirtualClientConfig::AudioType::NoAudio) {
     cricket::AudioOptions ao;
@@ -91,6 +92,7 @@ void VirtualClient::Close() {
 }
 
 void VirtualClient::Clear() {
+  retry_timer_.cancel();
   signaling_.reset();
 }
 
@@ -153,9 +155,37 @@ void VirtualClient::OnSetOffer(std::string offer) {
 void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
                                  std::string message) {
   signaling_.reset();
-  closing_ = false;
-  if (need_reconnect_) {
-    need_reconnect_ = false;
-    Connect();
+  retry_timer_.cancel();
+
+  if (!closing_) {
+    // VirtualClient の外から明示的に呼び出されていない、つまり不意に接続が切れた場合にここに来る
+    // この場合は、設定次第で再接続を試みる
+    if (retry_count_ < config_.max_retry) {
+      retry_count_ += 1;
+      retry_timer_.expires_from_now(boost::posix_time::milliseconds(
+          (int)(config_.retry_interval * 1000)));
+      retry_timer_.async_wait([this](boost::system::error_code ec) {
+        if (ec) {
+          return;
+        }
+        need_reconnect_ = false;
+        Connect();
+      });
+    }
+  } else {
+    closing_ = false;
+    if (need_reconnect_) {
+      need_reconnect_ = false;
+      Connect();
+    }
+  }
+}
+void VirtualClient::OnNotify(std::string text) {
+  auto json = boost::json::parse(text);
+  if (json.at("event_type").as_string() == "connection.created") {
+    // 接続できたらリトライ数をリセットする
+    // 他人が接続された時もリセットされることになるけど、
+    // その時は 0 のままになってるはずなので問題ない
+    retry_count_ = 0;
   }
 }

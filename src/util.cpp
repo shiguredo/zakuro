@@ -99,6 +99,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       "(Experimental) Duration of virtual client running in seconds");
   app.add_option("--repeat-interval", config.repeat_interval,
                  "(Experimental) Interval to reconnect after disconnection");
+  app.add_option("--max-retry", config.max_retry,
+                 "(Experimental) Max retries when a connection fails");
+  app.add_option("--retry-interval", config.retry_interval,
+                 "(Experimental) Interval to reconnect after connection fails");
 
   app.add_flag("--no-video-device", config.no_video_device,
                "Do not use video device");
@@ -481,6 +485,8 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_DOUBLE(inst, "", "vcs-hatch-rate");
     DEF_DOUBLE(inst, "", "duration");
     DEF_DOUBLE(inst, "", "repeat-interval");
+    DEF_INTEGER(inst, "", "max-retry");
+    DEF_INTEGER(inst, "", "retry-interval");
     DEF_FLAG(inst, "", "no-video-device");
     DEF_FLAG(inst, "", "no-audio-device");
     DEF_FLAG(inst, "", "fake-capture-device");

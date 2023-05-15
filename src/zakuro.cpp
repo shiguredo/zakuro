@@ -276,6 +276,8 @@ int Zakuro::Run() {
   VirtualClientConfig vc_config;
   sora::SoraSignalingConfig& sora_config = vc_config.sora_config;
   vc_config.capturer = capturer;
+  vc_config.max_retry = config_.max_retry;
+  vc_config.retry_interval = config_.retry_interval;
   vc_config.no_video_device = config_.no_video_device;
   vc_config.fixed_resolution = config_.fixed_resolution;
   vc_config.priority = config_.priority;

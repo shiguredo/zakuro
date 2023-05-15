@@ -33,6 +33,8 @@
     - @melpon
 - [ADD] `--duration` および `--repeat-interval` オプションを追加
     - @melpon
+- [ADD] `--max-retry` および `--retry-interval` オプションを追加
+    - @melpon
 - [FIX] 廃止になった `--sora-audio-opus-params-clock-rate` を削除する
     - @torikizi
 - [FIX] "data-channels" の "interval" 項目を指定するとエラーになる問題を修正
