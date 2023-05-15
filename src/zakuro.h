@@ -22,6 +22,10 @@ struct ZakuroConfig {
   std::string name = "zakuro";
   int vcs = 1;
   double vcs_hatch_rate = 1.0;
+  double duration = 0;
+  double repeat_interval = 0;
+  int max_retry = 0;
+  double retry_interval = 60;
 
   bool no_video_device = false;
   bool no_audio_device = false;

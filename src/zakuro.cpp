@@ -276,6 +276,8 @@ int Zakuro::Run() {
   VirtualClientConfig vc_config;
   sora::SoraSignalingConfig& sora_config = vc_config.sora_config;
   vc_config.capturer = capturer;
+  vc_config.max_retry = config_.max_retry;
+  vc_config.retry_interval = config_.retry_interval;
   vc_config.no_video_device = config_.no_video_device;
   vc_config.fixed_resolution = config_.fixed_resolution;
   vc_config.priority = config_.priority;
@@ -472,9 +474,26 @@ int Zakuro::Run() {
       for (const auto& d : dcs_data) {
         data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
       }
-      data.Sleep(1000, 5000);
-      data.PlayVoiceNumberClient();
-      loop_index = 1 + dcs_data.size();
+      ScenarioData sd;
+      sd.Sleep(1000, 5000);
+      sd.PlayVoiceNumberClient();
+      data.PlaySubScenario("scenario-voice-number-client", sd, 0);
+      if (config_.duration == 0) {
+        data.Sleep(10000, 10000);
+      } else {
+        // duration が設定されている場合、duration 秒待って切断し、
+        // repeat_interval 秒待ってから再接続する
+        data.Sleep((int)(config_.duration * 1000),
+                   (int)(config_.duration * 1000));
+        data.Disconnect();
+        // repeat_interval == 0 の場合は再接続しない
+        if (config_.repeat_interval != 0) {
+          data.Sleep((int)(config_.repeat_interval * 1000),
+                     (int)(config_.repeat_interval * 1000));
+          data.Reconnect();
+        }
+      }
+      loop_index = 1 + dcs_data.size() + 1;
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
       data.Sleep(1000, 5000);

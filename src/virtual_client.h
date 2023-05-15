@@ -26,6 +26,9 @@ struct VirtualClientConfig {
   rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> capturer;
   sora::SoraSignalingConfig sora_config;
 
+  int max_retry = 0;
+  double retry_interval = 60;
+
   bool fixed_resolution = false;
 
   std::string priority = "BALANCE";
@@ -75,7 +78,7 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   void OnSetOffer(std::string offer) override;
   void OnDisconnect(sora::SoraSignalingErrorCode ec,
                     std::string message) override;
-  void OnNotify(std::string text) override {}
+  void OnNotify(std::string text) override;
   void OnPush(std::string text) override {}
   void OnMessage(std::string label, std::string data) override {}
 
@@ -87,9 +90,13 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   void OnDataChannel(std::string label) override {}
 
  private:
+  VirtualClient(const VirtualClientConfig& config);
+
   VirtualClientConfig config_;
   bool closing_ = false;
   bool need_reconnect_ = false;
+  int retry_count_ = 0;
+  boost::asio::deadline_timer retry_timer_;
   std::shared_ptr<sora::SoraSignaling> signaling_;
   rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
