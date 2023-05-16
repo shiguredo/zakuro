@@ -15,7 +15,7 @@
     - @melpon
 - [UPDATE] WebRTC を m114.5735.0.1 に上げる
     - @melpon
-- [UPDATE] Sora C++ SDK を 2023.5.0 に上げる
+- [UPDATE] Sora C++ SDK を 2023.5.1 に上げる
     - @melpon
 - [UPDATE] `CMake` を `3.25.1` に上げる
     - @voluntas
@@ -27,6 +27,8 @@
     - @melpon
 - [UPDATE] actions/create-release と actions/upload-release を softprops/action-gh-release に変更する
     - @melpon
+- [UPDATE] VP9, AV1 もサイマルキャストが利用可能と可能となるよう入力チェックを変更する
+    - @miosakuma
 - [ADD] Ubuntu 22.04 x86_64 のビルドを追加
     - @melpon
 - [ADD] `--sora-client-id` および `--sora-bundle-id` オプションを追加
@@ -35,6 +37,12 @@
     - @melpon
 - [ADD] `--max-retry` および `--retry-interval` オプションを追加
     - @melpon
+- [ADD] Lyra 向けオプションを追加
+    - `--sora-audio-codec-type` オプションに `LYRA` を追加
+    - `--sora-audio-codec-lyra-bitrate` オプションを追加
+    - `--sora-audio-codec-lyra-usedtx` オプションを追加
+    - `--sora-check-lyra-version` オプションを追加
+    - @torikizi
 - [FIX] 廃止になった `--sora-audio-opus-params-clock-rate` を削除する
     - @torikizi
 - [FIX] "data-channels" の "interval" 項目を指定するとエラーになる問題を修正
