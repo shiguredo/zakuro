@@ -15,7 +15,7 @@
     - @melpon
 - [UPDATE] WebRTC を m114.5735.0.1 に上げる
     - @melpon
-- [UPDATE] Sora C++ SDK を 2023.5.0 に上げる
+- [UPDATE] Sora C++ SDK を 2023.5.1 に上げる
     - @melpon
 - [UPDATE] `CMake` を `3.25.1` に上げる
     - @voluntas
