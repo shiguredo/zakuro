@@ -200,6 +200,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
+## OpenH264
+
+https://www.openh264.org/BINARY_LICENSE.txt
+
+```
+"OpenH264 Video Codec provided by Cisco Systems, Inc."
+```
+
 ### 音声ファイルのライセンス
 
 スポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](https://amitaro.net/) 様の声素材を使用しています。
