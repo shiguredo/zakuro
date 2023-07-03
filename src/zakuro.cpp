@@ -462,12 +462,36 @@ int Zakuro::Run() {
       dcs_data.push_back(std::make_tuple("scenario-dcs-" + ch.label, sd));
     }
 
+    // 切断と再接続のシナリオを追加する関数
+    auto add_reconnect_scenario = [this](ScenarioData& data) {
+      int op = 0;
+      if (config_.duration == 0) {
+        data.Sleep(10000, 10000);
+        op += 1;
+      } else {
+        // duration が設定されている場合、duration 秒待って切断し、
+        // repeat_interval 秒待ってから再接続する
+        data.Sleep((int)(config_.duration * 1000),
+                   (int)(config_.duration * 1000));
+        data.Disconnect();
+        op += 2;
+        // repeat_interval == 0 の場合は再接続しない
+        if (config_.repeat_interval != 0) {
+          data.Sleep((int)(config_.repeat_interval * 1000),
+                     (int)(config_.repeat_interval * 1000));
+          data.Reconnect();
+          op += 2;
+        }
+      }
+      return op;
+    };
+
     ScenarioPlayer scenario_player(spc);
     ScenarioData data;
     int loop_index;
     if (!fake_audio_key_trigger) {
       data.Reconnect();
-      data.Sleep(10000, 10000);
+      add_reconnect_scenario(data);
       loop_index = 1;
     } else if (config_.scenario == "") {
       data.Reconnect();
@@ -478,21 +502,7 @@ int Zakuro::Run() {
       sd.Sleep(1000, 5000);
       sd.PlayVoiceNumberClient();
       data.PlaySubScenario("scenario-voice-number-client", sd, 0);
-      if (config_.duration == 0) {
-        data.Sleep(10000, 10000);
-      } else {
-        // duration が設定されている場合、duration 秒待って切断し、
-        // repeat_interval 秒待ってから再接続する
-        data.Sleep((int)(config_.duration * 1000),
-                   (int)(config_.duration * 1000));
-        data.Disconnect();
-        // repeat_interval == 0 の場合は再接続しない
-        if (config_.repeat_interval != 0) {
-          data.Sleep((int)(config_.repeat_interval * 1000),
-                     (int)(config_.repeat_interval * 1000));
-          data.Reconnect();
-        }
-      }
+      add_reconnect_scenario(data);
       loop_index = 1 + dcs_data.size() + 1;
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
