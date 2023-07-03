@@ -52,6 +52,8 @@
 - [FIX] パッケージを展開した際の名前が `zakuro` になってしまっていたのを `zakuro-{version}` にする
     - @melpon
     - @miosakuma
+- [FIX] `--fake-audio-capture` が有効な場合に `--duration` が効かないのを修正
+    - @melpon
 
 ## 2022.7.1 (2022-10-31)
 
