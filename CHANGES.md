@@ -19,7 +19,7 @@
   - @melpon
 - [UPDATE] `CMake` を `3.26.4` に上げる
   - @voluntas
-- [UPDATE] `OpenH264` を `2.3.1` に上げる
+- [UPDATE] `OpenH264` を `2.3.2` に上げる
   - @voluntas
 - [UPDATE] `CLI11` を `2.3.1` に上げる
   - @voluntas
