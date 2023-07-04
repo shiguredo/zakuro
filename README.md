@@ -29,7 +29,10 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 - フェイクネットワークへ対応
 - クライアント証明書へ対応
 - 最新の libwebrtc へ対応
+- OpenH264 対応
 - Sora C++ SDK ベース
+- 期間繰り返し
+  - 30 秒負荷かけて切断を繰り返すなど
 
 ## 使ってみる
 
