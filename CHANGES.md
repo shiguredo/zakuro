@@ -27,7 +27,7 @@
   - @melpon
 - [UPDATE] actions/create-release と actions/upload-release を softprops/action-gh-release に変更する
   - @melpon
-- [UPDATE] VP9, AV1 もサイマルキャストが利用可能と可能となるよう入力チェックを変更する
+- [UPDATE] VP9, AV1 もサイマルキャストが利用可能となるよう入力チェックを変更する
   - @miosakuma
 - [ADD] Ubuntu 22.04 x86_64 のビルドを追加
   - @melpon
