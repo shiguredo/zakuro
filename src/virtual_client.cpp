@@ -81,13 +81,21 @@ void VirtualClient::Connect() {
   signaling_->Connect();
 }
 
-void VirtualClient::Close() {
+void VirtualClient::Close(std::function<void(std::string)> on_close) {
   if (closing_) {
+    if (on_close_ == nullptr) {
+      on_close_ = on_close;
+    } else {
+      on_close("already closing");
+    }
     return;
   }
   if (signaling_) {
     closing_ = true;
+    on_close_ = on_close;
     signaling_->Disconnect();
+  } else {
+    on_close("already closed");
   }
 }
 
@@ -169,15 +177,24 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
           return;
         }
         need_reconnect_ = false;
-        Connect();
+        if (on_close_ == nullptr) {
+          Connect();
+        }
       });
     }
   } else {
     closing_ = false;
     if (need_reconnect_) {
       need_reconnect_ = false;
-      Connect();
+      if (on_close_ == nullptr) {
+        Connect();
+      }
     }
+  }
+
+  if (on_close_) {
+    on_close_(message);
+    on_close_ = nullptr;
   }
 }
 void VirtualClient::OnNotify(std::string text) {

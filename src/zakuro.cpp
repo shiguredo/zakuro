@@ -463,7 +463,7 @@ int Zakuro::Run() {
     }
 
     // 切断と再接続のシナリオを追加する関数
-    auto add_reconnect_scenario = [this](ScenarioData& data) {
+    auto add_reconnect_scenario = [this](ScenarioData& data, bool exit) {
       int op = 0;
       if (config_.duration == 0) {
         data.Sleep(10000, 10000);
@@ -475,8 +475,10 @@ int Zakuro::Run() {
                    (int)(config_.duration * 1000));
         data.Disconnect();
         op += 2;
-        // repeat_interval == 0 の場合は再接続しない
-        if (config_.repeat_interval != 0) {
+        if (config_.repeat_interval == 0) {
+          data.Exit();
+          op += 1;
+        } else {
           data.Sleep((int)(config_.repeat_interval * 1000),
                      (int)(config_.repeat_interval * 1000));
           data.Reconnect();
@@ -491,7 +493,7 @@ int Zakuro::Run() {
     int loop_index;
     if (!fake_audio_key_trigger) {
       data.Reconnect();
-      add_reconnect_scenario(data);
+      add_reconnect_scenario(data, true);
       loop_index = 1;
     } else if (config_.scenario == "") {
       data.Reconnect();
@@ -502,7 +504,7 @@ int Zakuro::Run() {
       sd.Sleep(1000, 5000);
       sd.PlayVoiceNumberClient();
       data.PlaySubScenario("scenario-voice-number-client", sd, 0);
-      add_reconnect_scenario(data);
+      add_reconnect_scenario(data, true);
       loop_index = 1 + dcs_data.size() + 1;
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
