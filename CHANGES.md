@@ -37,6 +37,8 @@
   - @melpon
 - [ADD] `--max-retry` および `--retry-interval` オプションを追加
   - @melpon
+- [ADD] 全てのインスタンスで duration が設定されていて、repeat-interval が設定されていない場合、全ての仮想クライアントが duration 時間経過することによって切断された時に zakuro を自動で終了する
+  - @melpon
 - [ADD] Lyra 向けオプションを追加
   - `--sora-audio-codec-type` オプションに `LYRA` を追加
   - `--sora-audio-codec-lyra-bitrate` オプションを追加
@@ -53,6 +55,8 @@
   - @melpon
   - @miosakuma
 - [FIX] `--fake-audio-capture` が有効な場合に `--duration` が効かないのを修正
+  - @melpon
+- [FIX] `--output-file-connection-id` を指定してない場合、終了時に落ちてしまうのを修正
   - @melpon
 
 ## 2022.7.1 (2022-10-31)
