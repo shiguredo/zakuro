@@ -35,6 +35,7 @@ struct ScenarioData {
   };
   struct OpDisconnect {};
   struct OpReconnect {};
+  struct OpExit {};
   enum Type {
     OP_SLEEP,
     OP_PLAY_SUB_SCENARIO,
@@ -42,6 +43,7 @@ struct ScenarioData {
     OP_SEND_DATA_CHANNEL_MESSAGE,
     OP_DISCONNECT,
     OP_RECONNECT,
+    OP_EXIT,
   };
 
   typedef boost::variant<OpSleep,
@@ -49,7 +51,8 @@ struct ScenarioData {
                          OpPlayVoiceNumberClient,
                          OpSendDataChannelMessage,
                          OpDisconnect,
-                         OpReconnect>
+                         OpReconnect,
+                         OpExit>
       operation_t;
   std::vector<operation_t> ops;
 
@@ -70,6 +73,7 @@ struct ScenarioData {
   }
   void Disconnect() { ops.push_back(OpDisconnect()); }
   void Reconnect() { ops.push_back(OpReconnect()); }
+  void Exit() { ops.push_back(OpExit()); }
 };
 
 struct ScenarioPlayerConfig {
@@ -100,6 +104,7 @@ class ScenarioPlayer {
     client_infos_[client_id].loop_op_index = loop_op_index;
     client_infos_[client_id].timer.cancel();
     client_infos_[client_id].paused = false;
+    client_infos_[client_id].exit = false;
     DoNext(client_id);
   }
   void PauseAll() {
@@ -211,6 +216,20 @@ class ScenarioPlayer {
         (*config_.vcs)[client_id]->Connect();
         break;
       }
+      case ScenarioData::OP_EXIT: {
+        (*config_.vcs)[client_id]->Close([this, client_id](std::string message) {
+          RTC_LOG(LS_INFO) << "Client " << client_id << " exited: " << message;
+          client_infos_[client_id].exit = true;
+          bool all_exited = std::all_of(client_infos_.begin(), client_infos_.end(), [](auto& info) {
+            return info.exit;
+          });
+          if (all_exited) {
+            config_.ioc->stop();
+          }
+        });
+        
+        break;
+      }
     }
 
     Next(client_id);
@@ -228,6 +247,7 @@ class ScenarioPlayer {
     int loop_op_index;
     boost::asio::deadline_timer timer;
     bool paused;
+    bool exit;
   };
   std::vector<ClientInfo> client_infos_;
   VoiceNumberReader voice_reader_;

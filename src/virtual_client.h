@@ -69,7 +69,7 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   static std::shared_ptr<VirtualClient> Create(VirtualClientConfig config);
 
   void Connect();
-  void Close();
+  void Close(std::function<void(std::string)> on_close = nullptr);
   void Clear();
   void SendMessage(const std::string& label, const std::string& data);
 
@@ -96,6 +96,7 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   bool closing_ = false;
   bool need_reconnect_ = false;
   int retry_count_ = 0;
+  std::function<void(std::string)> on_close_;
   boost::asio::deadline_timer retry_timer_;
   std::shared_ptr<sora::SoraSignaling> signaling_;
   rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;

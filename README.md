@@ -29,7 +29,10 @@ WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora �
 - フェイクネットワークへ対応
 - クライアント証明書へ対応
 - 最新の libwebrtc へ対応
+- OpenH264 対応
 - Sora C++ SDK ベース
+- 期間繰り返し
+  - 30 秒負荷かけて切断を繰り返すなど
 
 ## 使ってみる
 
@@ -61,39 +64,44 @@ Options:
   --output-file-connection-id TEXT
                               Output to specified file with connection IDs
   --instance-hatch-rate FLOAT:FLOAT in [0.1 - 100]
-                              Spawned instance per seconds
+                              Spawned instance per seconds (default: 1.0)
   --name TEXT                 Client Name
-  --vcs INT:INT in [1 - 1000] Virtual Clients
+  --vcs INT:INT in [1 - 1000] Virtual Clients (default: 1)
   --vcs-hatch-rate FLOAT:FLOAT in [0.1 - 100]
-                              Spawned virtual clients per seconds
-  --no-video-device           Do not use video device
-  --no-audio-device           Do not use audio device
-  --fake-capture-device       Fake Capture Device
+                              Spawned virtual clients per seconds (default: 1.0)
+  --duration FLOAT            (Experimental) Duration of virtual client running in seconds (if not zero) (default: 0.0)
+  --repeat-interval FLOAT     (Experimental) (If duration is set) Interval to reconnect after disconnection (default: 0.0)
+  --max-retry INT             (Experimental) Max retries when a connection fails (default: 0)
+  --retry-interval FLOAT      (Experimental) (If max-retry is set) Interval to reconnect after connection fails (default: 60)
+  --no-video-device           Do not use video device (default: false)
+  --no-audio-device           Do not use audio device (default: false)
+  --fake-capture-device       Fake Capture Device (default: true)
   --fake-video-capture TEXT:FILE
                               Fake Video from File
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
-  --sandstorm                 Fake Sandstorm Video
+  --sandstorm                 Fake Sandstorm Video (default: false)
   --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
-  --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT])
+  --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT]) (default: VGA)
   --framerate INT:INT in [1 - 60]
-                              Video framerate
-  --fixed-resolution          Maintain video resolution in degradation
+                              Video framerate (default: 30)
+  --fixed-resolution          Maintain video resolution in degradation (default: false)
   --priority TEXT:{BALANCE,FRAMERATE,RESOLUTION}
-                              Preference in video degradation (experimental)
-  --insecure                  Allow insecure server connections when using SSL
+                              (Experimental) Preference in video degradation (default: BALANCE)
+  --insecure                  Allow insecure server connections when using SSL (default: false)
   --openh264 TEXT:FILE        OpenH264 dynamic library path. "OpenH264 Video Codec provided by Cisco Systems, Inc."
   --game TEXT:{kuzushi}       Play game
   --scenario TEXT:{reconnect} Scenario type
   --client-cert TEXT:FILE     Cert file path for client certification (PEM format)
   --client-key TEXT:FILE      Private key file path for client certification (PEM format)
   --initial-mute-video BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              Mute video initialy
+                              Mute video initialy (default: false)
   --initial-mute-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              Mute audio initialy
+                              Mute audio initialy (default: false)
   --sora-signaling-url TEXT ...
                               Signaling URLs
   --sora-disable-signaling-url-randomization
+                              Disable random connections to signaling URLs (default: false)
   --sora-channel-id TEXT      Channel ID
   --sora-client-id TEXT       Client ID
   --sora-bundle-id TEXT       Bundle ID
@@ -104,32 +112,32 @@ Options:
   --sora-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send audio to sora (default: true)
   --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264}
-                              Video codec for send
+                              Video codec for send (default: none)
   --sora-audio-codec-type TEXT:{OPUS,LYRA}
-                              Audio codec for send
+                              Audio codec for send (default: none)
   --sora-audio-codec-lyra-bitrate INT:INT in [0 - 9200]
-                              Lyra audio codec bitrate
+                              Lyra audio codec bitrate (default: none)
   --sora-audio-codec-lyra-usedtx TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
                               Lyra usedtx (default: none)
   --sora-check-lyra-version BOOLEAN
-                              Lyra version check
+                              Lyra version check (default: false)
   --sora-video-bit-rate INT:INT in [0 - 30000]
-                              Video bit rate
+                              Video bit rate (default: none)
   --sora-audio-bit-rate INT:INT in [0 - 510]
-                              Audio bit rate
+                              Audio bit rate (default: none)
   --sora-multistream BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use multistream (default: false)
   --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use simulcast (default: false)
-  --sora-simulcast-rid TEXT   Simulcast rid
+  --sora-simulcast-rid TEXT   Simulcast rid (default: none)
   --sora-spotlight BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              Use spotlight (default: false)
+                              Use spotlight (default: none)
   --sora-spotlight-number INT:INT in [0 - 8]
-                              Number of spotlight
+                              Number of spotlight (default: none)
   --sora-spotlight-focus-rid TEXT
-                              Spotlight focus rid
+                              Spotlight focus rid (default: none)
   --sora-spotlight-unfocus-rid TEXT
-                              Spotlight unfocus rid
+                              Spotlight unfocus rid (default: none)
   --sora-data-channel-signaling TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
                               Use DataChannel for Sora signaling (default: none)
   --sora-data-channel-signaling-timeout INT:POSITIVE
@@ -139,11 +147,11 @@ Options:
   --sora-disconnect-wait-timeout INT:POSITIVE
                               Disconnecting timeout for Data Channel in seconds (default: 5)
   --sora-metadata TEXT:JSON Value
-                              Signaling metadata used in connect message
+                              Signaling metadata used in connect message (default: none)
   --sora-signaling-notify-metadata TEXT:JSON Value
-                              Signaling metadata
+                              Signaling metadata (default: none)
   --sora-data-channels TEXT:JSON Value
-                              DataChannels
+                              DataChannels (default: none)
   --fake-network-send-queue-length-packets UINT
                               Queue length in number of packets for sending
   --fake-network-send-queue-delay-ms INT
@@ -198,6 +206,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+```
+
+## OpenH264
+
+https://www.openh264.org/BINARY_LICENSE.txt
+
+```
+"OpenH264 Video Codec provided by Cisco Systems, Inc."
 ```
 
 ### 音声ファイルのライセンス
