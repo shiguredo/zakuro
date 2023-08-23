@@ -13,21 +13,25 @@
 
 - [CHANGE] `--fake-network-send-codel-active-queue-management` と `--fake-network-receive-codel-active-queue-management` オプションを削除
   - @melpon
-- [UPDATE] WebRTC を m114.5735.2.0 に上げる
+- [CHANGE] YAML 設定の `instance_num` と `instance-num` に変更する
   - @melpon
-- [UPDATE] Sora C++ SDK を 2023.7.1 に上げる
-  - @melpon
+- [UPDATE] WebRTC を m115.5790.7.0 に上げる
+  - @melpon @torikizi
+- [UPDATE] Sora C++ SDK を 2023.9.0 に上げる
+  - @melpon @torikizi
 - [UPDATE] `CMake` を `3.26.4` に上げる
   - @voluntas
-- [UPDATE] `OpenH264` を `2.3.2` に上げる
+- [UPDATE] `OpenH264` を `2.3.1` に上げる
   - @voluntas
-- [UPDATE] `CLI11` を `2.3.1` に上げる
+- [UPDATE] `CLI11` を `2.3.2` に上げる
   - @voluntas
 - [UPDATE] `Boost` を `1.82.0` に上げる
   - @melpon
 - [UPDATE] actions/create-release と actions/upload-release を softprops/action-gh-release に変更する
   - @melpon
 - [UPDATE] VP9, AV1 もサイマルキャストが利用可能となるよう入力チェックを変更する
+  - @miosakuma
+- [UPDATE] ヘルプテキストを修正する
   - @miosakuma
 - [ADD] Ubuntu 22.04 x86_64 のビルドを追加
   - @melpon
