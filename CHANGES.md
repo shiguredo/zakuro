@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2023.1.0 (2023-08-23)
+
 - [CHANGE] `--fake-network-send-codel-active-queue-management` と `--fake-network-receive-codel-active-queue-management` オプションを削除
   - @melpon
 - [CHANGE] YAML 設定の `instance_num` と `instance-num` に変更する
