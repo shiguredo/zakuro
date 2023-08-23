@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
           break;
         }
         // ファイルに書き込む
-        const auto& m = stats->Get();
+        auto m = stats->Get();
         /*
         {
           "wss://hoge1.jp/signaling": {
@@ -284,6 +284,9 @@ int main(int argc, char* argv[]) {
   }
   for (auto& th : ths) {
     th->join();
+  }
+  if (stats_th) {
+    stats_th->join();
   }
 
   return 0;

@@ -22,6 +22,10 @@ struct ZakuroConfig {
   std::string name = "zakuro";
   int vcs = 1;
   double vcs_hatch_rate = 1.0;
+  double duration = 0;
+  double repeat_interval = 0;
+  int max_retry = 0;
+  double retry_interval = 60;
 
   bool no_video_device = false;
   bool no_audio_device = false;
@@ -45,17 +49,21 @@ struct ZakuroConfig {
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;
+  std::string sora_client_id;
+  std::string sora_bundle_id;
   bool sora_disable_signaling_url_randomization = false;
   bool sora_video = true;
   bool sora_audio = true;
   // 空文字の場合コーデックは Sora 側で決める
   std::string sora_video_codec_type = "";
   std::string sora_audio_codec_type = "";
+  // Lyra 用の設定
+  int sora_audio_codec_lyra_bit_rate = 0;
+  boost::optional<bool> sora_audio_codec_lyra_usedtx;
+  bool sora_check_lyra_version = false;
   // 0 の場合ビットレートは Sora 側で決める
   int sora_video_bit_rate = 0;
   int sora_audio_bit_rate = 0;
-  // opus の設定
-  int sora_audio_opus_params_clock_rate = 0;
   std::string sora_role = "";
   bool sora_multistream = false;
   bool sora_simulcast = false;

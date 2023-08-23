@@ -16,16 +16,16 @@
 #include <modules/audio_processing/include/audio_processing.h>
 #include <rtc_base/logging.h>
 
-#include "dynamic_h264_video_encoder.h"
-#include "fake_network_call_factory.h"
-#include "nop_video_decoder.h"
-#include "sctp_transport_factory.h"
-
-VirtualClient::VirtualClient(VirtualClientConfig config)
-    : sora::SoraDefaultClient(config_), config_(config) {}
+std::shared_ptr<VirtualClient> VirtualClient::Create(
+    VirtualClientConfig config) {
+  return std::shared_ptr<VirtualClient>(new VirtualClient(config));
+}
+VirtualClient::VirtualClient(const VirtualClientConfig& config)
+    : config_(config), retry_timer_(*config.sora_config.io_context) {}
 
 void VirtualClient::Connect() {
   if (closing_) {
+    need_reconnect_ = true;
     return;
   }
 
@@ -35,6 +35,8 @@ void VirtualClient::Connect() {
     signaling_->Disconnect();
     return;
   }
+
+  retry_timer_.cancel();
 
   if (config_.audio_type != VirtualClientConfig::AudioType::NoAudio) {
     cricket::AudioOptions ao;
@@ -47,13 +49,15 @@ void VirtualClient::Connect() {
     if (config_.disable_highpass_filter)
       ao.highpass_filter = false;
     std::string audio_track_id = rtc::CreateRandomString(16);
-    audio_track_ = factory()->CreateAudioTrack(
-        audio_track_id, factory()->CreateAudioSource(ao).get());
+    audio_track_ = config_.context->peer_connection_factory()->CreateAudioTrack(
+        audio_track_id, config_.context->peer_connection_factory()
+                            ->CreateAudioSource(ao)
+                            .get());
   }
   if (!config_.no_video_device) {
     std::string video_track_id = rtc::CreateRandomString(16);
-    video_track_ =
-        factory()->CreateVideoTrack(video_track_id, config_.capturer.get());
+    video_track_ = config_.context->peer_connection_factory()->CreateVideoTrack(
+        video_track_id, config_.capturer.get());
 
     if (config_.fixed_resolution) {
       video_track_->set_content_hint(
@@ -62,30 +66,41 @@ void VirtualClient::Connect() {
   }
 
   sora::SoraSignalingConfig config = config_.sora_config;
-  config.pc_factory = factory();
+  config.pc_factory = config_.context->peer_connection_factory();
   config.observer = shared_from_this();
-  config.network_manager = signaling_thread()->Invoke<rtc::NetworkManager*>(
-      RTC_FROM_HERE,
-      [this]() { return connection_context()->default_network_manager(); });
-  config.socket_factory = signaling_thread()->Invoke<rtc::PacketSocketFactory*>(
-      RTC_FROM_HERE,
-      [this]() { return connection_context()->default_socket_factory(); });
+  config.network_manager =
+      config_.context->signaling_thread()->BlockingCall([this]() {
+        return config_.context->connection_context()->default_network_manager();
+      });
+  config.socket_factory =
+      config_.context->signaling_thread()->BlockingCall([this]() {
+        return config_.context->connection_context()->default_socket_factory();
+      });
 
   signaling_ = sora::SoraSignaling::Create(config);
   signaling_->Connect();
 }
 
-void VirtualClient::Close() {
+void VirtualClient::Close(std::function<void(std::string)> on_close) {
   if (closing_) {
+    if (on_close_ == nullptr) {
+      on_close_ = on_close;
+    } else {
+      on_close("already closing");
+    }
     return;
   }
   if (signaling_) {
     closing_ = true;
+    on_close_ = on_close;
     signaling_->Disconnect();
+  } else {
+    on_close("already closed");
   }
 }
 
 void VirtualClient::Clear() {
+  retry_timer_.cancel();
   signaling_.reset();
 }
 
@@ -108,81 +123,6 @@ VirtualClientStats VirtualClient::GetStats() const {
   st.datachannel_connected = signaling_->IsConnectedDataChannel();
   st.websocket_connected = signaling_->IsConnectedWebsocket();
   return st;
-}
-
-void VirtualClient::ConfigureDependencies(
-    webrtc::PeerConnectionFactoryDependencies& dependencies) {
-  cricket::MediaEngineDependencies media_dependencies;
-
-  media_dependencies.task_queue_factory = dependencies.task_queue_factory.get();
-  media_dependencies.adm =
-      worker_thread()->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(
-          RTC_FROM_HERE, [&] {
-            ZakuroAudioDeviceModuleConfig admconfig;
-            admconfig.task_queue_factory =
-                dependencies.task_queue_factory.get();
-            if (config_.audio_type == VirtualClientConfig::AudioType::Device) {
-#if defined(__linux__)
-              webrtc::AudioDeviceModule::AudioLayer audio_layer =
-                  webrtc::AudioDeviceModule::kLinuxAlsaAudio;
-#else
-              webrtc::AudioDeviceModule::AudioLayer audio_layer =
-                  webrtc::AudioDeviceModule::kPlatformDefaultAudio;
-#endif
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-              admconfig.adm = webrtc::AudioDeviceModule::Create(
-                  audio_layer, dependencies.task_queue_factory.get());
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::NoAudio) {
-              webrtc::AudioDeviceModule::AudioLayer audio_layer =
-                  webrtc::AudioDeviceModule::kDummyAudio;
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-              admconfig.adm = webrtc::AudioDeviceModule::Create(
-                  audio_layer, dependencies.task_queue_factory.get());
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::SpecifiedFakeAudio) {
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
-              admconfig.fake_audio = config_.fake_audio;
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::AutoGenerateFakeAudio) {
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
-            } else if (config_.audio_type ==
-                       VirtualClientConfig::AudioType::External) {
-              admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
-              admconfig.render = config_.render_audio;
-              admconfig.sample_rate = config_.sample_rate;
-              admconfig.channels = config_.channels;
-            }
-            return ZakuroAudioDeviceModule::Create(std::move(admconfig));
-          });
-  media_dependencies.audio_encoder_factory =
-      webrtc::CreateBuiltinAudioEncoderFactory();
-  media_dependencies.audio_decoder_factory =
-      webrtc::CreateBuiltinAudioDecoderFactory();
-
-  auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
-  sw_config.use_simulcast_adapter = true;
-  sw_config.encoders.push_back(sora::VideoEncoderConfig(
-      webrtc::kVideoCodecH264,
-      [openh264 = config_.openh264](
-          auto format) -> std::unique_ptr<webrtc::VideoEncoder> {
-        return webrtc::DynamicH264VideoEncoder::Create(
-            cricket::VideoCodec(format), openh264);
-      }));
-  media_dependencies.video_encoder_factory =
-      absl::make_unique<sora::SoraVideoEncoderFactory>(std::move(sw_config));
-  media_dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
-
-  media_dependencies.audio_mixer = nullptr;
-  media_dependencies.audio_processing =
-      webrtc::AudioProcessingBuilder().Create();
-
-  dependencies.media_engine =
-      cricket::CreateMediaEngine(std::move(media_dependencies));
-
-  dependencies.call_factory = CreateFakeNetworkCallFactory(
-      config_.fake_network_send, config_.fake_network_receive);
-  dependencies.sctp_factory.reset(new SctpTransportFactory(network_thread()));
 }
 
 void VirtualClient::OnSetOffer(std::string offer) {
@@ -223,9 +163,46 @@ void VirtualClient::OnSetOffer(std::string offer) {
 void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
                                  std::string message) {
   signaling_.reset();
-  closing_ = false;
-  if (need_reconnect_) {
-    need_reconnect_ = false;
-    Connect();
+  retry_timer_.cancel();
+
+  if (!closing_) {
+    // VirtualClient の外から明示的に呼び出されていない、つまり不意に接続が切れた場合にここに来る
+    // この場合は、設定次第で再接続を試みる
+    if (retry_count_ < config_.max_retry) {
+      retry_count_ += 1;
+      retry_timer_.expires_from_now(boost::posix_time::milliseconds(
+          (int)(config_.retry_interval * 1000)));
+      retry_timer_.async_wait([this](boost::system::error_code ec) {
+        if (ec) {
+          return;
+        }
+        need_reconnect_ = false;
+        if (on_close_ == nullptr) {
+          Connect();
+        }
+      });
+    }
+  } else {
+    closing_ = false;
+    if (need_reconnect_) {
+      need_reconnect_ = false;
+      if (on_close_ == nullptr) {
+        Connect();
+      }
+    }
+  }
+
+  if (on_close_) {
+    on_close_(message);
+    on_close_ = nullptr;
+  }
+}
+void VirtualClient::OnNotify(std::string text) {
+  auto json = boost::json::parse(text);
+  if (json.at("event_type").as_string() == "connection.created") {
+    // 接続できたらリトライ数をリセットする
+    // 他人が接続された時もリセットされることになるけど、
+    // その時は 0 のままになってるはずなので問題ない
+    retry_count_ = 0;
   }
 }

@@ -21,23 +21,6 @@ Zakuro を提供することで、 Sora を運用するサーバのサイジン�
 
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) です。
 
-```
-Copyright 2020-2021, Wandbox LLC (Original Author)
-Copyright 2020-2021, Shiguredo Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
-
 ## Zakuro に含まれている音声ファイルについて教えてください
 
 Zakuro のスポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](https://amitaro.net/) 様の声素材を使用しています。
@@ -47,10 +30,19 @@ Zakuro のスポットライト機能検証時に利用する音声ファイル�
 サーバでの用途を前提としているため Linux での動作を想定しています。
 
 - Ubuntu 20.04 x86_64
+- Ubuntu 22.04 x86_64
 
 ## Zakuro は破壊的変更を行いますか？
 
 積極的な破壊的変更を行います。
+
+## Zakuro は IPv6 に対応していますか？
+
+対応しています。
+
+Ubuntu サーバーを利用している場合、
+MACアドレスベースの EUI-64 フォーマットの IPv6 になっている場合があります。
+これは非推奨となっているため、 sysctl で `add_gen_mode` を確認し変更してください。
 
 ## Zakuro を利用する際の注意点はありますか？
 

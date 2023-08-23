@@ -17,10 +17,24 @@ jobs:
       matrix:
         name:
           - ubuntu-20.04_x86_64
+          - ubuntu-22.04_x86_64
     name: Build zakuro for ${{ matrix.name }}
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.name == 'ubuntu-22.04_x86_64' && 'ubuntu-22.04' || 'ubuntu-20.04' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Update repo
+        if: matrix.name == 'ubuntu-22.04_x86_64'
+        run: |
+          # 標準のリポジトリだと mesa-va-drivers パッケージが無い（404 NotFound）というエラーを出されてしまうので、
+          # CUDA のリポジトリを追加してインストール可能にする
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          # CUDA 10 なので ubuntu1804 で正しい
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
+          sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
+          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
+          sudo apt-get update
       - name: Install deps
         run: |
           DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libva-dev libdrm-dev
@@ -29,7 +43,7 @@ jobs:
         shell: bash
         run: |
           source _package/${{ matrix.name }}/release/zakuro.env
-          echo "::set-output name=name::${PACKAGE_NAME}"
+          echo "name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
         id: package_name
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
@@ -48,62 +62,21 @@ jobs:
       - build-linux
     runs-on: ubuntu-latest
     steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1.1.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/download
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-      - name: Output upload url
-        shell: bash
-        run: echo "UPLOAD_URL='${{ steps.create_release.outputs.upload_url }}'" > create-release.env
-      - name: Upload create-release Environment
-        uses: actions/upload-artifact@v3
+          platform: ubuntu-20.04_x86_64
+      - uses: ./.github/actions/download
         with:
-          name: create-release.env
-          path: create-release.env
-  upload-assets:
-    name: Upload Assets to Release
-    needs:
-      - create-release
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        name:
-          - ubuntu-20.04_x86_64
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ matrix.name }}.env
-          path: ${{ matrix.name }}.env
-      - uses: actions/download-artifact@v3
-        with:
-          name: create-release.env
-          path: create-release.env
+          platform: ubuntu-22.04_x86_64
       - name: Env to output
-        shell: bash
         run: |
-          source ${{ matrix.name }}.env/zakuro.env
-          source create-release.env/create-release.env
-          echo "::set-output name=package_name::$PACKAGE_NAME"
-          echo "::set-output name=content_type::$CONTENT_TYPE"
-          echo "::set-output name=upload_url::$UPLOAD_URL"
+          echo "package_paths<<EOF" >> $GITHUB_OUTPUT
+          cat package_paths.env >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
         id: env
-      - uses: actions/download-artifact@v3
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: ${{ steps.env.outputs.package_name }}
-          path: ${{ steps.env.outputs.package_name }}
-      - name: Upload ${{ matrix.name }} Release Asset
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.env.outputs.upload_url }}
-          asset_path: ${{ steps.env.outputs.package_name }}/${{ steps.env.outputs.package_name }}
-          asset_name: ${{ steps.env.outputs.package_name }}
-          asset_content_type: ${{ steps.env.outputs.content_type }}
+          files:
+            ${{ steps.env.outputs.package_paths }}

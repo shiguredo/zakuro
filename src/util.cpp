@@ -60,7 +60,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,
-                 "Spawned instance per seconds")
+                 "Spawned instance per seconds (default: 1.0)")
       ->check(CLI::Range(0.1, 100.0));
 
   // インスタンス毎のオプション
@@ -89,25 +89,34 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
           {{"false", false}, {"true", true}, {"none", boost::none}});
 
   app.add_option("--name", config.name, "Client Name");
-  app.add_option("--vcs", config.vcs, "Virtual Clients")
+  app.add_option("--vcs", config.vcs, "Virtual Clients (default: 1)")
       ->check(CLI::Range(1, 1000));
   app.add_option("--vcs-hatch-rate", config.vcs_hatch_rate,
-                 "Spawned virtual clients per seconds")
+                 "Spawned virtual clients per seconds (default: 1.0)")
       ->check(CLI::Range(0.1, 100.0));
+  app.add_option(
+      "--duration", config.duration,
+      "(Experimental) Duration of virtual client running in seconds (if not zero) (default: 0.0)");
+  app.add_option("--repeat-interval", config.repeat_interval,
+                 "(Experimental) (If duration is set) Interval to reconnect after disconnection (default: 0.0)");
+  app.add_option("--max-retry", config.max_retry,
+                 "(Experimental) Max retries when a connection fails (default: 0)");
+  app.add_option("--retry-interval", config.retry_interval,
+                 "(Experimental) (If max-retry is set) Interval to reconnect after connection fails (default: 60)");
 
   app.add_flag("--no-video-device", config.no_video_device,
-               "Do not use video device");
+               "Do not use video device (default: false)");
   app.add_flag("--no-audio-device", config.no_audio_device,
-               "Do not use audio device");
+               "Do not use audio device (default: false)");
   app.add_flag("--fake-capture-device", config.fake_capture_device,
-               "Fake Capture Device");
+               "Fake Capture Device (default: true)");
   app.add_option("--fake-video-capture", config.fake_video_capture,
                  "Fake Video from File")
       ->check(CLI::ExistingFile);
   app.add_option("--fake-audio-capture", config.fake_audio_capture,
                  "Fake Audio from File")
       ->check(CLI::ExistingFile);
-  app.add_flag("--sandstorm", config.sandstorm, "Fake Sandstorm Video");
+  app.add_flag("--sandstorm", config.sandstorm, "Fake Sandstorm Video (default: false)");
 #if defined(__APPLE__)
   app.add_option("--video-device", config.video_device,
                  "Use the video device specified by an index or a name "
@@ -120,17 +129,17 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
 #endif
   app.add_option("--resolution", config.resolution,
                  "Video resolution (one of QVGA, VGA, HD, FHD, 4K, or "
-                 "[WIDTH]x[HEIGHT])")
+                 "[WIDTH]x[HEIGHT]) (default: VGA)")
       ->check(is_valid_resolution);
-  app.add_option("--framerate", config.framerate, "Video framerate")
+  app.add_option("--framerate", config.framerate, "Video framerate (default: 30)")
       ->check(CLI::Range(1, 60));
   app.add_flag("--fixed-resolution", config.fixed_resolution,
-               "Maintain video resolution in degradation");
+               "Maintain video resolution in degradation (default: false)");
   app.add_option("--priority", config.priority,
-                 "Preference in video degradation (experimental)")
+                 "(Experimental) Preference in video degradation (default: BALANCE)")
       ->check(CLI::IsMember({"BALANCE", "FRAMERATE", "RESOLUTION"}));
   app.add_flag("--insecure", config.insecure,
-               "Allow insecure server connections when using SSL");
+               "Allow insecure server connections when using SSL (default: false)");
   app.add_option("--openh264", config.openh264,
                  "OpenH264 dynamic library path. \"OpenH264 Video Codec "
                  "provided by Cisco Systems, Inc.\"")
@@ -146,10 +155,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "Private key file path for client certification (PEM format)")
       ->check(CLI::ExistingFile);
   app.add_option("--initial-mute-video", config.initial_mute_video,
-                 "Mute video initialy")
+                 "Mute video initialy (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--initial-mute-audio", config.initial_mute_audio,
-                 "Mute audio initialy")
+                 "Mute audio initialy (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
 
   // Sora 系オプション
@@ -157,8 +166,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "Signaling URLs")
       ->take_all();
   app.add_flag("--sora-disable-signaling-url-randomization",
-               config.sora_disable_signaling_url_randomization);
+               config.sora_disable_signaling_url_randomization, "Disable random connections to signaling URLs (default: false)");
   app.add_option("--sora-channel-id", config.sora_channel_id, "Channel ID");
+  app.add_option("--sora-client-id", config.sora_client_id, "Client ID");
+  app.add_option("--sora-bundle-id", config.sora_bundle_id, "Bundle ID");
   app.add_option("--sora-role", config.sora_role, "Role")
       ->check(CLI::IsMember({"sendonly", "recvonly", "sendrecv"}));
 
@@ -169,20 +180,28 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "Send audio to sora (default: true)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-video-codec-type", config.sora_video_codec_type,
-                 "Video codec for send")
+                 "Video codec for send (default: none)")
       ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264"}));
   app.add_option("--sora-audio-codec-type", config.sora_audio_codec_type,
-                 "Audio codec for send")
-      ->check(CLI::IsMember({"", "OPUS"}));
+                 "Audio codec for send (default: none)")
+      ->check(CLI::IsMember({"", "OPUS", "LYRA"}));
+  app.add_option("--sora-audio-codec-lyra-bitrate",
+                 config.sora_audio_codec_lyra_bit_rate,
+                 "Lyra audio codec bitrate (default: none)")
+      ->check(CLI::Range(0, 9200));
+  app.add_option("--sora-audio-codec-lyra-usedtx",
+                 config.sora_audio_codec_lyra_usedtx,
+                 "Lyra usedtx (default: none)")
+      ->type_name("TEXT")
+      ->transform(CLI::CheckedTransformer(optional_bool_map, CLI::ignore_case));
+  app.add_option("--sora-check-lyra-version", config.sora_check_lyra_version,
+                 "Lyra version check (default: false)");
   app.add_option("--sora-video-bit-rate", config.sora_video_bit_rate,
-                 "Video bit rate")
+                 "Video bit rate (default: none)")
       ->check(CLI::Range(0, 30000));
   app.add_option("--sora-audio-bit-rate", config.sora_audio_bit_rate,
-                 "Audio bit rate")
+                 "Audio bit rate (default: none)")
       ->check(CLI::Range(0, 510));
-  app.add_option("--sora-audio-opus-params-clock-rate",
-                 config.sora_audio_opus_params_clock_rate, "OPUS clock rate")
-      ->check(CLI::Range(1600, 48000));
   app.add_option("--sora-multistream", config.sora_multistream,
                  "Use multistream (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
@@ -190,17 +209,17 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "Use simulcast (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-simulcast-rid", config.sora_simulcast_rid,
-                 "Simulcast rid");
+                 "Simulcast rid (default: none)");
   app.add_option("--sora-spotlight", config.sora_spotlight,
-                 "Use spotlight (default: false)")
+                 "Use spotlight (default: none)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-spotlight-number", config.sora_spotlight_number,
-                 "Number of spotlight")
+                 "Number of spotlight (default: none)")
       ->check(CLI::Range(0, 8));
   app.add_option("--sora-spotlight-focus-rid", config.sora_spotlight_focus_rid,
-                 "Spotlight focus rid");
+                 "Spotlight focus rid (default: none)");
   app.add_option("--sora-spotlight-unfocus-rid",
-                 config.sora_spotlight_unfocus_rid, "Spotlight unfocus rid");
+                 config.sora_spotlight_unfocus_rid, "Spotlight unfocus rid (default: none)");
   app.add_option("--sora-data-channel-signaling",
                  config.sora_data_channel_signaling,
                  "Use DataChannel for Sora signaling (default: none)")
@@ -233,14 +252,14 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       "JSON Value");
   std::string sora_metadata;
   app.add_option("--sora-metadata", sora_metadata,
-                 "Signaling metadata used in connect message")
+                 "Signaling metadata used in connect message (default: none)")
       ->check(is_json);
   std::string sora_signaling_notify_metadata;
   app.add_option("--sora-signaling-notify-metadata",
-                 sora_signaling_notify_metadata, "Signaling metadata")
+                 sora_signaling_notify_metadata, "Signaling metadata (default: none)")
       ->check(is_json);
   std::string sora_data_channels;
-  app.add_option("--sora-data-channels", sora_data_channels, "DataChannels")
+  app.add_option("--sora-data-channels", sora_data_channels, "DataChannels (default: none)")
       ->check(is_json);
 
   // Fake network 系
@@ -269,10 +288,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--fake-network-send-packet-overhead",
                  config.fake_network_send.packet_overhead,
                  "Additional bytes to add to packet size for sending");
-  app.add_option("--fake-network-send-codel-active-queue-management",
-                 config.fake_network_send.codel_active_queue_management,
-                 "Enable CoDel active queue management for sending")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--fake-network-receive-queue-length-packets",
                  config.fake_network_receive.queue_length_packets,
                  "Queue length in number of packets for receiving");
@@ -298,10 +313,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--fake-network-receive-packet-overhead",
                  config.fake_network_receive.packet_overhead,
                  "Additional bytes to add to packet size for receiving");
-  app.add_option("--fake-network-receive-codel-active-queue-management",
-                 config.fake_network_receive.codel_active_queue_management,
-                 "Enable CoDel active queue management for receiving")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
 
   try {
     app.parse(args);
@@ -342,8 +353,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   // サイマルキャストは VP8 か H264 のみで動作する
   if (config.sora_video && config.sora_simulcast &&
       config.sora_video_codec_type != "VP8" &&
+      config.sora_video_codec_type != "VP9" &&
+      config.sora_video_codec_type != "AV1" &&
       config.sora_video_codec_type != "H264") {
-    std::cerr << "Simulcast works only --sora-video-codec=VP8 or H264."
+    std::cerr << "Simulcast works only --sora-video-codec=VP8, VP9, AV1 or H264."
               << std::endl;
     std::exit(1);
   }
@@ -413,7 +426,7 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
 
   int instance_num = 1;
   {
-    const YAML::Node& node = inst["instance_num"];
+    const YAML::Node& node = inst["instance-num"];
     if (node) {
       instance_num = node.as<int>();
     }
@@ -472,6 +485,10 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "name");
     DEF_INTEGER(inst, "", "vcs");
     DEF_DOUBLE(inst, "", "vcs-hatch-rate");
+    DEF_DOUBLE(inst, "", "duration");
+    DEF_DOUBLE(inst, "", "repeat-interval");
+    DEF_INTEGER(inst, "", "max-retry");
+    DEF_INTEGER(inst, "", "retry-interval");
     DEF_FLAG(inst, "", "no-video-device");
     DEF_FLAG(inst, "", "no-audio-device");
     DEF_FLAG(inst, "", "fake-capture-device");
@@ -518,6 +535,8 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       DEF_BOOLEAN(sora, "sora-", "disable-signaling-url-randomization");
 
       DEF_STRING(sora, "sora-", "channel-id");
+      DEF_STRING(sora, "sora-", "client-id");
+      DEF_STRING(sora, "sora-", "bundle-id");
       DEF_STRING(sora, "sora-", "role");
       DEF_BOOLEAN(sora, "sora-", "video");
       DEF_BOOLEAN(sora, "sora-", "audio");
@@ -525,7 +544,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       DEF_STRING(sora, "sora-", "audio-codec-type");
       DEF_INTEGER(sora, "sora-", "video-bit-rate");
       DEF_INTEGER(sora, "sora-", "audio-bit-rate");
-      DEF_INTEGER(sora, "sora-", "audio-opus-params-clock-rate");
       DEF_BOOLEAN(sora, "sora-", "multistream");
       DEF_BOOLEAN(sora, "sora-", "simulcast");
       DEF_STRING(sora, "sora-", "simulcast-rid");
@@ -750,7 +768,7 @@ http::response<http::string_body> Util::BadRequest(
   res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   res.set(http::field::content_type, "text/html");
   res.keep_alive(req.keep_alive());
-  res.body() = why.to_string();
+  res.body() = std::string(why);
   res.prepare_payload();
   return res;
 }
@@ -762,7 +780,7 @@ http::response<http::string_body> Util::NotFound(
   res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   res.set(http::field::content_type, "text/html");
   res.keep_alive(req.keep_alive());
-  res.body() = "The resource '" + target.to_string() + "' was not found.";
+  res.body() = "The resource '" + std::string(target) + "' was not found.";
   res.prepare_payload();
   return res;
 }
@@ -775,7 +793,7 @@ http::response<http::string_body> Util::ServerError(
   res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   res.set(http::field::content_type, "text/html");
   res.keep_alive(req.keep_alive());
-  res.body() = "An error occurred: '" + what.to_string() + "'";
+  res.body() = "An error occurred: '" + std::string(what) + "'";
   res.prepare_payload();
   return res;
 }

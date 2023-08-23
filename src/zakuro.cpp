@@ -10,16 +10,22 @@
 
 // Sora C++ SDK
 #include <sora/camera_device_capturer.h>
+#include <sora/sora_video_encoder_factory.h>
 
+#include "dynamic_h264_video_encoder.h"
 #include "fake_audio_key_trigger.h"
+#include "fake_network_call_factory.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
+#include "nop_video_decoder.h"
 #include "scenario_player.h"
+#include "sctp_transport_factory.h"
 #include "util.h"
 #include "virtual_client.h"
 #include "wav_reader.h"
 #include "zakuro.h"
 #include "zakuro_stats.h"
+#include "zakuro_version.h"
 
 Zakuro::Zakuro(ZakuroConfig config) : config_(std::move(config)) {}
 
@@ -148,7 +154,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
 
     // boost::optional<bool> ordered;
     {
-      auto it = obj.find("interval");
+      auto it = obj.find("ordered");
       if (it != obj.end()) {
         sch.ordered = boost::json::value_to<bool>(it->value());
       }
@@ -269,9 +275,9 @@ int Zakuro::Run() {
 
   VirtualClientConfig vc_config;
   sora::SoraSignalingConfig& sora_config = vc_config.sora_config;
-  vc_config.use_hardware_encoder = false;
-  vc_config.use_audio_device = false;
   vc_config.capturer = capturer;
+  vc_config.max_retry = config_.max_retry;
+  vc_config.retry_interval = config_.retry_interval;
   vc_config.no_video_device = config_.no_video_device;
   vc_config.fixed_resolution = config_.fixed_resolution;
   vc_config.priority = config_.priority;
@@ -282,10 +288,11 @@ int Zakuro::Run() {
   vc_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
     vc_config.audio_type = VirtualClientConfig::AudioType::NoAudio;
-  } else if (!config_.game.empty()) {
+  } else if (!config_.game.empty() || fake_audio_key_trigger) {
     vc_config.audio_type = VirtualClientConfig::AudioType::External;
-  } else if (fake_audio_key_trigger) {
-    vc_config.audio_type = VirtualClientConfig::AudioType::External;
+    vc_config.render_audio = gam->AddGameAudio(16000);
+    vc_config.sample_rate = 16000;
+    vc_config.channels = 1;
   } else if (!config_.fake_audio_capture.empty()) {
     WavReader wav_reader;
     int r = wav_reader.Load(config_.fake_audio_capture);
@@ -303,21 +310,99 @@ int Zakuro::Run() {
     vc_config.audio_type =
         VirtualClientConfig::AudioType::AutoGenerateFakeAudio;
   }
+
+  // Sora client context
+  sora::SoraClientContextConfig context_config;
+  context_config.use_hardware_encoder = false;
+  context_config.use_audio_device = false;
+
+  context_config.configure_media_dependencies =
+      [vc = vc_config](
+          const webrtc::PeerConnectionFactoryDependencies& dependencies,
+          cricket::MediaEngineDependencies& media_dependencies) {
+        media_dependencies.adm = dependencies.worker_thread->BlockingCall([&] {
+          ZakuroAudioDeviceModuleConfig admconfig;
+          admconfig.task_queue_factory = dependencies.task_queue_factory.get();
+          if (vc.audio_type == VirtualClientConfig::AudioType::Device) {
+#if defined(__linux__)
+            webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                webrtc::AudioDeviceModule::kLinuxAlsaAudio;
+#else
+            webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                webrtc::AudioDeviceModule::kPlatformDefaultAudio;
+#endif
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+            admconfig.adm = webrtc::AudioDeviceModule::Create(
+                audio_layer, dependencies.task_queue_factory.get());
+          } else if (vc.audio_type == VirtualClientConfig::AudioType::NoAudio) {
+            webrtc::AudioDeviceModule::AudioLayer audio_layer =
+                webrtc::AudioDeviceModule::kDummyAudio;
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
+            admconfig.adm = webrtc::AudioDeviceModule::Create(
+                audio_layer, dependencies.task_queue_factory.get());
+          } else if (vc.audio_type ==
+                     VirtualClientConfig::AudioType::SpecifiedFakeAudio) {
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
+            admconfig.fake_audio = vc.fake_audio;
+          } else if (vc.audio_type ==
+                     VirtualClientConfig::AudioType::AutoGenerateFakeAudio) {
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::Safari;
+          } else if (vc.audio_type ==
+                     VirtualClientConfig::AudioType::External) {
+            admconfig.type = ZakuroAudioDeviceModuleConfig::Type::External;
+            admconfig.render = vc.render_audio;
+            admconfig.sample_rate = vc.sample_rate;
+            admconfig.channels = vc.channels;
+          }
+          return ZakuroAudioDeviceModule::Create(std::move(admconfig));
+        });
+
+        auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
+        sw_config.use_simulcast_adapter = true;
+        sw_config.encoders.push_back(sora::VideoEncoderConfig(
+            webrtc::kVideoCodecH264,
+            [openh264 = vc.openh264](
+                auto format) -> std::unique_ptr<webrtc::VideoEncoder> {
+              return webrtc::DynamicH264VideoEncoder::Create(
+                  cricket::VideoCodec(format), openh264);
+            }));
+        media_dependencies.video_encoder_factory =
+            absl::make_unique<sora::SoraVideoEncoderFactory>(
+                std::move(sw_config));
+        media_dependencies.video_decoder_factory.reset(
+            new NopVideoDecoderFactory());
+      };
+
+  context_config.configure_dependencies =
+      [vc =
+           vc_config](webrtc::PeerConnectionFactoryDependencies& dependencies) {
+        dependencies.call_factory = CreateFakeNetworkCallFactory(
+            vc.fake_network_send, vc.fake_network_receive);
+        dependencies.sctp_factory.reset(
+            new SctpTransportFactory(dependencies.network_thread));
+      };
+
+  vc_config.context = sora::SoraClientContext::Create(context_config);
+
+  sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
   sora_config.client_cert = config_.client_cert;
   sora_config.client_key = config_.client_key;
   sora_config.signaling_urls = config_.sora_signaling_urls;
   sora_config.channel_id = config_.sora_channel_id;
+  sora_config.client_id = config_.sora_client_id;
+  sora_config.bundle_id = config_.sora_bundle_id;
   sora_config.disable_signaling_url_randomization =
       config_.sora_disable_signaling_url_randomization;
   sora_config.video = config_.sora_video;
   sora_config.audio = config_.sora_audio;
   sora_config.video_codec_type = config_.sora_video_codec_type;
   sora_config.audio_codec_type = config_.sora_audio_codec_type;
+  sora_config.audio_codec_lyra_bitrate = config_.sora_audio_codec_lyra_bit_rate;
+  sora_config.audio_codec_lyra_usedtx = config_.sora_audio_codec_lyra_usedtx;
+  sora_config.check_lyra_version = config_.sora_check_lyra_version;
   sora_config.video_bit_rate = config_.sora_video_bit_rate;
   sora_config.audio_bit_rate = config_.sora_audio_bit_rate;
-  sora_config.audio_opus_params_clock_rate =
-      config_.sora_audio_opus_params_clock_rate;
   sora_config.metadata = config_.sora_metadata;
   sora_config.signaling_notify_metadata =
       config_.sora_signaling_notify_metadata;
@@ -339,13 +424,7 @@ int Zakuro::Run() {
 
   std::vector<VirtualClientConfig> vc_configs;
   for (int i = 0; i < config_.vcs; i++) {
-    VirtualClientConfig config = vc_config;
-    if (config.audio_type == VirtualClientConfig::AudioType::External) {
-      config.render_audio = gam->AddGameAudio(16000);
-      config.sample_rate = 16000;
-      config.channels = 1;
-    }
-    vc_configs.push_back(std::move(config));
+    vc_configs.push_back(vc_config);
   }
 
   std::vector<std::shared_ptr<VirtualClient>> vcs;
@@ -364,7 +443,7 @@ int Zakuro::Run() {
     }
 
     for (int i = 0; i < config_.vcs; i++) {
-      auto vc = sora::CreateSoraClient<VirtualClient>(vc_configs[i]);
+      auto vc = VirtualClient::Create(vc_configs[i]);
       vcs.push_back(std::move(vc));
     }
 
@@ -383,21 +462,50 @@ int Zakuro::Run() {
       dcs_data.push_back(std::make_tuple("scenario-dcs-" + ch.label, sd));
     }
 
+    // 切断と再接続のシナリオを追加する関数
+    auto add_reconnect_scenario = [this](ScenarioData& data, bool exit) {
+      int op = 0;
+      if (config_.duration == 0) {
+        data.Sleep(10000, 10000);
+        op += 1;
+      } else {
+        // duration が設定されている場合、duration 秒待って切断し、
+        // repeat_interval 秒待ってから再接続する
+        data.Sleep((int)(config_.duration * 1000),
+                   (int)(config_.duration * 1000));
+        data.Disconnect();
+        op += 2;
+        if (config_.repeat_interval == 0) {
+          data.Exit();
+          op += 1;
+        } else {
+          data.Sleep((int)(config_.repeat_interval * 1000),
+                     (int)(config_.repeat_interval * 1000));
+          data.Reconnect();
+          op += 2;
+        }
+      }
+      return op;
+    };
+
     ScenarioPlayer scenario_player(spc);
     ScenarioData data;
     int loop_index;
     if (!fake_audio_key_trigger) {
       data.Reconnect();
-      data.Sleep(10000, 10000);
+      add_reconnect_scenario(data, true);
       loop_index = 1;
     } else if (config_.scenario == "") {
       data.Reconnect();
       for (const auto& d : dcs_data) {
         data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
       }
-      data.Sleep(1000, 5000);
-      data.PlayVoiceNumberClient();
-      loop_index = 1 + dcs_data.size();
+      ScenarioData sd;
+      sd.Sleep(1000, 5000);
+      sd.PlayVoiceNumberClient();
+      data.PlaySubScenario("scenario-voice-number-client", sd, 0);
+      add_reconnect_scenario(data, true);
+      loop_index = 1 + dcs_data.size() + 1;
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
       data.Sleep(1000, 5000);
