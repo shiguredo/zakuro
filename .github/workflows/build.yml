@@ -21,7 +21,7 @@ jobs:
     name: Build zakuro for ${{ matrix.name }}
     runs-on: ${{ matrix.name == 'ubuntu-22.04_x86_64' && 'ubuntu-22.04' || 'ubuntu-20.04' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Update repo
         if: matrix.name == 'ubuntu-22.04_x86_64'
         run: |
@@ -62,7 +62,7 @@ jobs:
       - build-linux
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/download
         with:
           platform: ubuntu-20.04_x86_64
