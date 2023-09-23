@@ -11,6 +11,11 @@
 
 ## develop
 
+- [UPDATE] `CMake` を `3.26.7` に上げる
+  - @voluntas
+- [UPDATE] `Boost` を `1.83.0` に上げる
+  - @voluntas
+
 ## 2023.1.0 (2023-08-23)
 
 - [CHANGE] `--fake-network-send-codel-active-queue-management` と `--fake-network-receive-codel-active-queue-management` オプションを削除
