@@ -11,7 +11,7 @@
 
 ## develop
 
-- [UPDATE] `CMake` を `3.26.7` に上げる
+- [UPDATE] `CMake` を `3.27.6` に上げる
   - @voluntas
 - [UPDATE] `Boost` を `1.83.0` に上げる
   - @voluntas
