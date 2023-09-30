@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] asmjit と blend2d を最新版に上げる
+  - @voluntas
 - [UPDATE] `CMake` を `3.27.6` に上げる
   - @voluntas
 - [UPDATE] `Boost` を `1.83.0` に上げる
