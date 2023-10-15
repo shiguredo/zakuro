@@ -423,7 +423,7 @@ class GameKuzushi {
     }
 
     if (view_help_) {
-      ctx.reset();
+      ctx.resetTransform();
       ctx.setStrokeStyle(BLRgba32(255, 255, 255));
       ctx.setFillStyle(BLRgba32(255, 255, 255));
       std::string text =
