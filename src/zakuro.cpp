@@ -364,7 +364,7 @@ int Zakuro::Run() {
             [openh264 = vc.openh264](
                 auto format) -> std::unique_ptr<webrtc::VideoEncoder> {
               return webrtc::DynamicH264VideoEncoder::Create(
-                  cricket::VideoCodec(format), openh264);
+                  cricket::CreateVideoCodec(format), openh264);
             }));
         media_dependencies.video_encoder_factory =
             absl::make_unique<sora::SoraVideoEncoderFactory>(
