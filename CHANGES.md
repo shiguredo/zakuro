@@ -11,12 +11,20 @@
 
 ## develop
 
+- [UPDATE] WebRTC を m119.6045.2.1 に上げる
+  - @torikizi
 - [UPDATE] asmjit と blend2d を最新版に上げる
   - @voluntas
-- [UPDATE] `CMake` を `3.27.6` に上げる
-  - @voluntas
+- [UPDATE] `CMake` を `3.27.7` に上げる
+  - @voluntas @torikizi
 - [UPDATE] `Boost` を `1.83.0` に上げる
   - @voluntas
+- [FIX] VideoCodec は Protected のため CreateVideoCodec に修正
+  - m117.5938.2.0 へのアップデートに伴う修正
+  - @torikizi
+- [FIX] resetMatrix() から resetTransform() に修正
+  - blend2d を最新版に上げた際に発生した問題の修正
+  - @torikizi
 
 ## 2023.1.0 (2023-08-23)
 
