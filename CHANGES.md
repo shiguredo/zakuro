@@ -11,6 +11,8 @@
 
 ## develop
 
+- [UPDATE] Sora C++ SDK を 2023.16.0 に上げる
+  - @torikizi
 - [UPDATE] WebRTC を m119.6045.2.1 に上げる
   - @torikizi
 - [UPDATE] asmjit と blend2d を最新版に上げる
