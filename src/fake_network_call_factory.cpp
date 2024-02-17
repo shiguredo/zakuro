@@ -16,8 +16,8 @@ FakeNetworkCallFactory::FakeNetworkCallFactory(
     const webrtc::DegradedCall::TimeScopedNetworkConfig& receive_config)
     : send_config_(send_config), receive_config_(receive_config) {}
 
-webrtc::Call* FakeNetworkCallFactory::CreateCall(
-    const webrtc::Call::Config& config) {
+std::unique_ptr<webrtc::Call> FakeNetworkCallFactory::CreateCall(
+    const webrtc::CallConfig& config) {
   webrtc::DegradedCall::TimeScopedNetworkConfig default_config;
 
   webrtc::RtpTransportConfig transport_config = config.ExtractTransportConfig();
@@ -27,7 +27,7 @@ webrtc::Call* FakeNetworkCallFactory::CreateCall(
   bool receive_config_changed =
       memcmp(&receive_config_, &default_config, sizeof(default_config)) != 0;
 
-  webrtc::Call* call = webrtc::Call::Create(
+  auto call = webrtc::Call::Create(
       config, webrtc::Clock::GetRealTimeClock(),
       config.rtp_transport_controller_send_factory->Create(
           transport_config, webrtc::Clock::GetRealTimeClock()));
@@ -37,8 +37,8 @@ webrtc::Call* FakeNetworkCallFactory::CreateCall(
         send_config_};
     std::vector<webrtc::DegradedCall::TimeScopedNetworkConfig> receive_config =
         {receive_config_};
-    return new webrtc::DegradedCall(std::unique_ptr<webrtc::Call>(call),
-                                    send_config, receive_config);
+    return std::make_unique<webrtc::DegradedCall>(std::move(call), send_config,
+                                                  receive_config);
   }
 
   return call;

@@ -17,7 +17,8 @@ class FakeNetworkCallFactory : public webrtc::CallFactoryInterface {
 
  private:
   ~FakeNetworkCallFactory() override {}
-  webrtc::Call* CreateCall(const webrtc::CallConfig& config) override;
+  std::unique_ptr<webrtc::Call> CreateCall(
+      const webrtc::CallConfig& config) override;
 
   webrtc::DegradedCall::TimeScopedNetworkConfig send_config_;
   webrtc::DegradedCall::TimeScopedNetworkConfig receive_config_;
