@@ -25,7 +25,7 @@ int32_t NopVideoDecoder::Decode(const webrtc::EncodedImage& input_image,
   webrtc::VideoFrame decoded_image =
       webrtc::VideoFrame::Builder()
           .set_video_frame_buffer(i420_buffer)
-          .set_timestamp_rtp(input_image.Timestamp())
+          .set_timestamp_rtp(input_image.RtpTimestamp())
           .build();
   callback_->Decoded(decoded_image, absl::nullopt, absl::nullopt);
 
