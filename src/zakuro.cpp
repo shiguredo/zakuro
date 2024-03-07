@@ -319,7 +319,7 @@ int Zakuro::Run() {
   context_config.configure_dependencies =
       [vc =
            vc_config](webrtc::PeerConnectionFactoryDependencies& dependencies) {
-        dependencies.adm = dependencies.worker_thread->BlockingCall([&] {
+        auto adm = dependencies.worker_thread->BlockingCall([&] {
           ZakuroAudioDeviceModuleConfig admconfig;
           admconfig.task_queue_factory = dependencies.task_queue_factory.get();
           if (vc.audio_type == VirtualClientConfig::AudioType::Device) {
@@ -355,6 +355,8 @@ int Zakuro::Run() {
           }
           return ZakuroAudioDeviceModule::Create(std::move(admconfig));
         });
+        dependencies.worker_thread->BlockingCall(
+            [&] { dependencies.adm = adm; });
 
         auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
         sw_config.use_simulcast_adapter = true;

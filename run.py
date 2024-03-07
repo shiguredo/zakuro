@@ -522,6 +522,61 @@ def install_sora(version, source_dir, install_dir, platform: str):
     extract(archive, output_dir=install_dir, output_dirname="sora")
 
 
+class SoraInfo(NamedTuple):
+    sora_install_dir: str
+    boost_install_dir: str
+
+
+def install_sora_and_deps(platform: str, source_dir: str, install_dir: str):
+    version = read_version_file("VERSION")
+
+    # Boost
+    install_boost_args = {
+        "version": version["BOOST_VERSION"],
+        "version_file": os.path.join(install_dir, "boost.version"),
+        "source_dir": source_dir,
+        "install_dir": install_dir,
+        "sora_version": version["SORA_CPP_SDK_VERSION"],
+        "platform": platform,
+    }
+    install_boost(**install_boost_args)
+
+    # Sora C++ SDK
+    install_sora_args = {
+        "version": version["SORA_CPP_SDK_VERSION"],
+        "version_file": os.path.join(install_dir, "sora.version"),
+        "source_dir": source_dir,
+        "install_dir": install_dir,
+        "platform": platform,
+    }
+    install_sora(**install_sora_args)
+
+
+def build_sora(
+    platform: str, sora_dir: str, sora_args: List[str], debug: bool, webrtc_build_dir: Optional[str]
+):
+    if debug and "--debug" not in sora_args:
+        sora_args = ["--debug", *sora_args]
+    if webrtc_build_dir is not None:
+        sora_args = ["--webrtc-build-dir", webrtc_build_dir, *sora_args]
+
+    with cd(sora_dir):
+        cmd(["python3", "run.py", platform, *sora_args])
+
+
+def get_sora_info(
+    platform: str, sora_dir: Optional[str], install_dir: str, debug: bool
+) -> SoraInfo:
+    if sora_dir is not None:
+        configuration = "debug" if debug else "release"
+        install_dir = os.path.join(sora_dir, "_install", platform, configuration)
+
+    return SoraInfo(
+        sora_install_dir=os.path.join(install_dir, "sora"),
+        boost_install_dir=os.path.join(install_dir, "boost"),
+    )
+
+
 @versioned
 def install_cli11(version, install_dir):
     cli11_install_dir = os.path.join(install_dir, "cli11")
@@ -645,6 +700,8 @@ def install_deps(
     debug: bool,
     webrtc_build_dir: Optional[str],
     webrtc_build_args: List[str],
+    sora_dir: Optional[str],
+    sora_args: List[str],
 ):
     with cd(BASE_DIR):
         version = read_version_file("VERSION")
@@ -728,14 +785,10 @@ def install_deps(
             add_path(os.path.join(install_dir, "cmake", "bin"))
 
         # Sora C++ SDK
-        install_sora_args = {
-            "version": version["SORA_CPP_SDK_VERSION"],
-            "version_file": os.path.join(install_dir, "sora.version"),
-            "source_dir": source_dir,
-            "install_dir": install_dir,
-            "platform": platform,
-        }
-        install_sora(**install_sora_args)
+        if sora_dir is None:
+            install_sora_and_deps(platform, source_dir, install_dir)
+        else:
+            build_sora(platform, sora_dir, sora_args, debug, webrtc_build_dir)
 
         # CLI11
         install_cli11_args = {
@@ -790,6 +843,8 @@ def main():
     parser.add_argument("--relwithdebinfo", action="store_true")
     parser.add_argument("--webrtc-build-dir", type=os.path.abspath)
     parser.add_argument("--webrtc-build-args", default="", type=shlex.split)
+    parser.add_argument("--sora-dir", type=os.path.abspath)
+    parser.add_argument("--sora-args", default="", type=shlex.split)
     parser.add_argument("--package", action="store_true")
 
     args = parser.parse_args()
@@ -812,6 +867,8 @@ def main():
         args.debug,
         args.webrtc_build_dir,
         args.webrtc_build_args,
+        args.sora_dir,
+        args.sora_args,
     )
 
     configuration = "Release"
@@ -824,6 +881,7 @@ def main():
     with cd(os.path.join(build_dir, "zakuro")):
         webrtc_info = get_webrtc_info(platform, args.webrtc_build_dir, install_dir, args.debug)
         webrtc_version = read_version_file(webrtc_info.version_file)
+        sora_info = get_sora_info(platform, args.sora_dir, install_dir, args.debug)
 
         with cd(BASE_DIR):
             version = read_version_file("VERSION")
@@ -838,8 +896,8 @@ def main():
         cmake_args.append(f"-DWEBRTC_BUILD_VERSION={webrtc_version['WEBRTC_BUILD_VERSION']}")
         cmake_args.append(f"-DWEBRTC_READABLE_VERSION={webrtc_version['WEBRTC_READABLE_VERSION']}")
         cmake_args.append(f"-DWEBRTC_COMMIT={webrtc_version['WEBRTC_COMMIT']}")
-        cmake_args.append(f"-DSORA_DIR={cmake_path(os.path.join(install_dir, 'sora'))}")
-        cmake_args.append(f"-DBOOST_ROOT={cmake_path(os.path.join(install_dir, 'boost'))}")
+        cmake_args.append(f"-DSORA_DIR={cmake_path(sora_info.sora_install_dir)}")
+        cmake_args.append(f"-DBOOST_ROOT={cmake_path(sora_info.boost_install_dir)}")
         cmake_args.append(f"-DWEBRTC_INCLUDE_DIR={cmake_path(webrtc_info.webrtc_include_dir)}")
         cmake_args.append(f"-DWEBRTC_LIBRARY_DIR={cmake_path(webrtc_info.webrtc_library_dir)}")
         cmake_args.append(f"-DCLI11_ROOT_DIR={cmake_path(os.path.join(install_dir, 'cli11'))}")
