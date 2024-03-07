@@ -57,7 +57,7 @@ void VirtualClient::Connect() {
   if (!config_.no_video_device) {
     std::string video_track_id = rtc::CreateRandomString(16);
     video_track_ = config_.context->peer_connection_factory()->CreateVideoTrack(
-        video_track_id, config_.capturer.get());
+        config_.capturer, video_track_id);
 
     if (config_.fixed_resolution) {
       video_track_->set_content_hint(

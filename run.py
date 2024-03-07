@@ -1,14 +1,16 @@
 import argparse
+import filecmp
 import logging
 import multiprocessing
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 import tarfile
 import urllib.parse
 import zipfile
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -315,6 +317,12 @@ def git_clone_shallow(url, hash, dir):
         cmd(["git", "reset", "--hard", "FETCH_HEAD"])
 
 
+def copyfile_if_different(src, dst):
+    if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
+        return
+    shutil.copyfile(src, dst)
+
+
 @versioned
 def install_rootfs(version, install_dir, conf):
     rootfs_dir = os.path.join(install_dir, "rootfs")
@@ -365,40 +373,70 @@ def install_webrtc(version, source_dir, install_dir, platform: str):
     extract(archive, output_dir=install_dir, output_dirname="webrtc")
 
 
+def build_webrtc(platform, webrtc_build_dir, webrtc_build_args, debug):
+    with cd(webrtc_build_dir):
+        args = ["--webrtc-nobuild-ios-framework", "--webrtc-nobuild-android-aar"]
+        if debug:
+            args += ["--debug"]
+
+        args += webrtc_build_args
+
+        cmd(["python3", "run.py", "build", platform, *args])
+
+        # インクルードディレクトリを増やしたくないので、
+        # __config_site を libc++ のディレクトリにコピーしておく
+        webrtc_source_dir = os.path.join(webrtc_build_dir, "_source", platform, "webrtc")
+        src_config = os.path.join(
+            webrtc_source_dir, "src", "buildtools", "third_party", "libc++", "__config_site"
+        )
+        dst_config = os.path.join(
+            webrtc_source_dir, "src", "third_party", "libc++", "src", "include", "__config_site"
+        )
+        copyfile_if_different(src_config, dst_config)
+
+
 class WebrtcInfo(NamedTuple):
     version_file: str
+    deps_file: str
     webrtc_include_dir: str
+    webrtc_source_dir: Optional[str]
     webrtc_library_dir: str
     clang_dir: str
     libcxx_dir: str
 
 
 def get_webrtc_info(
-    webrtcbuild: bool, source_dir: str, build_dir: str, install_dir: str
+    platform: str, webrtc_build_dir: Optional[str], install_dir: str, debug: bool
 ) -> WebrtcInfo:
-    webrtc_source_dir = os.path.join(source_dir, "webrtc")
-    webrtc_build_dir = os.path.join(build_dir, "webrtc")
     webrtc_install_dir = os.path.join(install_dir, "webrtc")
 
-    if webrtcbuild:
-        return WebrtcInfo(
-            version_file=os.path.join(source_dir, "webrtc-build", "VERSION"),
-            webrtc_include_dir=os.path.join(webrtc_source_dir, "src"),
-            webrtc_library_dir=os.path.join(webrtc_build_dir, "obj")
-            if platform.system() == "Windows"
-            else webrtc_build_dir,
-            clang_dir=os.path.join(
-                webrtc_source_dir, "src", "third_party", "llvm-build", "Release+Asserts"
-            ),
-            libcxx_dir=os.path.join(webrtc_source_dir, "src", "third_party", "libc++", "src"),
-        )
-    else:
+    if webrtc_build_dir is None:
         return WebrtcInfo(
             version_file=os.path.join(webrtc_install_dir, "VERSIONS"),
+            deps_file=os.path.join(webrtc_install_dir, "DEPS"),
             webrtc_include_dir=os.path.join(webrtc_install_dir, "include"),
-            webrtc_library_dir=os.path.join(install_dir, "webrtc", "lib"),
+            webrtc_source_dir=None,
+            webrtc_library_dir=os.path.join(webrtc_install_dir, "lib"),
             clang_dir=os.path.join(install_dir, "llvm", "clang"),
             libcxx_dir=os.path.join(install_dir, "llvm", "libcxx"),
+        )
+    else:
+        webrtc_build_source_dir = os.path.join(webrtc_build_dir, "_source", platform, "webrtc")
+        configuration = "debug" if debug else "release"
+        webrtc_build_build_dir = os.path.join(
+            webrtc_build_dir, "_build", platform, configuration, "webrtc"
+        )
+
+        return WebrtcInfo(
+            version_file=os.path.join(webrtc_build_dir, "VERSION"),
+            deps_file=os.path.join(webrtc_build_dir, "DEPS"),
+            webrtc_include_dir=os.path.join(webrtc_build_source_dir, "src"),
+            webrtc_source_dir=os.path.join(webrtc_build_source_dir, "src"),
+            webrtc_library_dir=webrtc_build_build_dir,
+            clang_dir=os.path.join(
+                webrtc_build_source_dir, "src", "third_party", "llvm-build", "Release+Asserts"
+            ),
+            libcxx_dir=os.path.join(webrtc_build_source_dir, "src", "third_party", "libc++", "src"),
         )
 
 
@@ -562,13 +600,13 @@ def install_yaml(version, source_dir, build_dir, install_dir, cmake_args):
         cmd(["cmake", "--build", ".", "--target", "install"])
 
 
-def get_common_cmake_args(install_dir, platform):
+def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
     # クロスコンパイルの設定。
     # 本来は toolchain ファイルに書く内容
     if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"):
         return [
-            f"-DCMAKE_C_COMPILER={install_dir}/llvm/clang/bin/clang",
-            f"-DCMAKE_CXX_COMPILER={install_dir}/llvm/clang/bin/clang++",
+            f"-DCMAKE_C_COMPILER={webrtc_info.clang_dir}/bin/clang",
+            f"-DCMAKE_CXX_COMPILER={webrtc_info.clang_dir}/bin/clang++",
             "-DCMAKE_CXX_FLAGS="
             + " ".join(
                 [
@@ -577,7 +615,7 @@ def get_common_cmake_args(install_dir, platform):
                     "-D_LIBCPP_DISABLE_AVAILABILITY",
                     "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE",
                     "-nostdinc++",
-                    f"-isystem{install_dir}/llvm/libcxx/include",
+                    f"-isystem{webrtc_info.libcxx_dir}/include",
                 ]
             ),
         ]
@@ -599,22 +637,42 @@ def get_common_cmake_args(install_dir, platform):
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
-def install_deps(source_dir, build_dir, install_dir, debug, platform):
+def install_deps(
+    platform: str,
+    source_dir: str,
+    build_dir: str,
+    install_dir: str,
+    debug: bool,
+    webrtc_build_dir: Optional[str],
+    webrtc_build_args: List[str],
+):
     with cd(BASE_DIR):
         version = read_version_file("VERSION")
 
         # WebRTC
-        install_webrtc_args = {
-            "version": version["WEBRTC_BUILD_VERSION"],
-            "version_file": os.path.join(install_dir, "webrtc.version"),
-            "source_dir": source_dir,
-            "install_dir": install_dir,
-            "platform": platform,
-        }
-        install_webrtc(**install_webrtc_args)
+        if webrtc_build_dir is None:
+            install_webrtc_args = {
+                "version": version["WEBRTC_BUILD_VERSION"],
+                "version_file": os.path.join(install_dir, "webrtc.version"),
+                "source_dir": source_dir,
+                "install_dir": install_dir,
+                "platform": platform,
+            }
 
-        if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"):
-            webrtc_info = get_webrtc_info(False, source_dir, build_dir, install_dir)
+            install_webrtc(**install_webrtc_args)
+        else:
+            build_webrtc_args = {
+                "platform": platform,
+                "webrtc_build_dir": webrtc_build_dir,
+                "webrtc_build_args": webrtc_build_args,
+                "debug": debug,
+            }
+
+            build_webrtc(**build_webrtc_args)
+
+        webrtc_info = get_webrtc_info(platform, webrtc_build_dir, install_dir, debug)
+
+        if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64") and webrtc_build_dir is None:
             webrtc_version = read_version_file(webrtc_info.version_file)
 
             # LLVM
@@ -687,7 +745,7 @@ def install_deps(source_dir, build_dir, install_dir, debug, platform):
         }
         install_cli11(**install_cli11_args)
 
-        cmake_args = get_common_cmake_args(install_dir, platform)
+        cmake_args = get_common_cmake_args(install_dir, platform, webrtc_info)
 
         # Blend2D
         install_blend2d_args = {
@@ -729,26 +787,42 @@ def main():
         "target", choices=["macos_arm64", "ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"]
     )
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--relwithdebinfo", action="store_true")
+    parser.add_argument("--webrtc-build-dir", type=os.path.abspath)
+    parser.add_argument("--webrtc-build-args", default="", type=shlex.split)
     parser.add_argument("--package", action="store_true")
 
     args = parser.parse_args()
 
+    platform = args.target
     configuration_dir = "debug" if args.debug else "release"
-    source_dir = os.path.join(BASE_DIR, "_source", args.target, configuration_dir)
-    build_dir = os.path.join(BASE_DIR, "_build", args.target, configuration_dir)
-    install_dir = os.path.join(BASE_DIR, "_install", args.target, configuration_dir)
-    package_dir = os.path.join(BASE_DIR, "_package", args.target, configuration_dir)
+    source_dir = os.path.join(BASE_DIR, "_source", platform, configuration_dir)
+    build_dir = os.path.join(BASE_DIR, "_build", platform, configuration_dir)
+    install_dir = os.path.join(BASE_DIR, "_install", platform, configuration_dir)
+    package_dir = os.path.join(BASE_DIR, "_package", platform, configuration_dir)
     mkdir_p(source_dir)
     mkdir_p(build_dir)
     mkdir_p(install_dir)
 
-    install_deps(source_dir, build_dir, install_dir, args.debug, args.target)
+    install_deps(
+        platform,
+        source_dir,
+        build_dir,
+        install_dir,
+        args.debug,
+        args.webrtc_build_dir,
+        args.webrtc_build_args,
+    )
 
-    configuration = "Debug" if args.debug else "Release"
+    configuration = "Release"
+    if args.debug:
+        configuration = "Debug"
+    if args.relwithdebinfo:
+        configuration = "RelWithDebInfo"
 
     mkdir_p(os.path.join(build_dir, "zakuro"))
     with cd(os.path.join(build_dir, "zakuro")):
-        webrtc_info = get_webrtc_info(False, source_dir, build_dir, install_dir)
+        webrtc_info = get_webrtc_info(platform, args.webrtc_build_dir, install_dir, args.debug)
         webrtc_version = read_version_file(webrtc_info.version_file)
 
         with cd(BASE_DIR):
@@ -774,7 +848,7 @@ def main():
             f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}"
         )
         cmake_args.append(f"-DYAML_ROOT_DIR={cmake_path(os.path.join(install_dir, 'yaml'))}")
-        cmake_args += get_common_cmake_args(install_dir, args.target)
+        cmake_args += get_common_cmake_args(install_dir, args.target, webrtc_info)
 
         cmd(["cmake", BASE_DIR, *cmake_args])
         cmd(

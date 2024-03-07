@@ -19,6 +19,8 @@
   - インストールするファイルに model_coeffs を含めないようにする
   - VERSION ファイルから LYRA_VERSION を削除
   - @melpon
+- [ADD] run.py に `--webrtc-build-dir` と `--webrtc-build-args` オプションを追加
+  - @melpon
 - [UPDATE] Sora C++ SDK を 2024.3.1 に上げる
   - それに伴って以下のライブラリのバージョンも上げる
   - WebRTC を m121.6167.3.0 に上げる
