@@ -11,16 +11,27 @@
 
 ## develop
 
-- [UPDATE] Sora C++ SDK を 2023.16.0 に上げる
-  - @torikizi
-- [UPDATE] WebRTC を m119.6045.2.1 に上げる
-  - @torikizi
+- [CHANGE] Lyra を削除
+  - `--sora-audio-codec-lyra-bitrate` オプションを削除
+  - `--sora-audio-codec-lyra-usedtx` オプションを削除
+  - `--sora-check-lyra-version` オプションを削除
+  - `--sora-audio-codec-type` から LYRA を削除
+  - インストールするファイルに model_coeffs を含めないようにする
+  - VERSION ファイルから LYRA_VERSION を削除
+  - @melpon
+- [UPDATE] Sora C++ SDK を 2024.3.1 に上げる
+  - それに伴って以下のライブラリのバージョンも上げる
+  - WebRTC を m121.6167.3.0 に上げる
+  - Boost を 1.84.0 に上げる
+  - @torikizi @voluntas @melpon
 - [UPDATE] asmjit と blend2d を最新版に上げる
-  - @voluntas
-- [UPDATE] `CMake` を `3.27.7` に上げる
-  - @voluntas @torikizi
-- [UPDATE] `Boost` を `1.83.0` に上げる
-  - @voluntas
+  - @voluntas @melpon
+- [UPDATE] `CMake` を `3.28.1` に上げる
+  - @voluntas @torikizi @melpon
+- [UPDATE] OpenH264 を 2.4.1 に上げる
+  - @melpon
+- [UPDATE] CLI11 を 2.4.1 に上げる
+  - @melpon
 - [FIX] VideoCodec は Protected のため CreateVideoCodec に修正
   - m117.5938.2.0 へのアップデートに伴う修正
   - @torikizi

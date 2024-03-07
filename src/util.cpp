@@ -94,15 +94,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--vcs-hatch-rate", config.vcs_hatch_rate,
                  "Spawned virtual clients per seconds (default: 1.0)")
       ->check(CLI::Range(0.1, 100.0));
-  app.add_option(
-      "--duration", config.duration,
-      "(Experimental) Duration of virtual client running in seconds (if not zero) (default: 0.0)");
+  app.add_option("--duration", config.duration,
+                 "(Experimental) Duration of virtual client running in seconds "
+                 "(if not zero) (default: 0.0)");
   app.add_option("--repeat-interval", config.repeat_interval,
-                 "(Experimental) (If duration is set) Interval to reconnect after disconnection (default: 0.0)");
-  app.add_option("--max-retry", config.max_retry,
-                 "(Experimental) Max retries when a connection fails (default: 0)");
+                 "(Experimental) (If duration is set) Interval to reconnect "
+                 "after disconnection (default: 0.0)");
+  app.add_option(
+      "--max-retry", config.max_retry,
+      "(Experimental) Max retries when a connection fails (default: 0)");
   app.add_option("--retry-interval", config.retry_interval,
-                 "(Experimental) (If max-retry is set) Interval to reconnect after connection fails (default: 60)");
+                 "(Experimental) (If max-retry is set) Interval to reconnect "
+                 "after connection fails (default: 60)");
 
   app.add_flag("--no-video-device", config.no_video_device,
                "Do not use video device (default: false)");
@@ -116,7 +119,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--fake-audio-capture", config.fake_audio_capture,
                  "Fake Audio from File")
       ->check(CLI::ExistingFile);
-  app.add_flag("--sandstorm", config.sandstorm, "Fake Sandstorm Video (default: false)");
+  app.add_flag("--sandstorm", config.sandstorm,
+               "Fake Sandstorm Video (default: false)");
 #if defined(__APPLE__)
   app.add_option("--video-device", config.video_device,
                  "Use the video device specified by an index or a name "
@@ -131,15 +135,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "Video resolution (one of QVGA, VGA, HD, FHD, 4K, or "
                  "[WIDTH]x[HEIGHT]) (default: VGA)")
       ->check(is_valid_resolution);
-  app.add_option("--framerate", config.framerate, "Video framerate (default: 30)")
+  app.add_option("--framerate", config.framerate,
+                 "Video framerate (default: 30)")
       ->check(CLI::Range(1, 60));
   app.add_flag("--fixed-resolution", config.fixed_resolution,
                "Maintain video resolution in degradation (default: false)");
-  app.add_option("--priority", config.priority,
-                 "(Experimental) Preference in video degradation (default: BALANCE)")
+  app.add_option(
+         "--priority", config.priority,
+         "(Experimental) Preference in video degradation (default: BALANCE)")
       ->check(CLI::IsMember({"BALANCE", "FRAMERATE", "RESOLUTION"}));
-  app.add_flag("--insecure", config.insecure,
-               "Allow insecure server connections when using SSL (default: false)");
+  app.add_flag(
+      "--insecure", config.insecure,
+      "Allow insecure server connections when using SSL (default: false)");
   app.add_option("--openh264", config.openh264,
                  "OpenH264 dynamic library path. \"OpenH264 Video Codec "
                  "provided by Cisco Systems, Inc.\"")
@@ -166,7 +173,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "Signaling URLs")
       ->take_all();
   app.add_flag("--sora-disable-signaling-url-randomization",
-               config.sora_disable_signaling_url_randomization, "Disable random connections to signaling URLs (default: false)");
+               config.sora_disable_signaling_url_randomization,
+               "Disable random connections to signaling URLs (default: false)");
   app.add_option("--sora-channel-id", config.sora_channel_id, "Channel ID");
   app.add_option("--sora-client-id", config.sora_client_id, "Client ID");
   app.add_option("--sora-bundle-id", config.sora_bundle_id, "Bundle ID");
@@ -184,18 +192,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264"}));
   app.add_option("--sora-audio-codec-type", config.sora_audio_codec_type,
                  "Audio codec for send (default: none)")
-      ->check(CLI::IsMember({"", "OPUS", "LYRA"}));
-  app.add_option("--sora-audio-codec-lyra-bitrate",
-                 config.sora_audio_codec_lyra_bit_rate,
-                 "Lyra audio codec bitrate (default: none)")
-      ->check(CLI::Range(0, 9200));
-  app.add_option("--sora-audio-codec-lyra-usedtx",
-                 config.sora_audio_codec_lyra_usedtx,
-                 "Lyra usedtx (default: none)")
-      ->type_name("TEXT")
-      ->transform(CLI::CheckedTransformer(optional_bool_map, CLI::ignore_case));
-  app.add_option("--sora-check-lyra-version", config.sora_check_lyra_version,
-                 "Lyra version check (default: false)");
+      ->check(CLI::IsMember({"", "OPUS"}));
   app.add_option("--sora-video-bit-rate", config.sora_video_bit_rate,
                  "Video bit rate (default: none)")
       ->check(CLI::Range(0, 30000));
@@ -219,7 +216,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-spotlight-focus-rid", config.sora_spotlight_focus_rid,
                  "Spotlight focus rid (default: none)");
   app.add_option("--sora-spotlight-unfocus-rid",
-                 config.sora_spotlight_unfocus_rid, "Spotlight unfocus rid (default: none)");
+                 config.sora_spotlight_unfocus_rid,
+                 "Spotlight unfocus rid (default: none)");
   app.add_option("--sora-data-channel-signaling",
                  config.sora_data_channel_signaling,
                  "Use DataChannel for Sora signaling (default: none)")
@@ -256,10 +254,12 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(is_json);
   std::string sora_signaling_notify_metadata;
   app.add_option("--sora-signaling-notify-metadata",
-                 sora_signaling_notify_metadata, "Signaling metadata (default: none)")
+                 sora_signaling_notify_metadata,
+                 "Signaling metadata (default: none)")
       ->check(is_json);
   std::string sora_data_channels;
-  app.add_option("--sora-data-channels", sora_data_channels, "DataChannels (default: none)")
+  app.add_option("--sora-data-channels", sora_data_channels,
+                 "DataChannels (default: none)")
       ->check(is_json);
 
   // Fake network 系
@@ -356,8 +356,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       config.sora_video_codec_type != "VP9" &&
       config.sora_video_codec_type != "AV1" &&
       config.sora_video_codec_type != "H264") {
-    std::cerr << "Simulcast works only --sora-video-codec=VP8, VP9, AV1 or H264."
-              << std::endl;
+    std::cerr
+        << "Simulcast works only --sora-video-codec=VP8, VP9, AV1 or H264."
+        << std::endl;
     std::exit(1);
   }
 

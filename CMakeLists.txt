@@ -14,7 +14,6 @@ set(Boost_USE_STATIC_LIBS ON)
 
 set(WEBRTC_LIBRARY_NAME webrtc)
 find_package(Boost REQUIRED COMPONENTS json filesystem)
-find_package(Lyra REQUIRED)
 find_package(WebRTC REQUIRED)
 find_package(Sora REQUIRED)
 find_package(Threads REQUIRED)
@@ -43,7 +42,7 @@ target_sources(zakuro
   PRIVATE
     src/dynamic_h264_video_encoder.cpp
     src/embedded_binary.cpp
-    src/fake_network_call_factory.cpp
+    src/enable_media_with_fake_call.cpp
     src/fake_video_capturer.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
