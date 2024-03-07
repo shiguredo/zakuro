@@ -65,7 +65,7 @@ target_link_libraries(zakuro
     Boost::filesystem
     CLI11::CLI11
     Blend2D::Blend2D
-    yaml-cpp
+    yaml-cpp::yaml-cpp
 )
 
 target_compile_definitions(zakuro
