@@ -37,6 +37,8 @@
   - @melpon
 - [UPDATE] CLI11 を 2.4.1 に上げる
   - @melpon
+- [UPDATE] run.py に定義されていた関数を buildbase.py に移動する
+  - @melpon
 - [FIX] VideoCodec は Protected のため CreateVideoCodec に修正
   - m117.5938.2.0 へのアップデートに伴う修正
   - @torikizi
