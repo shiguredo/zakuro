@@ -186,11 +186,13 @@ def install_deps(
         install_blend2d_args = {
             "version": version["BLEND2D_VERSION"] + "-" + version["ASMJIT_VERSION"],
             "version_file": os.path.join(install_dir, "blend2d.version"),
+            "configuration": "Debug" if debug else "Release",
             "source_dir": source_dir,
             "build_dir": build_dir,
             "install_dir": install_dir,
             "blend2d_version": version["BLEND2D_VERSION"],
             "asmjit_version": version["ASMJIT_VERSION"],
+            "ios": False,
             "cmake_args": cmake_args,
         }
         install_blend2d(**install_blend2d_args)
