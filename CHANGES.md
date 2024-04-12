@@ -39,6 +39,12 @@
   - @melpon
 - [UPDATE] run.py に定義されていた関数を buildbase.py に移動する
   - @melpon
+- [UPDATE] Github Actions の actions/checkout , actions/upload-artifact , actions/download-artifact をアップデート
+  - Node.js 16 の Deprecated に伴うアップデート
+    - actions/checkout@v3 から actions/checkout@v4 にアップデート
+    - actions/upload-artifact@v3 から actions/upload-artifact@v4 にアップデート
+    - actions/download-artifact@v3 から actions/download-artifact@v4 にアップデート
+  - @miosakuma @torikizi
 - [FIX] VideoCodec は Protected のため CreateVideoCodec に修正
   - m117.5938.2.0 へのアップデートに伴う修正
   - @torikizi
