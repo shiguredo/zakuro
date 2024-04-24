@@ -23,7 +23,7 @@
   - @melpon
 - [ADD] run.py に `--sora-dir` と `--sora-args` オプションを追加
   - @melpon
-- [UPDATE] Sora C++ SDK を 2024.5.0 に上げる
+- [UPDATE] Sora C++ SDK を 2024.6.1 に上げる
   - それに伴って以下のライブラリのバージョンも上げる
   - WebRTC を m122.6261.1.0 に上げる
     - Ubuntu のビルドを通すために、 __assertion_handler というファイルをコピーする処理を追加した
