@@ -11,6 +11,8 @@
 
 ## develop
 
+## 2024.1.0 (2024-04-24)
+
 - [CHANGE] Lyra を削除
   - `--sora-audio-codec-lyra-bitrate` オプションを削除
   - `--sora-audio-codec-lyra-usedtx` オプションを削除
