@@ -512,7 +512,7 @@ int32_t DynamicH264VideoEncoder::Encode(
 
     encoded_images_[i]._encodedWidth = configurations_[i].width;
     encoded_images_[i]._encodedHeight = configurations_[i].height;
-    encoded_images_[i].SetTimestamp(input_frame.timestamp());
+    encoded_images_[i].SetRtpTimestamp(input_frame.timestamp());
     encoded_images_[i]._frameType = ConvertToVideoFrameType(info.eFrameType);
     encoded_images_[i].SetSpatialIndex(configurations_[i].simulcast_idx);
 

@@ -1,0 +1,40 @@
+{
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file",
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.autoIndent": "full",
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "always",
+            "source.organizeImports.ruff": "explicit"
+        }
+    },
+    "[cpp]": {
+        "editor.formatOnSave": true
+    },
+    "files.associations": {
+        "*.cs": "csharp",
+        "CMakeLists.txt": "cmake",
+        "*.txt": "plaintext",
+        "csignal": "cpp",
+        "cstdlib": "cpp",
+        "memory": "cpp",
+        "algorithm": "cpp",
+        "*.ipp": "cpp",
+        "fstream": "cpp",
+        "iosfwd": "cpp",
+        "type_traits": "cpp",
+        "memory_resource": "cpp",
+        "ostream": "cpp",
+        "__node_handle": "cpp",
+        "__config": "cpp",
+        "random": "cpp",
+        "stdexcept": "cpp",
+        "chrono": "cpp",
+        "string": "cpp",
+        "__mutex_base": "cpp",
+        "vector": "cpp"
+    }
+}

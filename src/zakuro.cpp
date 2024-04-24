@@ -13,8 +13,8 @@
 #include <sora/sora_video_encoder_factory.h>
 
 #include "dynamic_h264_video_encoder.h"
+#include "enable_media_with_fake_call.h"
 #include "fake_audio_key_trigger.h"
-#include "fake_network_call_factory.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "nop_video_decoder.h"
@@ -316,11 +316,10 @@ int Zakuro::Run() {
   context_config.use_hardware_encoder = false;
   context_config.use_audio_device = false;
 
-  context_config.configure_media_dependencies =
-      [vc = vc_config](
-          const webrtc::PeerConnectionFactoryDependencies& dependencies,
-          cricket::MediaEngineDependencies& media_dependencies) {
-        media_dependencies.adm = dependencies.worker_thread->BlockingCall([&] {
+  context_config.configure_dependencies =
+      [vc =
+           vc_config](webrtc::PeerConnectionFactoryDependencies& dependencies) {
+        auto adm = dependencies.worker_thread->BlockingCall([&] {
           ZakuroAudioDeviceModuleConfig admconfig;
           admconfig.task_queue_factory = dependencies.task_queue_factory.get();
           if (vc.audio_type == VirtualClientConfig::AudioType::Device) {
@@ -356,6 +355,8 @@ int Zakuro::Run() {
           }
           return ZakuroAudioDeviceModule::Create(std::move(admconfig));
         });
+        dependencies.worker_thread->BlockingCall(
+            [&] { dependencies.adm = adm; });
 
         auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
         sw_config.use_simulcast_adapter = true;
@@ -364,22 +365,18 @@ int Zakuro::Run() {
             [openh264 = vc.openh264](
                 auto format) -> std::unique_ptr<webrtc::VideoEncoder> {
               return webrtc::DynamicH264VideoEncoder::Create(
-                  cricket::VideoCodec(format), openh264);
+                  cricket::CreateVideoCodec(format), openh264);
             }));
-        media_dependencies.video_encoder_factory =
+        dependencies.video_encoder_factory =
             absl::make_unique<sora::SoraVideoEncoderFactory>(
                 std::move(sw_config));
-        media_dependencies.video_decoder_factory.reset(
-            new NopVideoDecoderFactory());
-      };
+        dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
 
-  context_config.configure_dependencies =
-      [vc =
-           vc_config](webrtc::PeerConnectionFactoryDependencies& dependencies) {
-        dependencies.call_factory = CreateFakeNetworkCallFactory(
-            vc.fake_network_send, vc.fake_network_receive);
         dependencies.sctp_factory.reset(
             new SctpTransportFactory(dependencies.network_thread));
+
+        EnableMediaWithFakeCall(dependencies, vc.fake_network_send,
+                                vc.fake_network_receive);
       };
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
@@ -398,9 +395,6 @@ int Zakuro::Run() {
   sora_config.audio = config_.sora_audio;
   sora_config.video_codec_type = config_.sora_video_codec_type;
   sora_config.audio_codec_type = config_.sora_audio_codec_type;
-  sora_config.audio_codec_lyra_bitrate = config_.sora_audio_codec_lyra_bit_rate;
-  sora_config.audio_codec_lyra_usedtx = config_.sora_audio_codec_lyra_usedtx;
-  sora_config.check_lyra_version = config_.sora_check_lyra_version;
   sora_config.video_bit_rate = config_.sora_video_bit_rate;
   sora_config.audio_bit_rate = config_.sora_audio_bit_rate;
   sora_config.metadata = config_.sora_metadata;

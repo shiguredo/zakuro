@@ -11,6 +11,49 @@
 
 ## develop
 
+## 2024.1.0 (2024-04-24)
+
+- [CHANGE] Lyra を削除
+  - `--sora-audio-codec-lyra-bitrate` オプションを削除
+  - `--sora-audio-codec-lyra-usedtx` オプションを削除
+  - `--sora-check-lyra-version` オプションを削除
+  - `--sora-audio-codec-type` から LYRA を削除
+  - インストールするファイルに model_coeffs を含めないようにする
+  - VERSION ファイルから LYRA_VERSION を削除
+  - @melpon
+- [ADD] run.py に `--webrtc-build-dir` と `--webrtc-build-args` オプションを追加
+  - @melpon
+- [ADD] run.py に `--sora-dir` と `--sora-args` オプションを追加
+  - @melpon
+- [UPDATE] Sora C++ SDK を 2024.6.1 に上げる
+  - それに伴って以下のライブラリのバージョンも上げる
+  - WebRTC を m122.6261.1.0 に上げる
+    - Ubuntu のビルドを通すために、 __assertion_handler というファイルをコピーする処理を追加した
+  - Boost を 1.84.0 に上げる
+  - @torikizi @voluntas @melpon
+- [UPDATE] asmjit と blend2d を最新版に上げる
+  - @voluntas @melpon
+- [UPDATE] `CMake` を `3.28.1` に上げる
+  - @voluntas @torikizi @melpon
+- [UPDATE] OpenH264 を 2.4.1 に上げる
+  - @melpon
+- [UPDATE] CLI11 を 2.4.1 に上げる
+  - @melpon
+- [UPDATE] run.py に定義されていた関数を buildbase.py に移動する
+  - @melpon
+- [UPDATE] Github Actions の actions/checkout , actions/upload-artifact , actions/download-artifact をアップデート
+  - Node.js 16 の Deprecated に伴うアップデート
+    - actions/checkout@v3 から actions/checkout@v4 にアップデート
+    - actions/upload-artifact@v3 から actions/upload-artifact@v4 にアップデート
+    - actions/download-artifact@v3 から actions/download-artifact@v4 にアップデート
+  - @miosakuma @torikizi
+- [FIX] VideoCodec は Protected のため CreateVideoCodec に修正
+  - m117.5938.2.0 へのアップデートに伴う修正
+  - @torikizi
+- [FIX] resetMatrix() から resetTransform() に修正
+  - blend2d を最新版に上げた際に発生した問題の修正
+  - @torikizi
+
 ## 2023.1.0 (2023-08-23)
 
 - [CHANGE] `--fake-network-send-codel-active-queue-management` と `--fake-network-receive-codel-active-queue-management` オプションを削除
