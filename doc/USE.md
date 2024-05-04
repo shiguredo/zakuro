@@ -25,7 +25,6 @@ $ sudo apt install libnspr4 libnss3 libxext6 libx11-6 libdrm2 libva2 libva-drm2
 
 まず 5 人の会議を行う簡単な負荷をかけてみましょう
 
-
 ```
 $ ./zakuro \
     --sora-signaling-url wss://example.com/signaling \
@@ -38,7 +37,6 @@ $ ./zakuro \
     --fake-capture-device \
     --vcs 5
 ```
-
 
 上記コマンドを実行することで負荷が走ります。それぞれの項目については -h を見てください。
 おそらく Sora を理解していればわからないことは特に無いと思います。
@@ -94,7 +92,6 @@ Zakuro ではソフトウェアエンコーダを OpenH264 のライブラリを
 OpenH264 のバイナリの最新版は以下からダウンロード可能です。
 
 https://github.com/cisco/openh264/releases/tag/v2.1.1
-
 
 ### 音声ファイル指定
 
@@ -156,8 +153,7 @@ zakuro:
   instances:
     - name: zakuro
       vcs: 1
-      sora:
-        ...
+      sora: ...
       fake-network:
         send-loss-percent: 20
         receive-loss-percent: 20
@@ -187,6 +183,11 @@ zakuro:
             size_min: 100
             # 省略時は 48 (bytes)
             size_max: 5000
+            # 順番保証するかどうか
+            # ordered: true
+            # メッセージの最大寿命
+            # max_packet_lifetime 1
+            # max_retransmits: 1
 ```
 
 ### 複数シグナリング URL
@@ -198,9 +199,9 @@ zakuro:
       vcs: 2
       sora:
         signaling-url:
-           - "wss://sora1.example.com/signaling"
-           - "wss://sora2.example.com/signaling"
-           - "wss://sora3.example.com/signaling"
+          - "wss://sora1.example.com/signaling"
+          - "wss://sora2.example.com/signaling"
+          - "wss://sora3.example.com/signaling"
         channel-id: sora
         role: sendrecv
         multistream: true
