@@ -162,6 +162,7 @@ zakuro:
 ### DataChannel メッセージングの設定
 
 - DataChannel メッセージングバイナリの先頭には `<<"ZAKURO", UnixTimeMicro:64, Counter:64>>` が入ります
+- Sora DevTools はメッセージの先頭に `ZAKURO` がある場合、そのメッセージの時刻とカウンターのみを表示します
 
 ```yaml
 zakuro:
@@ -183,10 +184,11 @@ zakuro:
             size_min: 100
             # 省略時は 48 (bytes)
             size_max: 5000
-            # 順番保証するかどうか
+            # 順番保証するか
             # ordered: true
-            # メッセージの最大寿命
+            # 何ミリ秒間再送するか
             # max_packet_lifetime 1
+            # 難解再送するか
             # max_retransmits: 1
 ```
 
