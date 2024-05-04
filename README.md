@@ -81,7 +81,7 @@ Options:
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
   --sandstorm                 Fake Sandstorm Video (default: false)
-  --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
+  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
   --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT]) (default: VGA)
   --framerate INT:INT in [1 - 60]
                               Video framerate (default: 30)
@@ -113,14 +113,8 @@ Options:
                               Send audio to sora (default: true)
   --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264}
                               Video codec for send (default: none)
-  --sora-audio-codec-type TEXT:{OPUS,LYRA}
+  --sora-audio-codec-type TEXT:{OPUS}
                               Audio codec for send (default: none)
-  --sora-audio-codec-lyra-bitrate INT:INT in [0 - 9200]
-                              Lyra audio codec bitrate (default: none)
-  --sora-audio-codec-lyra-usedtx TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
-                              Lyra usedtx (default: none)
-  --sora-check-lyra-version BOOLEAN
-                              Lyra version check (default: false)
   --sora-video-bit-rate INT:INT in [0 - 30000]
                               Video bit rate (default: none)
   --sora-audio-bit-rate INT:INT in [0 - 510]
@@ -186,14 +180,13 @@ Options:
                               Additional bytes to add to packet size for receiving
 ```
 
-
 ## ライセンス
 
 Apache License 2.0
 
 ```
-Copyright 2020-2023, Wandbox LLC (Original Author)
-Copyright 2020-2023, Shiguredo Inc.
+Copyright 2020-2024, Wandbox LLC (Original Author)
+Copyright 2020-2024, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -231,4 +224,3 @@ https://www.openh264.org/BINARY_LICENSE.txt
 - Content Hint への対応
 - --fake-video-capture で mjpeg も指定可能にする
 - --audio-device 追加
-
