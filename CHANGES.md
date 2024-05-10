@@ -37,8 +37,8 @@
   - @voluntas @torikizi @melpon
 - [UPDATE] OpenH264 を 2.4.1 に上げる
   - @melpon
-- [UPDATE] CLI11 を 2.4.1 に上げる
-  - @melpon
+- [UPDATE] CLI11 を 2.4.2 に上げる
+  - @melpon @torikizi
 - [UPDATE] run.py に定義されていた関数を buildbase.py に移動する
   - @melpon
 - [UPDATE] Github Actions の actions/checkout , actions/upload-artifact , actions/download-artifact をアップデート
