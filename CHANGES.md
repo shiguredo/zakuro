@@ -11,6 +11,11 @@
 
 ## develop
 
+- [CHANGE] `--sora-dir`, `--sora-args` を `--local-sora-cpp-sdk-dir` と `--local-sora-cpp-sdk-args` に変更する
+  - @melpon
+- [CHANGE] `--webrtc-build-dir`, `--webrtc-build-args` を `--local-webrtc-build-dir` と `--local-webrtc-build-args` に変更する
+  - @melpon
+
 ## 2024.1.0 (2024-04-24)
 
 - [CHANGE] Lyra を削除
