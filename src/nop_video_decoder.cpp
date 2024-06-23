@@ -2,6 +2,7 @@
 
 // WebRTC
 #include <api/video/i420_buffer.h>
+#include <media/base/media_constants.h>
 #include <modules/video_coding/codecs/av1/libaom_av1_encoder.h>
 #include <modules/video_coding/codecs/h264/include/h264.h>
 #include <modules/video_coding/codecs/vp8/include/vp8.h>
@@ -68,8 +69,8 @@ NopVideoDecoderFactory::GetSupportedFormats() const {
   return supported_codecs;
 }
 
-std::unique_ptr<webrtc::VideoDecoder>
-NopVideoDecoderFactory::CreateVideoDecoder(
+std::unique_ptr<webrtc::VideoDecoder> NopVideoDecoderFactory::Create(
+    const webrtc::Environment& env,
     const webrtc::SdpVideoFormat& format) {
   return std::unique_ptr<webrtc::VideoDecoder>(
       absl::make_unique<NopVideoDecoder>());

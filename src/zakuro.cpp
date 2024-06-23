@@ -12,14 +12,12 @@
 #include <sora/camera_device_capturer.h>
 #include <sora/sora_video_encoder_factory.h>
 
-#include "dynamic_h264_video_encoder.h"
 #include "enable_media_with_fake_call.h"
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "nop_video_decoder.h"
 #include "scenario_player.h"
-#include "sctp_transport_factory.h"
 #include "util.h"
 #include "virtual_client.h"
 #include "wav_reader.h"
@@ -358,22 +356,14 @@ int Zakuro::Run() {
         dependencies.worker_thread->BlockingCall(
             [&] { dependencies.adm = adm; });
 
-        auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
+        auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig(
+            vc.openh264.empty() ? std::optional<std::string>(std::nullopt)
+                                : std::optional<std::string>(vc.openh264));
         sw_config.use_simulcast_adapter = true;
-        sw_config.encoders.push_back(sora::VideoEncoderConfig(
-            webrtc::kVideoCodecH264,
-            [openh264 = vc.openh264](
-                auto format) -> std::unique_ptr<webrtc::VideoEncoder> {
-              return webrtc::DynamicH264VideoEncoder::Create(
-                  cricket::CreateVideoCodec(format), openh264);
-            }));
         dependencies.video_encoder_factory =
             absl::make_unique<sora::SoraVideoEncoderFactory>(
                 std::move(sw_config));
         dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
-
-        dependencies.sctp_factory.reset(
-            new SctpTransportFactory(dependencies.network_thread));
 
         EnableMediaWithFakeCall(dependencies, vc.fake_network_send,
                                 vc.fake_network_receive);

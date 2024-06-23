@@ -26,7 +26,8 @@ class NopVideoDecoder : public webrtc::VideoDecoder {
 class NopVideoDecoderFactory : public webrtc::VideoDecoderFactory {
  public:
   std::vector<webrtc::SdpVideoFormat> GetSupportedFormats() const override;
-  std::unique_ptr<webrtc::VideoDecoder> CreateVideoDecoder(
+  std::unique_ptr<webrtc::VideoDecoder> Create(
+      const webrtc::Environment& environment,
       const webrtc::SdpVideoFormat& format) override;
 };
 
