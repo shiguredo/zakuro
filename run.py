@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.DEBUG)
 def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
     # クロスコンパイルの設定。
     # 本来は toolchain ファイルに書く内容
-    if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"):
+    if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
         return [
             f"-DCMAKE_C_COMPILER={webrtc_info.clang_dir}/bin/clang",
             f"-DCMAKE_CXX_COMPILER={webrtc_info.clang_dir}/bin/clang++",
@@ -112,7 +112,7 @@ def install_deps(
         webrtc_info = get_webrtc_info(platform, local_webrtc_build_dir, install_dir, debug)
 
         if (
-            platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64")
+            platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64")
             and local_webrtc_build_dir is None
         ):
             webrtc_version = read_version_file(webrtc_info.version_file)
@@ -159,7 +159,7 @@ def install_deps(
             "platform": "",
             "ext": "tar.gz",
         }
-        if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"):
+        if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
             install_cmake_args["platform"] = "linux-x86_64"
         elif platform == "macos_arm64":
             install_cmake_args["platform"] = "macos-universal"
@@ -231,7 +231,7 @@ def install_deps(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "target", choices=["macos_arm64", "ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"]
+        "target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"]
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--relwithdebinfo", action="store_true")
