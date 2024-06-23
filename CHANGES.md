@@ -15,6 +15,13 @@
   - @melpon
 - [CHANGE] `--webrtc-build-dir`, `--webrtc-build-args` を `--local-webrtc-build-dir` と `--local-webrtc-build-args` に変更する
   - @melpon
+- [UPDATE] Sora C++ SDK を 2024.7.0-canary.4 に上げる
+  - それに伴って以下のライブラリのバージョンも上げる
+  - libwebrtc のバージョンを `m125.6422.2.5` に上げる
+  - Boost のバージョンを `1.85.0` に上げる
+  - @melpon
+- [UPDATE] Blend2D, AsmJit を最新版に上げる
+  - @melpon
 
 ## 2024.1.0 (2024-04-24)
 

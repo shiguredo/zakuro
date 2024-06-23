@@ -40,13 +40,11 @@ target_include_directories(zakuro PRIVATE ${OPENH264_ROOT_DIR}/include)
 
 target_sources(zakuro
   PRIVATE
-    src/dynamic_h264_video_encoder.cpp
     src/embedded_binary.cpp
     src/enable_media_with_fake_call.cpp
     src/fake_video_capturer.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
-    src/sctp_transport_factory.cpp
     src/util.cpp
     src/virtual_client.cpp
     src/wav_reader.cpp
