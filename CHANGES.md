@@ -27,7 +27,9 @@
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 
-## 2024.1.0 (2024-04-24)
+## 2024.1.0
+
+**リリース日**: 2024-04-24
 
 - [CHANGE] Lyra を削除
   - `--sora-audio-codec-lyra-bitrate` オプションを削除
