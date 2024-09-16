@@ -17,11 +17,12 @@
   - @melpon
 - [CHANGE] Ubuntu 20.04 のビルドを削除
   - @melpon
-- [UPDATE] Sora C++ SDK を 2024.7.0-canary.4 に上げる
+- [UPDATE] Sora C++ SDK を `2024.7.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
-  - libwebrtc のバージョンを `m125.6422.2.5` に上げる
+  - libwebrtc のバージョンを `m127.6533.1.1` に上げる
   - Boost のバージョンを `1.85.0` に上げる
-  - @melpon
+  - CMake のバージョンを `3.29.6` に上げる
+  - @melpon @voluntas
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon
 - [ADD] Ubuntu 24.04 のビルドを追加
