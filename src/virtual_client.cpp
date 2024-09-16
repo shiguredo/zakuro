@@ -15,6 +15,7 @@
 #include <modules/audio_device/include/audio_device_factory.h>
 #include <modules/audio_processing/include/audio_processing.h>
 #include <rtc_base/logging.h>
+#include <rtc_base/crypto_random.h>
 
 std::shared_ptr<VirtualClient> VirtualClient::Create(
     VirtualClientConfig config) {
