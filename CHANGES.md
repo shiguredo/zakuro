@@ -17,11 +17,13 @@
   - @melpon
 - [CHANGE] Ubuntu 20.04 のビルドを削除
   - @melpon
-- [UPDATE] Sora C++ SDK を `2024.7.0` に上げる
+- [UPDATE] Sora C++ SDK を `2024.8.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
-  - libwebrtc のバージョンを `m127.6533.1.1` に上げる
-  - Boost のバージョンを `1.85.0` に上げる
-  - CMake のバージョンを `3.29.6` に上げる
+  - libwebrtc のバージョンを `m128.6613.2.0` に上げる
+  - Boost のバージョンを `1.86.0` に上げる
+  - CMake のバージョンを `3.30.3` に上げる
+  - `#include <rtc_base/helpers.h>` を `#include <rtc_base/crypto_random.h>` に置き換える
+  - `boost::json::error_code` を `boost::system::error_code` に置き換える
   - @melpon @voluntas
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon

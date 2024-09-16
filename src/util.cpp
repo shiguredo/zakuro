@@ -17,7 +17,7 @@
 #include <boost/preprocessor/stringize.hpp>
 
 // WebRTC
-#include <rtc_base/helpers.h>
+#include <rtc_base/crypto_random.h>
 
 #include "zakuro.h"
 #include "zakuro_version.h"
@@ -240,7 +240,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
 
   auto is_json = CLI::Validator(
       [](std::string input) -> std::string {
-        boost::json::error_code ec;
+        boost::system::error_code ec;
         boost::json::parse(input, ec);
         if (ec) {
           return "Value " + input + " is not JSON Value";
