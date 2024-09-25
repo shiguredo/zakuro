@@ -65,7 +65,6 @@ struct ZakuroConfig {
   int sora_video_bit_rate = 0;
   int sora_audio_bit_rate = 0;
   std::string sora_role = "";
-  bool sora_multistream = false;
   bool sora_simulcast = false;
   std::string sora_simulcast_rid;
   bool sora_spotlight = false;

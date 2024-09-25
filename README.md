@@ -119,8 +119,6 @@ Options:
                               Video bit rate (default: none)
   --sora-audio-bit-rate INT:INT in [0 - 510]
                               Audio bit rate (default: none)
-  --sora-multistream BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              Use multistream (default: false)
   --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use simulcast (default: false)
   --sora-simulcast-rid TEXT   Simulcast rid (default: none)
