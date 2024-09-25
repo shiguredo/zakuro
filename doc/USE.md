@@ -32,7 +32,6 @@ $ ./zakuro \
     --sora-channel-id zakuro-test \
     --sora-video-codec-type VP8 \
     --sora-video-bit-rate 1000 \
-    --sora-multistream true \
     --resolution 640x480 \
     --fake-capture-device \
     --vcs 5
@@ -119,7 +118,6 @@ zakuro:
         channel-id: "sora"
         role: "sendrecv"
         video-codec-type: VP8
-        multistream: true
         spotlight: true
         simulcast: true
     - name: zakuro2
@@ -129,7 +127,6 @@ zakuro:
         channel-id: "sora"
         role: "sendrecv"
         video-codec-type: VP8
-        multistream: true
         spotlight: true
         simulcast: true
 ```
@@ -173,7 +170,6 @@ zakuro:
         signaling-url: "wss://sora.example.com/signaling"
         channel-id: sora
         role: sendrecv
-        multistream: true
         data-channel-signaling: true
         data-channels:
           - label: "#test"
@@ -206,5 +202,4 @@ zakuro:
           - "wss://sora3.example.com/signaling"
         channel-id: sora
         role: sendrecv
-        multistream: true
 ```

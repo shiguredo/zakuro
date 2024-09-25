@@ -391,7 +391,6 @@ int Zakuro::Run() {
   sora_config.signaling_notify_metadata =
       config_.sora_signaling_notify_metadata;
   sora_config.role = config_.sora_role;
-  sora_config.multistream = config_.sora_multistream;
   sora_config.simulcast = config_.sora_simulcast;
   sora_config.simulcast_rid = config_.sora_simulcast_rid;
   sora_config.spotlight = config_.sora_spotlight;

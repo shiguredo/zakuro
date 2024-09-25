@@ -199,9 +199,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-audio-bit-rate", config.sora_audio_bit_rate,
                  "Audio bit rate (default: none)")
       ->check(CLI::Range(0, 510));
-  app.add_option("--sora-multistream", config.sora_multistream,
-                 "Use multistream (default: false)")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-simulcast", config.sora_simulcast,
                  "Use simulcast (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
@@ -545,7 +542,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       DEF_STRING(sora, "sora-", "audio-codec-type");
       DEF_INTEGER(sora, "sora-", "video-bit-rate");
       DEF_INTEGER(sora, "sora-", "audio-bit-rate");
-      DEF_BOOLEAN(sora, "sora-", "multistream");
       DEF_BOOLEAN(sora, "sora-", "simulcast");
       DEF_STRING(sora, "sora-", "simulcast-rid");
       DEF_BOOLEAN(sora, "sora-", "spotlight");
