@@ -17,6 +17,8 @@
   - @melpon
 - [CHANGE] Ubuntu 20.04 のビルドを削除
   - @melpon
+- [CHANGE] multistream のオプションを削除
+  - @torikizi
 - [UPDATE] Sora C++ SDK を `2024.8.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
   - libwebrtc のバージョンを `m128.6613.2.0` に上げる
