@@ -28,7 +28,7 @@
   - `boost::json::error_code` を `boost::system::error_code` に置き換える
   - @melpon @voluntas
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
-  - @melpon
+  - @melpon, torikizi
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 
