@@ -518,34 +518,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       }
     }
 
-    const YAML::Node& fake_network = inst["fake-network"];
-    if (fake_network) {
-      DEF_INTEGER(fake_network, "fake-network-", "send-queue-length-packets");
-      DEF_INTEGER(fake_network, "fake-network-", "send-queue-delay-ms");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "send-delay-standard-deviation-ms");
-      DEF_INTEGER(fake_network, "fake-network-", "send-link-capacity-kbps");
-      DEF_INTEGER(fake_network, "fake-network-", "send-loss-percent");
-      DEF_BOOLEAN(fake_network, "fake-network-", "send-allow-reordering");
-      DEF_INTEGER(fake_network, "fake-network-", "send-avg-burst-loss-length");
-      DEF_INTEGER(fake_network, "fake-network-", "send-packet-overhead");
-      DEF_BOOLEAN(fake_network, "fake-network-",
-                  "send-codel-active-queue-management");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "receive-queue-length-packets");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-queue-delay-ms");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "receive-delay-standard-deviation-ms");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-link-capacity-kbps");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-loss-percent");
-      DEF_BOOLEAN(fake_network, "fake-network-", "receive-allow-reordering");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "receive-avg-burst-loss-length");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-packet-overhead");
-      DEF_BOOLEAN(fake_network, "fake-network-",
-                  "receive-codel-active-queue-management");
-    }
-
     if (has_error) {
       throw std::exception();
     }
