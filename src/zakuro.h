@@ -5,10 +5,6 @@
 #include <cstdlib>
 #include <string>
 
-// WebRTC
-#include <api/test/simulated_network.h>
-#include <call/degraded_call.h>
-
 // Boost
 #include <boost/json.hpp>
 #include <boost/optional.hpp>
@@ -78,9 +74,6 @@ struct ZakuroConfig {
   boost::json::value sora_metadata;
   boost::json::value sora_signaling_notify_metadata;
   boost::json::value sora_data_channels;
-
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_send;
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
 
   std::shared_ptr<GameKeyCore> key_core;
 
