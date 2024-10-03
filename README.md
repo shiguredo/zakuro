@@ -144,38 +144,6 @@ Options:
                               Signaling metadata (default: none)
   --sora-data-channels TEXT:JSON Value
                               DataChannels (default: none)
-  --fake-network-send-queue-length-packets UINT
-                              Queue length in number of packets for sending
-  --fake-network-send-queue-delay-ms INT
-                              Delay in addition to capacity induced delay for sending
-  --fake-network-send-delay-standard-deviation-ms INT
-                              Standard deviation of the extra delay for sending
-  --fake-network-send-link-capacity-kbps INT
-                              Link capacity in kbps for sending
-  --fake-network-send-loss-percent INT
-                              Random packet loss for sending
-  --fake-network-send-allow-reordering BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              If packets are allowed to be reordered for sending
-  --fake-network-send-avg-burst-loss-length INT
-                              The average length of a burst of lost packets for sending
-  --fake-network-send-packet-overhead INT
-                              Additional bytes to add to packet size for sending
-  --fake-network-receive-queue-length-packets UINT
-                              Queue length in number of packets for receiving
-  --fake-network-receive-queue-delay-ms INT
-                              Delay in addition to capacity induced delay for receiving
-  --fake-network-receive-delay-standard-deviation-ms INT
-                              Standard deviation of the extra delay for receiving
-  --fake-network-receive-link-capacity-kbps INT
-                              Link capacity in kbps for receiving
-  --fake-network-receive-loss-percent INT
-                              Random packet loss for receiving
-  --fake-network-receive-allow-reordering BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              If packets are allowed to be reordered for receiving
-  --fake-network-receive-avg-burst-loss-length INT
-                              The average length of a burst of lost packets for receiving
-  --fake-network-receive-packet-overhead INT
-                              Additional bytes to add to packet size for receiving
 ```
 
 ## ライセンス

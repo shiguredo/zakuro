@@ -143,19 +143,6 @@ zakuro:
         ...
 ```
 
-### フェイクネットワークによるパケロスの設定
-
-```yaml
-zakuro:
-  instances:
-    - name: zakuro
-      vcs: 1
-      sora: ...
-      fake-network:
-        send-loss-percent: 20
-        receive-loss-percent: 20
-```
-
 ### DataChannel メッセージングの設定
 
 - DataChannel メッセージングバイナリの先頭には `<<"ZAKURO", UnixTimeMicro:64, Counter:64>>` が入ります
