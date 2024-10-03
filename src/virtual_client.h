@@ -6,9 +6,6 @@
 // Sora C++ SDK
 #include <sora/sora_client_context.h>
 
-// WebRTC
-#include <call/degraded_call.h>
-
 // Boost
 #include <boost/asio/io_context.hpp>
 
@@ -54,9 +51,6 @@ struct VirtualClientConfig {
   std::function<void(std::vector<int16_t>&)> render_audio;
   int sample_rate;
   int channels;
-
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_send;
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
 
   std::string openh264;
 

@@ -19,6 +19,8 @@
   - @melpon
 - [CHANGE] multistream のオプションを削除
   - @torikizi
+- [CHANGE] FakeNetwork 系の機能を削除
+  - @melpon
 - [UPDATE] Sora C++ SDK を `2024.8.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
   - libwebrtc のバージョンを `m128.6613.2.0` に上げる

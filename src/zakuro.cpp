@@ -8,11 +8,13 @@
 #include <thread>
 #include <vector>
 
+// WebRTC
+#include <api/enable_media.h>
+
 // Sora C++ SDK
 #include <sora/camera_device_capturer.h>
 #include <sora/sora_video_encoder_factory.h>
 
-#include "enable_media_with_fake_call.h"
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
@@ -280,8 +282,6 @@ int Zakuro::Run() {
   vc_config.fixed_resolution = config_.fixed_resolution;
   vc_config.priority = config_.priority;
   vc_config.openh264 = config_.openh264;
-  vc_config.fake_network_send = config_.fake_network_send;
-  vc_config.fake_network_receive = config_.fake_network_receive;
   vc_config.initial_mute_video = config_.initial_mute_video;
   vc_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
@@ -365,8 +365,7 @@ int Zakuro::Run() {
                 std::move(sw_config));
         dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
 
-        EnableMediaWithFakeCall(dependencies, vc.fake_network_send,
-                                vc.fake_network_receive);
+        webrtc::EnableMedia(dependencies);
       };
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
