@@ -171,7 +171,7 @@ zakuro:
             # ordered: true
             # 何ミリ秒間再送するか
             # max_packet_lifetime 1
-            # 難解再送するか
+            # 何回再送するか
             # max_retransmits: 1
 ```
 
