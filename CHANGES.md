@@ -34,6 +34,11 @@
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 
+### misc
+
+- [CHANGE] GitHub Actions の ubuntu-latest を ubuntu-24.04 に変更
+  - @voluntas
+
 ## 2024.1.0
 
 **リリース日**: 2024-04-24
