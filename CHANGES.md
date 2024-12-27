@@ -23,14 +23,15 @@
   - @melpon
 - [UPDATE] Sora C++ SDK を `2024.8.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
-  - libwebrtc のバージョンを `m128.6613.2.0` に上げる
-  - Boost のバージョンを `1.86.0` に上げる
-  - CMake のバージョンを `3.30.3` に上げる
+  - libwebrtc のバージョンを `m132.6834.4.0` に上げる
+  - Boost のバージョンを `1.87.0` に上げる
+  - CMake のバージョンを `3.30.5` に上げる
+  - OpenH264 のバージョンを `2.5.0` に上げる
   - `#include <rtc_base/helpers.h>` を `#include <rtc_base/crypto_random.h>` に置き換える
   - `boost::json::error_code` を `boost::system::error_code` に置き換える
-  - @melpon @voluntas
+  - @melpon @voluntas @zztkm
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
-  - @melpon, torikizi
+  - @melpon, @torikizi
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 
