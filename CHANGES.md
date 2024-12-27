@@ -21,9 +21,9 @@
   - @torikizi
 - [CHANGE] FakeNetwork 系の機能を削除
   - @melpon
-- [CHANGE] CMakeLists の依存から libva と libdrm を削除する
+- [UPDATE] CMakeLists の依存から libva と libdrm を削除する
   - @zztkm
-- [CHANGE] CI の Ubuntu で libba と libdrm をインストールしないようにする
+- [UPDATE] CI の Ubuntu で libba と libdrm をインストールしないようにする
 - [UPDATE] Sora C++ SDK を `2024.8.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
   - libwebrtc のバージョンを `m132.6834.4.0` に上げる
