@@ -21,11 +21,6 @@ find_package(Blend2D REQUIRED)
 find_package(CLI11 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
-if (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
-  find_package(Libva REQUIRED)
-  find_package(Libdrm REQUIRED)
-endif()
-
 add_executable(zakuro)
 
 set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
