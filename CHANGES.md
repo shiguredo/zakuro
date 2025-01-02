@@ -33,7 +33,7 @@
   - `#include <rtc_base/helpers.h>` を `#include <rtc_base/crypto_random.h>` に置き換える
   - `boost::json::error_code` を `boost::system::error_code` に置き換える
   - `absl::nullopt` を `std::nullopt` に置き換える
-  - ZakuroConfig の `sora_data_channel_signaling` と `sora_ignore_disconnect_websocket` の型を `std::optional<bool>` に置き換える
+  - `boost::optional` を std::optional` に置き換える
   - @melpon @voluntas @zztkm
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon, @torikizi
