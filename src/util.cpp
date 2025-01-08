@@ -12,8 +12,6 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/json.hpp>
-#include <boost/optional.hpp>
-#include <boost/optional/optional_io.hpp>
 #include <boost/preprocessor/stringize.hpp>
 
 // WebRTC
@@ -85,8 +83,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   auto bool_map = std::vector<std::pair<std::string, bool>>(
       {{"false", false}, {"true", true}});
   auto optional_bool_map =
-      std::vector<std::pair<std::string, boost::optional<bool>>>(
-          {{"false", false}, {"true", true}, {"none", boost::none}});
+      std::vector<std::pair<std::string, std::optional<bool>>>(
+          {{"false", false}, {"true", true}, {"none", std::nullopt}});
 
   app.add_option("--name", config.name, "Client Name");
   app.add_option("--vcs", config.vcs, "Virtual Clients (default: 1)")
