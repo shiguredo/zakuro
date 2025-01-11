@@ -36,12 +36,14 @@
   - `boost::optional` を `std::optional` に置き換える
   - @melpon @voluntas @zztkm
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
-  - @melpon, @torikizi
+  - @melpon @torikizi @voluntas
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 
 ### misc
 
+- [ADD] canary.py を追加
+  - @voluntas
 - [CHANGE] GitHub Actions の ubuntu-latest を ubuntu-24.04 に変更
   - @voluntas
 
