@@ -5,6 +5,9 @@
 #include <cstdlib>
 #include <string>
 
+// WebRTC
+#include <api/rtp_parameters.h>
+
 // Boost
 #include <boost/json.hpp>
 #include <boost/optional.hpp>
@@ -42,6 +45,7 @@ struct ZakuroConfig {
   std::string client_key;
   bool initial_mute_video = false;
   bool initial_mute_audio = false;
+  std::optional<webrtc::DegradationPreference> degradation_preference;
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;

@@ -403,6 +403,7 @@ int Zakuro::Run() {
       config_.sora_ignore_disconnect_websocket;
   sora_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
   sora_config.data_channels = dcs.schannels;
+  sora_config.degradation_preference = config_.degradation_preference;
 
   std::vector<VirtualClientConfig> vc_configs;
   for (int i = 0; i < config_.vcs; i++) {

@@ -165,6 +165,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--initial-mute-audio", config.initial_mute_audio,
                  "Mute audio initialy (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  auto degradation_preference_map =
+      std::vector<std::pair<std::string, webrtc::DegradationPreference>>(
+          {{"disabled", webrtc::DegradationPreference::DISABLED},
+           {"maintain_framerate",
+            webrtc::DegradationPreference::MAINTAIN_FRAMERATE},
+           {"maintain_resolution",
+            webrtc::DegradationPreference::MAINTAIN_RESOLUTION},
+           {"balanced", webrtc::DegradationPreference::BALANCED}});
+  app.add_option("--degradation-preference", config.degradation_preference,
+                 "Degradation preference")
+      ->transform(CLI::CheckedTransformer(degradation_preference_map,
+                                          CLI::ignore_case));
 
   // Sora 系オプション
   app.add_option("--sora-signaling-url", config.sora_signaling_urls,
@@ -376,23 +388,23 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     }
   }
 
-#define DEF_SCALAR(x, prefix, key, type, type_name)                                       \
-  try {                                                                                   \
-    const YAML::Node& node = x[key];                                                      \
-    if (node) {                                                                           \
-      if (!node.IsScalar()) {                                                             \
+#define DEF_SCALAR(x, prefix, key, type, type_name)                            \
+  try {                                                                        \
+    const YAML::Node& node = x[key];                                           \
+    if (node) {                                                                \
+      if (!node.IsScalar()) {                                                  \
         std::cerr << "\"" key "\" の値は " type_name " である必要があります。" \
-                  << std::endl;                                                           \
-        has_error = true;                                                                 \
-      } else {                                                                            \
-        args.push_back("--" prefix key);                                                  \
-        args.push_back(ConvertEnv<type>(node, envs));                                     \
-      }                                                                                   \
-    }                                                                                     \
-  } catch (YAML::BadConversion & e) {                                                     \
+                  << std::endl;                                                \
+        has_error = true;                                                      \
+      } else {                                                                 \
+        args.push_back("--" prefix key);                                       \
+        args.push_back(ConvertEnv<type>(node, envs));                          \
+      }                                                                        \
+    }                                                                          \
+  } catch (YAML::BadConversion & e) {                                          \
     std::cerr << "\"" key "\" の値は " type_name " である必要があります。"     \
-              << std::endl;                                                               \
-    has_error = true;                                                                     \
+              << std::endl;                                                    \
+    has_error = true;                                                          \
   }
 
 #define DEF_STRING(x, prefix, key) \
@@ -401,24 +413,24 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
 #define DEF_DOUBLE(x, prefix, key) DEF_SCALAR(x, prefix, key, double, "実数")
 #define DEF_BOOLEAN(x, prefix, key) DEF_SCALAR(x, prefix, key, bool, "bool値")
 
-#define DEF_FLAG(x, prefix, key)                                                       \
-  try {                                                                                \
-    const YAML::Node& node = x[key];                                                   \
-    if (node) {                                                                        \
-      if (!node.IsScalar()) {                                                          \
+#define DEF_FLAG(x, prefix, key)                                        \
+  try {                                                                 \
+    const YAML::Node& node = x[key];                                    \
+    if (node) {                                                         \
+      if (!node.IsScalar()) {                                           \
         std::cerr << "\"" key "\" の値は bool値 である必要があります。" \
-                  << std::endl;                                                        \
-        has_error = true;                                                              \
-      } else {                                                                         \
-        if (node.as<bool>()) {                                                         \
-          args.push_back("--" prefix key);                                             \
-        }                                                                              \
-      }                                                                                \
-    }                                                                                  \
-  } catch (YAML::BadConversion & e) {                                                  \
+                  << std::endl;                                         \
+        has_error = true;                                               \
+      } else {                                                          \
+        if (node.as<bool>()) {                                          \
+          args.push_back("--" prefix key);                              \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  } catch (YAML::BadConversion & e) {                                   \
     std::cerr << "\"" key "\" の値は bool値 である必要があります。"     \
-              << std::endl;                                                            \
-    has_error = true;                                                                  \
+              << std::endl;                                             \
+    has_error = true;                                                   \
   }
 
   for (int i = 0; i < instance_num; i++) {
@@ -452,6 +464,7 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "client-key");
     DEF_BOOLEAN(inst, "", "initial-mute-video");
     DEF_BOOLEAN(inst, "", "initial-mute-audio");
+    DEF_STRING(inst, "", "degradation-preference");
 
     const YAML::Node& sora = inst["sora"];
     if (sora) {
