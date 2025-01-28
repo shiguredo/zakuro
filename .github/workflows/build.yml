@@ -67,3 +67,4 @@ jobs:
         with:
           files:
             ${{ steps.env.outputs.package_paths }}
+          prerelease: ${{ contains(github.ref, 'canary') }}

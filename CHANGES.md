@@ -48,6 +48,8 @@
   - @voluntas
 - [CHANGE] GitHub Actions の ubuntu-latest を ubuntu-24.04 に変更
   - @voluntas
+- [FIX] canary リリースの時は prerelease フラグをつける
+  - @miosakuma
 
 ## 2024.1.0
 
