@@ -8,29 +8,30 @@
 
 We will not respond to PRs or issues that have not been discussed on Discord. Also, Discord is only available in Japanese.
 
-Please read https://github.com/shiguredo/oss before use.
+Please read <https://github.com/shiguredo/oss> before use.
 
 ## 時雨堂のオープンソースソフトウェアについて
 
-利用前に https://github.com/shiguredo/oss をお読みください。
+利用前に <https://github.com/shiguredo/oss> をお読みください。
 
 ## WebRTC Load Testing Tool Zakuro について
 
-WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora 向けの WebRTC 負荷試験ツールです。
+WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/src.git/) を利用した [WebRTC SFU Sora](https://sora.shiguredo.jp/) 向けの WebRTC 負荷試験ツールです。
 
 ## 特徴
 
 - 最新の WebRTC SFU Sora に対応
-- YAML による設定ファイルへ対応
+- YAML によるシナリオファイルへ対応
 - 動的インスタンス作成へ対応
 - クラスター機能への対応
+  - 複数シグナリング URL を指定できる
 - フェイク音声/映像に対応
-- データチャネルメッセージング機能へ対応
-- クライアント証明書へ対応
+- リアルタイムメッセージング機能へ対応
+- シグナリングのクライアント証明書 (mTLS) へ対応
 - 最新の libwebrtc へ対応
-- OpenH264 対応
-- Sora C++ SDK ベース
-- 期間繰り返し
+- [OpenH264](https://www.openh264.org/) を利用した H.264 コーデックに対応
+- [Sora C++ SDK](https://github.com/shiguredo/sora-cpp-sdk) ベース
+- 期間繰り返し対応
   - 30 秒負荷かけて切断を繰り返すなど
 
 ## 使ってみる
@@ -150,8 +151,8 @@ Options:
 Apache License 2.0
 
 ```
-Copyright 2020-2024, Wandbox LLC (Original Author)
-Copyright 2020-2024, Shiguredo Inc.
+Copyright 2020-2025, Wandbox LLC (Original Author)
+Copyright 2020-2025, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -168,9 +169,9 @@ limitations under the License.
 
 ## OpenH264
 
-https://www.openh264.org/BINARY_LICENSE.txt
+<https://www.openh264.org/BINARY_LICENSE.txt>
 
-```
+```text
 "OpenH264 Video Codec provided by Cisco Systems, Inc."
 ```
 
