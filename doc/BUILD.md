@@ -9,7 +9,7 @@ $ git clone git@github.com:shiguredo/zakuro.git
 ## 必要なライブラリのインストール
 
 ```console
-$ sudo apt install libxext-dev libx11-dev libdrm-dev libva-dev pkg-config python3
+$ sudo apt install libxext-dev libx11-dev python3
 ```
 
 ## Ubuntu 24.04 (x86_64) 向けバイナリを作成する
