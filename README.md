@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m122.6261-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/6261)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m132.6834-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/6834)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -81,7 +81,7 @@ Options:
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
   --sandstorm                 Fake Sandstorm Video (default: false)
-  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
+  --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
   --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT]) (default: VGA)
   --framerate INT:INT in [1 - 60]
                               Video framerate (default: 30)
@@ -98,6 +98,8 @@ Options:
                               Mute video initialy (default: false)
   --initial-mute-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Mute audio initialy (default: false)
+  --degradation-preference ENUM:value in {disabled->0,maintain_framerate->1,maintain_resolution->2,balanced->3} OR {0,1,2,3}
+                              Degradation preference
   --sora-signaling-url TEXT ...
                               Signaling URLs
   --sora-disable-signaling-url-randomization
