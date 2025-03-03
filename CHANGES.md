@@ -25,7 +25,7 @@
   - @melpon
 - [UPDATE] CMakeLists の依存から libva と libdrm を削除する
   - @zztkm
-- [UPDATE] CI の Ubuntu で libba と libdrm をインストールしないようにする
+- [UPDATE] CI の Ubuntu で libva と libdrm をインストールしないようにする
 - [UPDATE] Sora C++ SDK を `2025.1.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
   - libwebrtc のバージョンを `m132.6834.5.2` に上げる
