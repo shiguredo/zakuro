@@ -21,8 +21,6 @@
   - @torikizi
 - [CHANGE] FakeNetwork 系の機能を削除
   - @melpon
-- [ADD] `--degradation-preference` 引数を追加
-  - @melpon
 - [UPDATE] CMakeLists の依存から libva と libdrm を削除する
   - @zztkm
 - [UPDATE] CI の Ubuntu で libva と libdrm をインストールしないようにする
@@ -40,6 +38,8 @@
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon @torikizi @voluntas
 - [ADD] Ubuntu 24.04 のビルドを追加
+  - @melpon
+- [ADD] `--degradation-preference` 引数を追加
   - @melpon
 
 ### misc
