@@ -41,6 +41,9 @@
   - @melpon
 - [ADD] `--degradation-preference` 引数を追加
   - @melpon
+- [FIX] Lyra 用の設定を削除する
+  - 2024.1.0 で機能廃止済であるため残った設定を削除
+  - @miosakuma
 
 ### misc
 
