@@ -57,10 +57,6 @@ struct ZakuroConfig {
   // 空文字の場合コーデックは Sora 側で決める
   std::string sora_video_codec_type = "";
   std::string sora_audio_codec_type = "";
-  // Lyra 用の設定
-  int sora_audio_codec_lyra_bit_rate = 0;
-  std::optional<bool> sora_audio_codec_lyra_usedtx;
-  bool sora_check_lyra_version = false;
   // 0 の場合ビットレートは Sora 側で決める
   int sora_video_bit_rate = 0;
   int sora_audio_bit_rate = 0;

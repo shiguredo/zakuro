@@ -37,6 +37,9 @@
   - @melpon @voluntas @zztkm
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon @torikizi @voluntas
+- [UPDATE] Lyra 用の設定を削除する
+  - 2024.1.0 で機能廃止済であるため残った設定を削除
+  - @miosakuma
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 - [ADD] `--degradation-preference` 引数を追加
