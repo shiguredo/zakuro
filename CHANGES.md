@@ -24,16 +24,21 @@
 - [UPDATE] CMakeLists の依存から libva と libdrm を削除する
   - @zztkm
 - [UPDATE] CI の Ubuntu で libva と libdrm をインストールしないようにする
-- [UPDATE] Sora C++ SDK を `2025.1.0` に上げる
+- [UPDATE] Sora C++ SDK を `2025.2.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
-  - libwebrtc のバージョンを `m132.6834.5.2` に上げる
+  - libwebrtc のバージョンを `m132.6834.5.8` に上げる
   - Boost のバージョンを `1.87.0` に上げる
-  - CMake のバージョンを `3.30.5` に上げる
-  - OpenH264 のバージョンを `2.5.0` に上げる
+  - CMake のバージョンを `3.31.6` に上げる
+  - OpenH264 のバージョンを `2.6.0` に上げる
+  - Blend2D のバージョンを `ca5403c1d02b2bc9d2de581e4cb13e5e80f33860` に上げる
+  - AsmJit のバージョンを `2e93826348d6cd1325a8b1f7629e193c58332da9` に上げる
   - `#include <rtc_base/helpers.h>` を `#include <rtc_base/crypto_random.h>` に置き換える
   - `boost::json::error_code` を `boost::system::error_code` に置き換える
   - `absl::nullopt` を `std::nullopt` に置き換える
   - `boost::optional` を `std::optional` に置き換える
+  - `SoraVideoEncoderFactoryConfig` の `use_simulcast_adapter` を削除
+  - `VideoCodecPreference` を利用して `use_hardware_encoder` を削除
+  -  利用するエンコーダ/デコーダを `VideoCodecPreference` で指定する
   - @melpon @voluntas @zztkm
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon @torikizi @voluntas

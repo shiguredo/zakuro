@@ -311,7 +311,6 @@ int Zakuro::Run() {
 
   // Sora client context
   sora::SoraClientContextConfig context_config;
-  context_config.use_hardware_encoder = false;
   context_config.use_audio_device = false;
 
   context_config.configure_dependencies =
@@ -356,17 +355,20 @@ int Zakuro::Run() {
         dependencies.worker_thread->BlockingCall(
             [&] { dependencies.adm = adm; });
 
-        auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig(
-            vc.openh264.empty() ? std::optional<std::string>(std::nullopt)
-                                : std::optional<std::string>(vc.openh264));
-        sw_config.use_simulcast_adapter = true;
-        dependencies.video_encoder_factory =
-            absl::make_unique<sora::SoraVideoEncoderFactory>(
-                std::move(sw_config));
-        dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
-
         webrtc::EnableMedia(dependencies);
       };
+
+  if (!vc_config.openh264.empty()) {
+    context_config.video_codec_factory_config.capability_config.openh264_path = vc_config.openh264;
+    auto& preference =
+      context_config.video_codec_factory_config.preference.emplace();
+    auto capability = sora::GetVideoCodecCapability(
+      context_config.video_codec_factory_config.capability_config);
+    preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kInternal));
+    preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kCiscoOpenH264));
+  }
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
 
