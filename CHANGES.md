@@ -24,10 +24,10 @@
 - [UPDATE] CMakeLists の依存から libva と libdrm を削除する
   - @zztkm
 - [UPDATE] CI の Ubuntu で libva と libdrm をインストールしないようにする
-- [UPDATE] Sora C++ SDK を `2025.2.0` に上げる
+- [UPDATE] Sora C++ SDK を `2025.3.0-canary.8` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
-  - libwebrtc のバージョンを `m132.6834.5.8` に上げる
-  - Boost のバージョンを `1.87.0` に上げる
+  - libwebrtc のバージョンを `m136.7103.0.0` に上げる
+  - Boost のバージョンを `1.88.0` に上げる
   - CMake のバージョンを `3.31.6` に上げる
   - OpenH264 のバージョンを `2.6.0` に上げる
   - Blend2D のバージョンを `ca5403c1d02b2bc9d2de581e4cb13e5e80f33860` に上げる
@@ -39,6 +39,7 @@
   - `SoraVideoEncoderFactoryConfig` の `use_simulcast_adapter` を削除
   - `VideoCodecPreference` を利用して `use_hardware_encoder` を削除
   -  利用するエンコーダ/デコーダを `VideoCodecPreference` で指定する
+  - `NopVideoDecoder` を `VideoCodecPreference` の仕組みに乗せる
   - @melpon @voluntas @zztkm
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon @torikizi @voluntas

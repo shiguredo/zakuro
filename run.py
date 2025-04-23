@@ -21,7 +21,6 @@ from buildbase import (
     get_sora_info,
     get_webrtc_info,
     install_blend2d,
-    install_boost,
     install_cli11,
     install_cmake,
     install_llvm,
@@ -138,17 +137,6 @@ def install_deps(
                 "buildtools_commit": buildtools_commit,
             }
             install_llvm(**install_llvm_args)
-
-        # Boost
-        install_boost_args = {
-            "version": version["BOOST_VERSION"],
-            "version_file": os.path.join(install_dir, "boost.version"),
-            "source_dir": source_dir,
-            "install_dir": install_dir,
-            "sora_version": version["SORA_CPP_SDK_VERSION"],
-            "platform": platform,
-        }
-        install_boost(**install_boost_args)
 
         # CMake
         install_cmake_args = {
