@@ -372,18 +372,18 @@ int Zakuro::Run() {
     return std::vector<sora::VideoCodecCapability::Engine>{engine};
   };
 
+  if (!vc_config.openh264.empty()) {
+    context_config.video_codec_factory_config.capability_config.openh264_path =
+        vc_config.openh264;
+  }
   auto capability = sora::GetVideoCodecCapability(
       context_config.video_codec_factory_config.capability_config);
   auto& preference =
       context_config.video_codec_factory_config.preference.emplace();
   preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
       capability, sora::VideoCodecImplementation::kInternal));
-  if (!vc_config.openh264.empty()) {
-    context_config.video_codec_factory_config.capability_config.openh264_path =
-        vc_config.openh264;
-    preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-        capability, sora::VideoCodecImplementation::kCiscoOpenH264));
-  }
+  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kCiscoOpenH264));
   preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
       capability, sora::VideoCodecImplementation::kCustom_1));
   context_config.video_codec_factory_config.create_video_decoder =
