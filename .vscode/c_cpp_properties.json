@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Ubuntu 22.04",
             "includePath": [
                 "/usr/include",
                 "${workspaceFolder}/_build/ubuntu-22.04_x86_64/release/zakuro",
@@ -28,6 +28,39 @@
                 "RTC_ENABLE_H265"
             ],
             "compilerPath": "${workspaceFolder}/_install/ubuntu-22.04_x86_64/release/llvm/clang/bin/clang++",
+            "compilerArgs": ["-nostdinc++"],
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-clang-x64"
+        },
+        {
+            "name": "Ubuntu 24.04",
+            "includePath": [
+                "/usr/include",
+                "${workspaceFolder}/_build/ubuntu-24.04_x86_64/release/zakuro",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/sora/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/webrtc/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/webrtc/include/third_party/abseil-cpp",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/webrtc/include/third_party/boringssl/src/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/webrtc/include/third_party/libyuv/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/llvm/libcxx/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/boost/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/cli11/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/blend2d/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/openh264/include",
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/yaml/include"
+            ],
+            "defines": [
+                "WEBRTC_POSIX",
+                "WEBRTC_LINUX",
+                "_LIBCPP_ABI_NAMESPACE=Cr",
+                "_LIBCPP_ABI_VERSION=2",
+                "_LIBCPP_DISABLE_AVAILABILITY",
+                "_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE",
+                "OPENSSL_IS_BORINGSSL",
+                "RTC_ENABLE_H265"
+            ],
+            "compilerPath": "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/llvm/clang/bin/clang++",
             "compilerArgs": ["-nostdinc++"],
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",

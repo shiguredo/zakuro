@@ -311,7 +311,6 @@ int Zakuro::Run() {
 
   // Sora client context
   sora::SoraClientContextConfig context_config;
-  context_config.use_hardware_encoder = false;
   context_config.use_audio_device = false;
 
   context_config.configure_dependencies =
@@ -356,16 +355,46 @@ int Zakuro::Run() {
         dependencies.worker_thread->BlockingCall(
             [&] { dependencies.adm = adm; });
 
-        auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig(
-            vc.openh264.empty() ? std::optional<std::string>(std::nullopt)
-                                : std::optional<std::string>(vc.openh264));
-        sw_config.use_simulcast_adapter = true;
-        dependencies.video_encoder_factory =
-            absl::make_unique<sora::SoraVideoEncoderFactory>(
-                std::move(sw_config));
-        dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
-
         webrtc::EnableMedia(dependencies);
+      };
+
+  context_config.video_codec_factory_config.capability_config
+      .get_custom_engines = []() {
+    // NopVideoDecoder
+    sora::VideoCodecCapability::Engine engine(
+        sora::VideoCodecImplementation::kCustom_1);
+    engine.parameters.custom_engine_name = "NopVideoDecoder";
+    engine.codecs.emplace_back(webrtc::kVideoCodecVP8, false, true);
+    engine.codecs.emplace_back(webrtc::kVideoCodecVP9, false, true);
+    engine.codecs.emplace_back(webrtc::kVideoCodecH264, false, true);
+    engine.codecs.emplace_back(webrtc::kVideoCodecH265, false, false);
+    engine.codecs.emplace_back(webrtc::kVideoCodecAV1, false, true);
+    return std::vector<sora::VideoCodecCapability::Engine>{engine};
+  };
+
+  if (!vc_config.openh264.empty()) {
+    context_config.video_codec_factory_config.capability_config.openh264_path =
+        vc_config.openh264;
+  }
+  auto capability = sora::GetVideoCodecCapability(
+      context_config.video_codec_factory_config.capability_config);
+  auto& preference =
+      context_config.video_codec_factory_config.preference.emplace();
+  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kInternal));
+  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kCiscoOpenH264));
+  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kCustom_1));
+  context_config.video_codec_factory_config.create_video_decoder =
+      [](sora::VideoCodecImplementation implementation,
+         const sora::VideoCodecCapabilityConfig& capability_config,
+         webrtc::VideoCodecType type) {
+        if (implementation == sora::VideoCodecImplementation::kCustom_1) {
+          return std::make_unique<NopVideoDecoder>();
+        } else {
+          throw "Invalid implementation";
+        }
       };
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
