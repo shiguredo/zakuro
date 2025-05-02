@@ -40,12 +40,16 @@
   - `VideoCodecPreference` を利用して `use_hardware_encoder` を削除
   -  利用するエンコーダ/デコーダを `VideoCodecPreference` で指定する
   - `NopVideoDecoder` を `VideoCodecPreference` の仕組みに乗せる
-  - @melpon @voluntas @zztkm
+  - @melpon @voluntas @zztkm @torikizi
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon @torikizi @voluntas
 - [UPDATE] Lyra 用の設定を削除する
   - 2024.1.0 で機能廃止済であるため残った設定を削除
   - @miosakuma
+- [UPDATE] YAML_CPP_VERSION を `2f86d13775d119edbb69af52e5f566fd65c6953b` にアップデート
+  - yaml-cpp は `0.8.0` 以降リリースされておらず、新しいバージョンの CMAKE と互換性が失われている
+  - リリースバージョン指定をやめ、GitHub の master ブランチのコミットを指定する
+  - @torikizi
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 - [ADD] `--degradation-preference` 引数を追加
