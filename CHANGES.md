@@ -24,14 +24,14 @@
 - [UPDATE] CMakeLists の依存から libva と libdrm を削除する
   - @zztkm
 - [UPDATE] CI の Ubuntu で libva と libdrm をインストールしないようにする
-- [UPDATE] Sora C++ SDK を `2025.3.0-canary.8` に上げる
+- [UPDATE] Sora C++ SDK を `2025.3.0` に上げる
   - それに伴って以下のライブラリのバージョンも上げる
   - libwebrtc のバージョンを `m136.7103.0.0` に上げる
   - Boost のバージョンを `1.88.0` に上げる
-  - CMake のバージョンを `3.31.6` に上げる
+  - CMake のバージョンを `4.0.1` に上げる
   - OpenH264 のバージョンを `2.6.0` に上げる
-  - Blend2D のバージョンを `ca5403c1d02b2bc9d2de581e4cb13e5e80f33860` に上げる
-  - AsmJit のバージョンを `2e93826348d6cd1325a8b1f7629e193c58332da9` に上げる
+  - Blend2D のバージョンを `717cbf4bc0f2ca164cf2f0c48f0497779241b6c5` に上げる
+  - AsmJit のバージョンを `e8c8e2e48a1a38154c8e8864eb3bc61db80a1e31` に上げる
   - `#include <rtc_base/helpers.h>` を `#include <rtc_base/crypto_random.h>` に置き換える
   - `boost::json::error_code` を `boost::system::error_code` に置き換える
   - `absl::nullopt` を `std::nullopt` に置き換える
@@ -40,12 +40,20 @@
   - `VideoCodecPreference` を利用して `use_hardware_encoder` を削除
   -  利用するエンコーダ/デコーダを `VideoCodecPreference` で指定する
   - `NopVideoDecoder` を `VideoCodecPreference` の仕組みに乗せる
-  - @melpon @voluntas @zztkm
+  - @melpon @voluntas @zztkm @torikizi
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
   - @melpon @torikizi @voluntas
 - [UPDATE] Lyra 用の設定を削除する
   - 2024.1.0 で機能廃止済であるため残った設定を削除
   - @miosakuma
+- [UPDATE] YAML_CPP_VERSION を `2f86d13775d119edbb69af52e5f566fd65c6953b` にアップデート
+  - yaml-cpp は `0.8.0` 以降リリースされておらず、新しいバージョンの CMAKE と互換性が失われている
+  - リリースバージョン指定をやめ、GitHub の master ブランチのコミットを指定する
+    - このコミットハッシュを指定した理由は以下の通り
+      - 対応時点での最新のコミットであること
+      - CMake 4.0.1 でビルドが通ることを確認できたこと
+  - この対応は yaml-cpp のリリースが行われるまでの暫定的な対応で、最新のリリースが行われた場合はバージョン指定に戻す
+  - @torikizi
 - [ADD] Ubuntu 24.04 のビルドを追加
   - @melpon
 - [ADD] `--degradation-preference` 引数を追加
