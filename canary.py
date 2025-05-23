@@ -11,12 +11,12 @@ def update_sdk_version(version_content: list[str]) -> Tuple[list[str], Optional[
     current_version: Optional[str] = None
     new_version: Optional[str] = None
 
-    for line in [line.strip() for line in version_content]:
-        parts = line.split("=")
-        if len(parts) == 2 and parts[0] == "ZAKURO_VERSION":
-            version = parts[1]
-            current_version = version
-            version_match = re.match(r"(\d{4}\.\d+\.\d+)(-canary\.(\d+))?", version)
+    # VERSIONファイルは単一行でバージョン番号のみを含む
+    if len(version_content) > 0:
+        version_line = version_content[0].strip()
+        if version_line:
+            current_version = version_line
+            version_match = re.match(r"(\d{4}\.\d+\.\d+)(-canary\.(\d+))?", version_line)
             if version_match:
                 major_minor_patch = version_match.group(1)
                 canary_part = version_match.groups()[1]
@@ -26,14 +26,16 @@ def update_sdk_version(version_content: list[str]) -> Tuple[list[str], Optional[
                     new_version = f"{major_minor_patch}-canary.0"
                 else:
                     new_version = f"{major_minor_patch}-canary.{int(canary_num) + 1}"
-                updated_content.append(f"ZAKURO_VERSION={new_version}")
+                updated_content = [new_version]
             else:
-                updated_content.append(line)
+                updated_content = [version_line]
         else:
-            updated_content.append(line)
+            raise ValueError("VERSION file is empty.")
+    else:
+        raise ValueError("VERSION file is empty.")
 
     if current_version is None:
-        raise ValueError("ZAKURO_VERSION not found in VERSION file.")
+        raise ValueError("Invalid version format in VERSION file.")
 
     print(f"Current version: {current_version}")
     print(f"New version: {new_version}")
@@ -53,7 +55,8 @@ def write_version_file(filename: str, updated_content: list[str], dry_run: bool)
             print(line)
     else:
         with open(filename, "w", encoding="utf-8") as file:
-            file.write("\n".join(updated_content) + "\n")
+            # 改行なしで単一のバージョン番号のみを書き込む
+            file.write(updated_content[0])
         print(f"{filename} has been updated.")
 
 
