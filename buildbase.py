@@ -169,8 +169,8 @@ def download(url: str, output_dir: Optional[str] = None, filename: Optional[str]
     return output_path
 
 
-def read_version_file(path: str) -> Dict[str, str]:
-    versions = {}
+def read_deps_file(path: str) -> Dict[str, str]:
+    deps = {}
 
     lines = open(path).readlines()
     for line in lines:
@@ -185,9 +185,9 @@ def read_version_file(path: str) -> Dict[str, str]:
             continue
 
         [a, b] = map(lambda x: x.strip(), line.split("=", 2))
-        versions[a] = b.strip('"')
+        deps[a] = b.strip('"')
 
-    return versions
+    return deps
 
 
 # dir 以下にある全てのファイルパスを、dir2 からの相対パスで返す
@@ -726,22 +726,22 @@ def install_sora(version, source_dir, install_dir, platform: str):
 
 
 def install_sora_and_deps(platform: str, source_dir: str, install_dir: str):
-    version = read_version_file("VERSION")
+    deps = read_deps_file("DEPS")
 
     # Boost
     install_boost_args = {
-        "version": version["BOOST_VERSION"],
+        "version": deps["BOOST_VERSION"],
         "version_file": os.path.join(install_dir, "boost.version"),
         "source_dir": source_dir,
         "install_dir": install_dir,
-        "sora_version": version["SORA_CPP_SDK_VERSION"],
+        "sora_version": deps["SORA_CPP_SDK_VERSION"],
         "platform": platform,
     }
     install_boost(**install_boost_args)
 
     # Sora C++ SDK
     install_sora_args = {
-        "version": version["SORA_CPP_SDK_VERSION"],
+        "version": deps["SORA_CPP_SDK_VERSION"],
         "version_file": os.path.join(install_dir, "sora.version"),
         "source_dir": source_dir,
         "install_dir": install_dir,
