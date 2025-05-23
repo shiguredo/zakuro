@@ -29,6 +29,7 @@ from buildbase import (
     install_webrtc,
     install_yaml,
     mkdir_p,
+    read_deps_file,
     read_version_file,
     rm_rf,
 )
@@ -85,12 +86,12 @@ def install_deps(
     local_sora_cpp_sdk_args: List[str],
 ):
     with cd(BASE_DIR):
-        version = read_version_file("VERSION")
+        deps = read_deps_file("DEPS")
 
         # WebRTC
         if local_webrtc_build_dir is None:
             install_webrtc_args = {
-                "version": version["WEBRTC_BUILD_VERSION"],
+                "version": deps["WEBRTC_BUILD_VERSION"],
                 "version_file": os.path.join(install_dir, "webrtc.version"),
                 "source_dir": source_dir,
                 "install_dir": install_dir,
@@ -114,7 +115,7 @@ def install_deps(
             platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64")
             and local_webrtc_build_dir is None
         ):
-            webrtc_version = read_version_file(webrtc_info.version_file)
+            webrtc_version = read_deps_file(webrtc_info.version_file)
 
             # LLVM
             tools_url = webrtc_version["WEBRTC_SRC_TOOLS_URL"]
@@ -140,7 +141,7 @@ def install_deps(
 
         # CMake
         install_cmake_args = {
-            "version": version["CMAKE_VERSION"],
+            "version": deps["CMAKE_VERSION"],
             "version_file": os.path.join(install_dir, "cmake.version"),
             "source_dir": source_dir,
             "install_dir": install_dir,
@@ -171,7 +172,7 @@ def install_deps(
 
         # CLI11
         install_cli11_args = {
-            "version": version["CLI11_VERSION"],
+            "version": deps["CLI11_VERSION"],
             "version_file": os.path.join(install_dir, "cli11.version"),
             "install_dir": install_dir,
         }
@@ -181,14 +182,14 @@ def install_deps(
 
         # Blend2D
         install_blend2d_args = {
-            "version": version["BLEND2D_VERSION"] + "-" + version["ASMJIT_VERSION"],
+            "version": deps["BLEND2D_VERSION"] + "-" + deps["ASMJIT_VERSION"],
             "version_file": os.path.join(install_dir, "blend2d.version"),
             "configuration": "Debug" if debug else "Release",
             "source_dir": source_dir,
             "build_dir": build_dir,
             "install_dir": install_dir,
-            "blend2d_version": version["BLEND2D_VERSION"],
-            "asmjit_version": version["ASMJIT_VERSION"],
+            "blend2d_version": deps["BLEND2D_VERSION"],
+            "asmjit_version": deps["ASMJIT_VERSION"],
             "ios": False,
             "cmake_args": cmake_args,
         }
@@ -196,7 +197,7 @@ def install_deps(
 
         # OpenH264
         install_openh264_args = {
-            "version": version["OPENH264_VERSION"],
+            "version": deps["OPENH264_VERSION"],
             "version_file": os.path.join(install_dir, "openh264.version"),
             "source_dir": source_dir,
             "install_dir": install_dir,
@@ -206,7 +207,7 @@ def install_deps(
 
         # yaml-cpp
         install_yaml_args = {
-            "version": version["YAML_CPP_VERSION"],
+            "version": deps["YAML_CPP_VERSION"],
             "version_file": os.path.join(install_dir, "yaml.version"),
             "source_dir": source_dir,
             "build_dir": build_dir,
@@ -264,12 +265,11 @@ def main():
         webrtc_info = get_webrtc_info(
             platform, args.local_webrtc_build_dir, install_dir, args.debug
         )
-        webrtc_version = read_version_file(webrtc_info.version_file)
+        webrtc_version = read_deps_file(webrtc_info.version_file)
         sora_info = get_sora_info(platform, args.local_sora_cpp_sdk_dir, install_dir, args.debug)
 
         with cd(BASE_DIR):
-            version = read_version_file("VERSION")
-            zakuro_version = version["ZAKURO_VERSION"]
+            zakuro_version = read_version_file("VERSION")
             zakuro_commit = cmdcap(["git", "rev-parse", "HEAD"])
 
         cmake_args = []
@@ -304,8 +304,7 @@ def main():
         rm_rf(os.path.join(package_dir, "zakuro.env"))
 
         with cd(BASE_DIR):
-            version = read_version_file("VERSION")
-            zakuro_version = version["ZAKURO_VERSION"]
+            zakuro_version = read_version_file("VERSION")
 
         mkdir_p(zakuro_package_dir)
         with cd(zakuro_package_dir):
