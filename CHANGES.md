@@ -38,7 +38,7 @@
   - `boost::optional` を `std::optional` に置き換える
   - `SoraVideoEncoderFactoryConfig` の `use_simulcast_adapter` を削除
   - `VideoCodecPreference` を利用して `use_hardware_encoder` を削除
-  -  利用するエンコーダ/デコーダを `VideoCodecPreference` で指定する
+  - 利用するエンコーダ/デコーダを `VideoCodecPreference` で指定する
   - `NopVideoDecoder` を `VideoCodecPreference` の仕組みに乗せる
   - @melpon @voluntas @zztkm @torikizi
 - [UPDATE] Blend2D, AsmJit を最新版に上げる
@@ -61,10 +61,14 @@
 
 ### misc
 
-- [ADD] canary.py を追加
+- [CHANGE] VERSION ファイルを Zakuro のバージョンにのみ利用するようにする
   - @voluntas
 - [CHANGE] GitHub Actions の ubuntu-latest を ubuntu-24.04 に変更
   - @voluntas
+- [ADD] 依存ライブラリ用に DEPS ファイルを追加
+  - @voluntas
+- [ADD] canary.py を追加
+  - @voluntas @torikizi
 - [FIX] canary リリースの時は prerelease フラグをつける
   - @miosakuma
 
