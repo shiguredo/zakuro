@@ -58,9 +58,7 @@ jobs:
           platform: ubuntu-24.04_x86_64
       - name: Env to output
         run: |
-          echo "package_paths<<EOF" >> $GITHUB_OUTPUT
-          cat package_paths.env >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "package_paths=$(cat package_paths.env | tr '\n' ' ')" >> $GITHUB_OUTPUT
         id: env
       - name: Release (Stable)
         if: ${{ !contains(github.ref, 'canary') }}
