@@ -36,7 +36,7 @@ struct FakeVideoCapturerConfig : sora::ScalableVideoTrackSourceConfig {
 
 class FakeVideoCapturer : public sora::ScalableVideoTrackSource {
   FakeVideoCapturer(FakeVideoCapturerConfig config);
-  friend class rtc::RefCountedObject<FakeVideoCapturer>;
+  friend class webrtc::RefCountedObject<FakeVideoCapturer>;
 
  public:
   static rtc::scoped_refptr<FakeVideoCapturer> Create(

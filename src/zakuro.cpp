@@ -8,18 +8,18 @@
 #include <thread>
 #include <vector>
 
+// WebRTC
+#include <api/enable_media.h>
+
 // Sora C++ SDK
 #include <sora/camera_device_capturer.h>
 #include <sora/sora_video_encoder_factory.h>
 
-#include "dynamic_h264_video_encoder.h"
-#include "enable_media_with_fake_call.h"
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "nop_video_decoder.h"
 #include "scenario_player.h"
-#include "sctp_transport_factory.h"
 #include "util.h"
 #include "virtual_client.h"
 #include "wav_reader.h"
@@ -282,8 +282,6 @@ int Zakuro::Run() {
   vc_config.fixed_resolution = config_.fixed_resolution;
   vc_config.priority = config_.priority;
   vc_config.openh264 = config_.openh264;
-  vc_config.fake_network_send = config_.fake_network_send;
-  vc_config.fake_network_receive = config_.fake_network_receive;
   vc_config.initial_mute_video = config_.initial_mute_video;
   vc_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
@@ -313,7 +311,6 @@ int Zakuro::Run() {
 
   // Sora client context
   sora::SoraClientContextConfig context_config;
-  context_config.use_hardware_encoder = false;
   context_config.use_audio_device = false;
 
   context_config.configure_dependencies =
@@ -358,25 +355,46 @@ int Zakuro::Run() {
         dependencies.worker_thread->BlockingCall(
             [&] { dependencies.adm = adm; });
 
-        auto sw_config = sora::GetSoftwareOnlyVideoEncoderFactoryConfig();
-        sw_config.use_simulcast_adapter = true;
-        sw_config.encoders.push_back(sora::VideoEncoderConfig(
-            webrtc::kVideoCodecH264,
-            [openh264 = vc.openh264](
-                auto format) -> std::unique_ptr<webrtc::VideoEncoder> {
-              return webrtc::DynamicH264VideoEncoder::Create(
-                  cricket::CreateVideoCodec(format), openh264);
-            }));
-        dependencies.video_encoder_factory =
-            absl::make_unique<sora::SoraVideoEncoderFactory>(
-                std::move(sw_config));
-        dependencies.video_decoder_factory.reset(new NopVideoDecoderFactory());
+        webrtc::EnableMedia(dependencies);
+      };
 
-        dependencies.sctp_factory.reset(
-            new SctpTransportFactory(dependencies.network_thread));
+  context_config.video_codec_factory_config.capability_config
+      .get_custom_engines = []() {
+    // NopVideoDecoder
+    sora::VideoCodecCapability::Engine engine(
+        sora::VideoCodecImplementation::kCustom_1);
+    engine.parameters.custom_engine_name = "NopVideoDecoder";
+    engine.codecs.emplace_back(webrtc::kVideoCodecVP8, false, true);
+    engine.codecs.emplace_back(webrtc::kVideoCodecVP9, false, true);
+    engine.codecs.emplace_back(webrtc::kVideoCodecH264, false, true);
+    engine.codecs.emplace_back(webrtc::kVideoCodecH265, false, true);
+    engine.codecs.emplace_back(webrtc::kVideoCodecAV1, false, true);
+    return std::vector<sora::VideoCodecCapability::Engine>{engine};
+  };
 
-        EnableMediaWithFakeCall(dependencies, vc.fake_network_send,
-                                vc.fake_network_receive);
+  if (!vc_config.openh264.empty()) {
+    context_config.video_codec_factory_config.capability_config.openh264_path =
+        vc_config.openh264;
+  }
+  auto capability = sora::GetVideoCodecCapability(
+      context_config.video_codec_factory_config.capability_config);
+  auto& preference =
+      context_config.video_codec_factory_config.preference.emplace();
+  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kInternal));
+  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kCiscoOpenH264));
+  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+      capability, sora::VideoCodecImplementation::kCustom_1));
+  context_config.video_codec_factory_config.create_video_decoder =
+      [](sora::VideoCodecImplementation implementation,
+         const sora::VideoCodecCapabilityConfig& capability_config,
+         webrtc::VideoCodecType type) {
+        if (implementation == sora::VideoCodecImplementation::kCustom_1) {
+          return std::make_unique<NopVideoDecoder>();
+        } else {
+          throw "Invalid implementation";
+        }
       };
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
@@ -401,7 +419,6 @@ int Zakuro::Run() {
   sora_config.signaling_notify_metadata =
       config_.sora_signaling_notify_metadata;
   sora_config.role = config_.sora_role;
-  sora_config.multistream = config_.sora_multistream;
   sora_config.simulcast = config_.sora_simulcast;
   sora_config.simulcast_rid = config_.sora_simulcast_rid;
   sora_config.spotlight = config_.sora_spotlight;
@@ -415,6 +432,7 @@ int Zakuro::Run() {
       config_.sora_ignore_disconnect_websocket;
   sora_config.disconnect_wait_timeout = config_.sora_disconnect_wait_timeout;
   sora_config.data_channels = dcs.schannels;
+  sora_config.degradation_preference = config_.degradation_preference;
 
   std::vector<VirtualClientConfig> vc_configs;
   for (int i = 0; i < config_.vcs; i++) {

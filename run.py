@@ -21,7 +21,6 @@ from buildbase import (
     get_sora_info,
     get_webrtc_info,
     install_blend2d,
-    install_boost,
     install_cli11,
     install_cmake,
     install_llvm,
@@ -30,6 +29,7 @@ from buildbase import (
     install_webrtc,
     install_yaml,
     mkdir_p,
+    read_deps_file,
     read_version_file,
     rm_rf,
 )
@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.DEBUG)
 def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
     # クロスコンパイルの設定。
     # 本来は toolchain ファイルに書く内容
-    if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"):
+    if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
         return [
             f"-DCMAKE_C_COMPILER={webrtc_info.clang_dir}/bin/clang",
             f"-DCMAKE_CXX_COMPILER={webrtc_info.clang_dir}/bin/clang++",
@@ -80,18 +80,18 @@ def install_deps(
     build_dir: str,
     install_dir: str,
     debug: bool,
-    webrtc_build_dir: Optional[str],
-    webrtc_build_args: List[str],
-    sora_dir: Optional[str],
-    sora_args: List[str],
+    local_webrtc_build_dir: Optional[str],
+    local_webrtc_build_args: List[str],
+    local_sora_cpp_sdk_dir: Optional[str],
+    local_sora_cpp_sdk_args: List[str],
 ):
     with cd(BASE_DIR):
-        version = read_version_file("VERSION")
+        deps = read_deps_file("DEPS")
 
         # WebRTC
-        if webrtc_build_dir is None:
+        if local_webrtc_build_dir is None:
             install_webrtc_args = {
-                "version": version["WEBRTC_BUILD_VERSION"],
+                "version": deps["WEBRTC_BUILD_VERSION"],
                 "version_file": os.path.join(install_dir, "webrtc.version"),
                 "source_dir": source_dir,
                 "install_dir": install_dir,
@@ -102,17 +102,20 @@ def install_deps(
         else:
             build_webrtc_args = {
                 "platform": platform,
-                "webrtc_build_dir": webrtc_build_dir,
-                "webrtc_build_args": webrtc_build_args,
+                "local_webrtc_build_dir": local_webrtc_build_dir,
+                "local_webrtc_build_args": local_webrtc_build_args,
                 "debug": debug,
             }
 
             build_webrtc(**build_webrtc_args)
 
-        webrtc_info = get_webrtc_info(platform, webrtc_build_dir, install_dir, debug)
+        webrtc_info = get_webrtc_info(platform, local_webrtc_build_dir, install_dir, debug)
 
-        if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64") and webrtc_build_dir is None:
-            webrtc_version = read_version_file(webrtc_info.version_file)
+        if (
+            platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64")
+            and local_webrtc_build_dir is None
+        ):
+            webrtc_version = read_deps_file(webrtc_info.version_file)
 
             # LLVM
             tools_url = webrtc_version["WEBRTC_SRC_TOOLS_URL"]
@@ -136,27 +139,16 @@ def install_deps(
             }
             install_llvm(**install_llvm_args)
 
-        # Boost
-        install_boost_args = {
-            "version": version["BOOST_VERSION"],
-            "version_file": os.path.join(install_dir, "boost.version"),
-            "source_dir": source_dir,
-            "install_dir": install_dir,
-            "sora_version": version["SORA_CPP_SDK_VERSION"],
-            "platform": platform,
-        }
-        install_boost(**install_boost_args)
-
         # CMake
         install_cmake_args = {
-            "version": version["CMAKE_VERSION"],
+            "version": deps["CMAKE_VERSION"],
             "version_file": os.path.join(install_dir, "cmake.version"),
             "source_dir": source_dir,
             "install_dir": install_dir,
             "platform": "",
             "ext": "tar.gz",
         }
-        if platform in ("ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"):
+        if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
             install_cmake_args["platform"] = "linux-x86_64"
         elif platform == "macos_arm64":
             install_cmake_args["platform"] = "macos-universal"
@@ -167,14 +159,20 @@ def install_deps(
             add_path(os.path.join(install_dir, "cmake", "bin"))
 
         # Sora C++ SDK
-        if sora_dir is None:
+        if local_sora_cpp_sdk_dir is None:
             install_sora_and_deps(platform, source_dir, install_dir)
         else:
-            build_sora(platform, sora_dir, sora_args, debug, webrtc_build_dir)
+            build_sora(
+                platform,
+                local_sora_cpp_sdk_dir,
+                local_sora_cpp_sdk_args,
+                debug,
+                local_webrtc_build_dir,
+            )
 
         # CLI11
         install_cli11_args = {
-            "version": version["CLI11_VERSION"],
+            "version": deps["CLI11_VERSION"],
             "version_file": os.path.join(install_dir, "cli11.version"),
             "install_dir": install_dir,
         }
@@ -184,14 +182,14 @@ def install_deps(
 
         # Blend2D
         install_blend2d_args = {
-            "version": version["BLEND2D_VERSION"] + "-" + version["ASMJIT_VERSION"],
+            "version": deps["BLEND2D_VERSION"] + "-" + deps["ASMJIT_VERSION"],
             "version_file": os.path.join(install_dir, "blend2d.version"),
             "configuration": "Debug" if debug else "Release",
             "source_dir": source_dir,
             "build_dir": build_dir,
             "install_dir": install_dir,
-            "blend2d_version": version["BLEND2D_VERSION"],
-            "asmjit_version": version["ASMJIT_VERSION"],
+            "blend2d_version": deps["BLEND2D_VERSION"],
+            "asmjit_version": deps["ASMJIT_VERSION"],
             "ios": False,
             "cmake_args": cmake_args,
         }
@@ -199,7 +197,7 @@ def install_deps(
 
         # OpenH264
         install_openh264_args = {
-            "version": version["OPENH264_VERSION"],
+            "version": deps["OPENH264_VERSION"],
             "version_file": os.path.join(install_dir, "openh264.version"),
             "source_dir": source_dir,
             "install_dir": install_dir,
@@ -209,7 +207,7 @@ def install_deps(
 
         # yaml-cpp
         install_yaml_args = {
-            "version": version["YAML_CPP_VERSION"],
+            "version": deps["YAML_CPP_VERSION"],
             "version_file": os.path.join(install_dir, "yaml.version"),
             "source_dir": source_dir,
             "build_dir": build_dir,
@@ -222,14 +220,14 @@ def install_deps(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "target", choices=["macos_arm64", "ubuntu-20.04_x86_64", "ubuntu-22.04_x86_64"]
+        "target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"]
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--relwithdebinfo", action="store_true")
-    parser.add_argument("--webrtc-build-dir", type=os.path.abspath)
-    parser.add_argument("--webrtc-build-args", default="", type=shlex.split)
-    parser.add_argument("--sora-dir", type=os.path.abspath)
-    parser.add_argument("--sora-args", default="", type=shlex.split)
+    parser.add_argument("--local-webrtc-build-dir", type=os.path.abspath)
+    parser.add_argument("--local-webrtc-build-args", default="", type=shlex.split)
+    parser.add_argument("--local-sora-cpp-sdk-dir", type=os.path.abspath)
+    parser.add_argument("--local-sora-cpp-sdk-args", default="", type=shlex.split)
     parser.add_argument("--package", action="store_true")
 
     args = parser.parse_args()
@@ -250,10 +248,10 @@ def main():
         build_dir,
         install_dir,
         args.debug,
-        args.webrtc_build_dir,
-        args.webrtc_build_args,
-        args.sora_dir,
-        args.sora_args,
+        args.local_webrtc_build_dir,
+        args.local_webrtc_build_args,
+        args.local_sora_cpp_sdk_dir,
+        args.local_sora_cpp_sdk_args,
     )
 
     configuration = "Release"
@@ -264,13 +262,14 @@ def main():
 
     mkdir_p(os.path.join(build_dir, "zakuro"))
     with cd(os.path.join(build_dir, "zakuro")):
-        webrtc_info = get_webrtc_info(platform, args.webrtc_build_dir, install_dir, args.debug)
-        webrtc_version = read_version_file(webrtc_info.version_file)
-        sora_info = get_sora_info(platform, args.sora_dir, install_dir, args.debug)
+        webrtc_info = get_webrtc_info(
+            platform, args.local_webrtc_build_dir, install_dir, args.debug
+        )
+        webrtc_version = read_deps_file(webrtc_info.version_file)
+        sora_info = get_sora_info(platform, args.local_sora_cpp_sdk_dir, install_dir, args.debug)
 
         with cd(BASE_DIR):
-            version = read_version_file("VERSION")
-            zakuro_version = version["ZAKURO_VERSION"]
+            zakuro_version = read_version_file("VERSION")
             zakuro_commit = cmdcap(["git", "rev-parse", "HEAD"])
 
         cmake_args = []
@@ -305,8 +304,7 @@ def main():
         rm_rf(os.path.join(package_dir, "zakuro.env"))
 
         with cd(BASE_DIR):
-            version = read_version_file("VERSION")
-            zakuro_version = version["ZAKURO_VERSION"]
+            zakuro_version = read_version_file("VERSION")
 
         mkdir_p(zakuro_package_dir)
         with cd(zakuro_package_dir):

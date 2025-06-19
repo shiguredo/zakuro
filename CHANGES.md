@@ -11,7 +11,82 @@
 
 ## develop
 
-## 2024.1.0 (2024-04-24)
+## 2025.1.0
+
+**リリース日**: 2025-06-19
+
+- [CHANGE] `--sora-dir`, `--sora-args` を `--local-sora-cpp-sdk-dir` と `--local-sora-cpp-sdk-args` に変更する
+  - @melpon
+- [CHANGE] `--webrtc-build-dir`, `--webrtc-build-args` を `--local-webrtc-build-dir` と `--local-webrtc-build-args` に変更する
+  - @melpon
+- [CHANGE] Ubuntu 20.04 のビルドを削除
+  - @melpon
+- [CHANGE] multistream のオプションを削除
+  - @torikizi
+- [CHANGE] FakeNetwork 系の機能を削除
+  - @melpon
+- [UPDATE] CMakeLists の依存から libva と libdrm を削除する
+  - @zztkm
+- [UPDATE] CI の Ubuntu で libva と libdrm をインストールしないようにする
+- [UPDATE] Sora C++ SDK を `2025.3.1` に上げる
+  - それに伴って以下のライブラリのバージョンも上げる
+  - libwebrtc のバージョンを `m136.7103.0.0` に上げる
+  - Boost のバージョンを `1.88.0` に上げる
+  - CMake のバージョンを `4.0.1` に上げる
+  - OpenH264 のバージョンを `2.6.0` に上げる
+  - Blend2D のバージョンを `717cbf4bc0f2ca164cf2f0c48f0497779241b6c5` に上げる
+  - AsmJit のバージョンを `e8c8e2e48a1a38154c8e8864eb3bc61db80a1e31` に上げる
+  - `#include <rtc_base/helpers.h>` を `#include <rtc_base/crypto_random.h>` に置き換える
+  - `boost::json::error_code` を `boost::system::error_code` に置き換える
+  - `absl::nullopt` を `std::nullopt` に置き換える
+  - `boost::optional` を `std::optional` に置き換える
+  - `SoraVideoEncoderFactoryConfig` の `use_simulcast_adapter` を削除
+  - `VideoCodecPreference` を利用して `use_hardware_encoder` を削除
+  - 利用するエンコーダ/デコーダを `VideoCodecPreference` で指定する
+  - `NopVideoDecoder` を `VideoCodecPreference` の仕組みに乗せる
+  - @melpon @voluntas @zztkm @torikizi
+- [UPDATE] Blend2D, AsmJit を最新版に上げる
+  - @melpon @torikizi @voluntas
+- [UPDATE] Lyra 用の設定を削除する
+  - 2024.1.0 で機能廃止済であるため残った設定を削除
+  - @miosakuma
+- [UPDATE] YAML_CPP_VERSION を `2f86d13775d119edbb69af52e5f566fd65c6953b` にアップデート
+  - yaml-cpp は `0.8.0` 以降リリースされておらず、新しいバージョンの CMAKE と互換性が失われている
+  - リリースバージョン指定をやめ、GitHub の master ブランチのコミットを指定する
+    - このコミットハッシュを指定した理由は以下の通り
+      - 対応時点での最新のコミットであること
+      - CMake 4.0.1 でビルドが通ることを確認できたこと
+  - この対応は yaml-cpp のリリースが行われるまでの暫定的な対応で、最新のリリースが行われた場合はバージョン指定に戻す
+  - @torikizi
+- [ADD] Ubuntu 24.04 のビルドを追加
+  - @melpon
+- [ADD] `--degradation-preference` 引数を追加
+  - @melpon
+- [ADD] H.265 でも実際のデコード処理を行わず、固定サイズ（320x240）のダミーフレームを返すデコーダーを追加する
+  - @voluntas
+- [ADD] --sora-video-codec-type オプションに H265 を追加
+  - 利用可能な映像コーデックに H.265 を追加
+  - @voluntas
+- [FIX] ビデオコーデックが未指定かつサイマルキャスト利用時に入力チェックエラーになる問題を修正する
+  - ビデオコーデックが未指定でもサイマルキャストは利用可能であるため、チェックを削除
+  - @miosakuma
+
+### misc
+
+- [CHANGE] VERSION ファイルを Zakuro のバージョンにのみ利用するようにする
+  - @voluntas
+- [CHANGE] GitHub Actions の ubuntu-latest を ubuntu-24.04 に変更
+  - @voluntas
+- [ADD] 依存ライブラリ用に DEPS ファイルを追加
+  - @voluntas
+- [ADD] canary.py を追加
+  - @voluntas @torikizi
+- [FIX] canary リリースの時は prerelease フラグをつける
+  - @miosakuma
+
+## 2024.1.0
+
+**リリース日**: 2024-04-24
 
 - [CHANGE] Lyra を削除
   - `--sora-audio-codec-lyra-bitrate` オプションを削除
@@ -37,8 +112,8 @@
   - @voluntas @torikizi @melpon
 - [UPDATE] OpenH264 を 2.4.1 に上げる
   - @melpon
-- [UPDATE] CLI11 を 2.4.1 に上げる
-  - @melpon
+- [UPDATE] CLI11 を 2.4.2 に上げる
+  - @melpon @torikizi
 - [UPDATE] run.py に定義されていた関数を buildbase.py に移動する
   - @melpon
 - [UPDATE] Github Actions の actions/checkout , actions/upload-artifact , actions/download-artifact をアップデート

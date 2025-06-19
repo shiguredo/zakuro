@@ -25,7 +25,6 @@ $ sudo apt install libnspr4 libnss3 libxext6 libx11-6 libdrm2 libva2 libva-drm2
 
 まず 5 人の会議を行う簡単な負荷をかけてみましょう
 
-
 ```
 $ ./zakuro \
     --sora-signaling-url wss://example.com/signaling \
@@ -33,12 +32,10 @@ $ ./zakuro \
     --sora-channel-id zakuro-test \
     --sora-video-codec-type VP8 \
     --sora-video-bit-rate 1000 \
-    --sora-multistream true \
     --resolution 640x480 \
     --fake-capture-device \
     --vcs 5
 ```
-
 
 上記コマンドを実行することで負荷が走ります。それぞれの項目については -h を見てください。
 おそらく Sora を理解していればわからないことは特に無いと思います。
@@ -71,7 +68,7 @@ Zakuro ではエンコーダとデコーダに負荷をかけるために砂嵐�
 
 ### インスタンスハッチレート
 
-`--vcs-hatch-rate 1`
+`--instance-hatch-rate 1`
 
 Zakuro では 1 秒間に起動するインスタンス数を指定できます。デフォルトは 1 秒 1 インスタンスです。
 基本的にはデフォルトで問題ありません。
@@ -94,7 +91,6 @@ Zakuro ではソフトウェアエンコーダを OpenH264 のライブラリを
 OpenH264 のバイナリの最新版は以下からダウンロード可能です。
 
 https://github.com/cisco/openh264/releases/tag/v2.1.1
-
 
 ### 音声ファイル指定
 
@@ -122,7 +118,6 @@ zakuro:
         channel-id: "sora"
         role: "sendrecv"
         video-codec-type: VP8
-        multistream: true
         spotlight: true
         simulcast: true
     - name: zakuro2
@@ -132,7 +127,6 @@ zakuro:
         channel-id: "sora"
         role: "sendrecv"
         video-codec-type: VP8
-        multistream: true
         spotlight: true
         simulcast: true
 ```
@@ -149,23 +143,10 @@ zakuro:
         ...
 ```
 
-### フェイクネットワークによるパケロスの設定
-
-```yaml
-zakuro:
-  instances:
-    - name: zakuro
-      vcs: 1
-      sora:
-        ...
-      fake-network:
-        send-loss-percent: 20
-        receive-loss-percent: 20
-```
-
 ### DataChannel メッセージングの設定
 
 - DataChannel メッセージングバイナリの先頭には `<<"ZAKURO", UnixTimeMicro:64, Counter:64>>` が入ります
+- Sora DevTools はメッセージの先頭に `ZAKURO` がある場合、そのメッセージの時刻とカウンターのみを表示します
 
 ```yaml
 zakuro:
@@ -176,7 +157,6 @@ zakuro:
         signaling-url: "wss://sora.example.com/signaling"
         channel-id: sora
         role: sendrecv
-        multistream: true
         data-channel-signaling: true
         data-channels:
           - label: "#test"
@@ -187,6 +167,12 @@ zakuro:
             size_min: 100
             # 省略時は 48 (bytes)
             size_max: 5000
+            # 順番保証するか
+            # ordered: true
+            # 何ミリ秒間再送するか
+            # max_packet_lifetime: 1
+            # 何回再送するか
+            # max_retransmits: 1
 ```
 
 ### 複数シグナリング URL
@@ -198,10 +184,9 @@ zakuro:
       vcs: 2
       sora:
         signaling-url:
-           - "wss://sora1.example.com/signaling"
-           - "wss://sora2.example.com/signaling"
-           - "wss://sora3.example.com/signaling"
+          - "wss://sora1.example.com/signaling"
+          - "wss://sora2.example.com/signaling"
+          - "wss://sora3.example.com/signaling"
         channel-id: sora
         role: sendrecv
-        multistream: true
 ```

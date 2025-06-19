@@ -169,8 +169,12 @@ def download(url: str, output_dir: Optional[str] = None, filename: Optional[str]
     return output_path
 
 
-def read_version_file(path: str) -> Dict[str, str]:
-    versions = {}
+def read_version_file(path: str) -> str:
+    return open(path).read().strip()
+
+
+def read_deps_file(path: str) -> Dict[str, str]:
+    deps = {}
 
     lines = open(path).readlines()
     for line in lines:
@@ -185,9 +189,9 @@ def read_version_file(path: str) -> Dict[str, str]:
             continue
 
         [a, b] = map(lambda x: x.strip(), line.split("=", 2))
-        versions[a] = b.strip('"')
+        deps[a] = b.strip('"')
 
-    return versions
+    return deps
 
 
 # dir 以下にある全てのファイルパスを、dir2 からの相対パスで返す
@@ -423,7 +427,7 @@ def replace_vcproj_static_runtime(project_file: str):
 @versioned
 def install_webrtc(version, source_dir, install_dir, platform: str):
     win = platform.startswith("windows_")
-    filename = f'webrtc.{platform}.{"zip" if win else "tar.gz"}'
+    filename = f"webrtc.{platform}.{'zip' if win else 'tar.gz'}"
     rm_rf(os.path.join(source_dir, filename))
     archive = download(
         f"https://github.com/shiguredo-webrtc-build/webrtc-build/releases/download/{version}/{filename}",
@@ -433,19 +437,19 @@ def install_webrtc(version, source_dir, install_dir, platform: str):
     extract(archive, output_dir=install_dir, output_dirname="webrtc")
 
 
-def build_webrtc(platform, webrtc_build_dir, webrtc_build_args, debug):
-    with cd(webrtc_build_dir):
+def build_webrtc(platform, local_webrtc_build_dir, local_webrtc_build_args, debug):
+    with cd(local_webrtc_build_dir):
         args = ["--webrtc-nobuild-ios-framework", "--webrtc-nobuild-android-aar"]
         if debug:
             args += ["--debug"]
 
-        args += webrtc_build_args
+        args += local_webrtc_build_args
 
         cmd(["python3", "run.py", "build", platform, *args])
 
         # インクルードディレクトリを増やしたくないので、
         # __config_site を libc++ のディレクトリにコピーしておく
-        webrtc_source_dir = os.path.join(webrtc_build_dir, "_source", platform, "webrtc")
+        webrtc_source_dir = os.path.join(local_webrtc_build_dir, "_source", platform, "webrtc")
         src_config = os.path.join(
             webrtc_source_dir, "src", "buildtools", "third_party", "libc++", "__config_site"
         )
@@ -486,11 +490,11 @@ class WebrtcInfo(NamedTuple):
 
 
 def get_webrtc_info(
-    platform: str, webrtc_build_dir: Optional[str], install_dir: str, debug: bool
+    platform: str, local_webrtc_build_dir: Optional[str], install_dir: str, debug: bool
 ) -> WebrtcInfo:
     webrtc_install_dir = os.path.join(install_dir, "webrtc")
 
-    if webrtc_build_dir is None:
+    if local_webrtc_build_dir is None:
         return WebrtcInfo(
             version_file=os.path.join(webrtc_install_dir, "VERSIONS"),
             deps_file=os.path.join(webrtc_install_dir, "DEPS"),
@@ -501,15 +505,17 @@ def get_webrtc_info(
             libcxx_dir=os.path.join(install_dir, "llvm", "libcxx"),
         )
     else:
-        webrtc_build_source_dir = os.path.join(webrtc_build_dir, "_source", platform, "webrtc")
+        webrtc_build_source_dir = os.path.join(
+            local_webrtc_build_dir, "_source", platform, "webrtc"
+        )
         configuration = "debug" if debug else "release"
         webrtc_build_build_dir = os.path.join(
-            webrtc_build_dir, "_build", platform, configuration, "webrtc"
+            local_webrtc_build_dir, "_build", platform, configuration, "webrtc"
         )
 
         return WebrtcInfo(
-            version_file=os.path.join(webrtc_build_dir, "VERSION"),
-            deps_file=os.path.join(webrtc_build_dir, "DEPS"),
+            version_file=os.path.join(local_webrtc_build_dir, "VERSION"),
+            deps_file=os.path.join(local_webrtc_build_dir, "DEPS"),
             webrtc_include_dir=os.path.join(webrtc_build_source_dir, "src"),
             webrtc_source_dir=os.path.join(webrtc_build_source_dir, "src"),
             webrtc_library_dir=webrtc_build_build_dir,
@@ -524,7 +530,7 @@ def get_webrtc_info(
 def install_boost(version, source_dir, install_dir, sora_version, platform: str):
     win = platform.startswith("windows_")
     filename = (
-        f'boost-{version}_sora-cpp-sdk-{sora_version}_{platform}.{"zip" if win else "tar.gz"}'
+        f"boost-{version}_sora-cpp-sdk-{sora_version}_{platform}.{'zip' if win else 'tar.gz'}"
     )
     rm_rf(os.path.join(source_dir, filename))
     archive = download(
@@ -589,16 +595,16 @@ def build_and_install_boost(
                         b2,
                         "install",
                         "-d+0",
-                        f'--build-dir={os.path.join(build_dir, "boost", f"build-{arch}-{sdk}")}',
-                        f'--prefix={os.path.join(build_dir, "boost", f"install-{arch}-{sdk}")}',
+                        f"--build-dir={os.path.join(build_dir, 'boost', f'build-{arch}-{sdk}')}",
+                        f"--prefix={os.path.join(build_dir, 'boost', f'install-{arch}-{sdk}')}",
                         "--with-json",
                         "--with-filesystem",
                         "--layout=system",
                         "--ignore-site-config",
-                        f'variant={"debug" if debug else "release"}',
-                        f'cflags={" ".join(cflags)}',
-                        f'cxxflags={" ".join(cxxflags)}',
-                        f'linkflags={" ".join(linkflags)}',
+                        f"variant={'debug' if debug else 'release'}",
+                        f"cflags={' '.join(cflags)}",
+                        f"cxxflags={' '.join(cxxflags)}",
+                        f"linkflags={' '.join(linkflags)}",
                         f"toolset={toolset}",
                         f"visibility={visibility}",
                         f"target-os={target_os}",
@@ -660,16 +666,16 @@ def build_and_install_boost(
                     b2,
                     "install",
                     "-d+0",
-                    f'--prefix={os.path.join(install_dir, "boost")}',
+                    f"--prefix={os.path.join(install_dir, 'boost')}",
                     "--with-json",
                     "--with-filesystem",
                     "--layout=system",
                     "--ignore-site-config",
-                    f'variant={"debug" if debug else "release"}',
+                    f"variant={'debug' if debug else 'release'}",
                     f"compileflags=--sysroot={sysroot}",
-                    f'cflags={" ".join(cflags)}',
-                    f'cxxflags={" ".join(cxxflags)}',
-                    f'linkflags={" ".join(linkflags)}',
+                    f"cflags={' '.join(cflags)}",
+                    f"cxxflags={' '.join(cxxflags)}",
+                    f"linkflags={' '.join(linkflags)}",
                     f"toolset={toolset}",
                     f"visibility={visibility}",
                     f"target-os={target_os}",
@@ -689,15 +695,15 @@ def build_and_install_boost(
                     b2,
                     "install",
                     "-d+0",
-                    f'--prefix={os.path.join(install_dir, "boost")}',
+                    f"--prefix={os.path.join(install_dir, 'boost')}",
                     "--with-json",
                     "--with-filesystem",
                     "--layout=system",
                     "--ignore-site-config",
-                    f'variant={"debug" if debug else "release"}',
-                    f'cflags={" ".join(cflags)}',
-                    f'cxxflags={" ".join(cxxflags)}',
-                    f'linkflags={" ".join(linkflags)}',
+                    f"variant={'debug' if debug else 'release'}",
+                    f"cflags={' '.join(cflags)}",
+                    f"cxxflags={' '.join(cxxflags)}",
+                    f"linkflags={' '.join(linkflags)}",
                     f"toolset={toolset}",
                     f"visibility={visibility}",
                     f"target-os={target_os}",
@@ -713,7 +719,7 @@ def build_and_install_boost(
 @versioned
 def install_sora(version, source_dir, install_dir, platform: str):
     win = platform.startswith("windows_")
-    filename = f'sora-cpp-sdk-{version}_{platform}.{"zip" if win else "tar.gz"}'
+    filename = f"sora-cpp-sdk-{version}_{platform}.{'zip' if win else 'tar.gz'}"
     rm_rf(os.path.join(source_dir, filename))
     archive = download(
         f"https://github.com/shiguredo/sora-cpp-sdk/releases/download/{version}/{filename}",
@@ -724,22 +730,22 @@ def install_sora(version, source_dir, install_dir, platform: str):
 
 
 def install_sora_and_deps(platform: str, source_dir: str, install_dir: str):
-    version = read_version_file("VERSION")
+    deps = read_deps_file("DEPS")
 
     # Boost
     install_boost_args = {
-        "version": version["BOOST_VERSION"],
+        "version": deps["BOOST_VERSION"],
         "version_file": os.path.join(install_dir, "boost.version"),
         "source_dir": source_dir,
         "install_dir": install_dir,
-        "sora_version": version["SORA_CPP_SDK_VERSION"],
+        "sora_version": deps["SORA_CPP_SDK_VERSION"],
         "platform": platform,
     }
     install_boost(**install_boost_args)
 
     # Sora C++ SDK
     install_sora_args = {
-        "version": version["SORA_CPP_SDK_VERSION"],
+        "version": deps["SORA_CPP_SDK_VERSION"],
         "version_file": os.path.join(install_dir, "sora.version"),
         "source_dir": source_dir,
         "install_dir": install_dir,
@@ -749,15 +755,23 @@ def install_sora_and_deps(platform: str, source_dir: str, install_dir: str):
 
 
 def build_sora(
-    platform: str, sora_dir: str, sora_args: List[str], debug: bool, webrtc_build_dir: Optional[str]
+    platform: str,
+    local_sora_cpp_sdk_dir: str,
+    local_sora_cpp_sdk_args: List[str],
+    debug: bool,
+    local_webrtc_build_dir: Optional[str],
 ):
-    if debug and "--debug" not in sora_args:
-        sora_args = ["--debug", *sora_args]
-    if webrtc_build_dir is not None:
-        sora_args = ["--webrtc-build-dir", webrtc_build_dir, *sora_args]
+    if debug and "--debug" not in local_sora_cpp_sdk_args:
+        local_sora_cpp_sdk_args = ["--debug", *local_sora_cpp_sdk_args]
+    if local_webrtc_build_dir is not None:
+        local_sora_cpp_sdk_args = [
+            "--local-webrtc-build-dir",
+            local_webrtc_build_dir,
+            *local_sora_cpp_sdk_args,
+        ]
 
-    with cd(sora_dir):
-        cmd(["python3", "run.py", platform, *sora_args])
+    with cd(local_sora_cpp_sdk_dir):
+        cmd(["python3", "run.py", platform, *local_sora_cpp_sdk_args])
 
 
 class SoraInfo(NamedTuple):
@@ -766,11 +780,11 @@ class SoraInfo(NamedTuple):
 
 
 def get_sora_info(
-    platform: str, sora_dir: Optional[str], install_dir: str, debug: bool
+    platform: str, local_sora_cpp_sdk_dir: Optional[str], install_dir: str, debug: bool
 ) -> SoraInfo:
-    if sora_dir is not None:
+    if local_sora_cpp_sdk_dir is not None:
         configuration = "debug" if debug else "release"
-        install_dir = os.path.join(sora_dir, "_install", platform, configuration)
+        install_dir = os.path.join(local_sora_cpp_sdk_dir, "_install", platform, configuration)
 
     return SoraInfo(
         sora_install_dir=os.path.join(install_dir, "sora"),
@@ -802,7 +816,7 @@ def install_rootfs(version, install_dir, conf):
                 continue
             # 相対パスに置き換える
             relpath = os.path.relpath(targetpath, dir)
-            logging.debug(f"{linkpath[len(rootfs_dir):]} targets {target} to {relpath}")
+            logging.debug(f"{linkpath[len(rootfs_dir) :]} targets {target} to {relpath}")
             os.remove(linkpath)
             os.symlink(relpath, linkpath)
 
@@ -1190,7 +1204,7 @@ def install_openh264(version, source_dir, install_dir, is_windows):
                         file, os.path.join(install_dir, "openh264", "include", "wels", file)
                     )
         else:
-            cmd(["make", f'PREFIX={os.path.join(install_dir, "openh264")}', "install-headers"])
+            cmd(["make", f"PREFIX={os.path.join(install_dir, 'openh264')}", "install-headers"])
 
 
 @versioned
@@ -1348,7 +1362,7 @@ def get_build_platform() -> PlatformTarget:
         os = "macos"
         osver = get_macos_osver()
     elif os == "Linux":
-        release = read_version_file("/etc/os-release")
+        release = read_deps_file("/etc/os-release")
         os = release["NAME"]
         if os == "Ubuntu":
             os = "ubuntu"
@@ -1497,32 +1511,32 @@ def get_webrtc_platform(platform: Platform) -> str:
 # `--sora-args '--test'` のようにスペースを使うと、ハイフンから始まるオプションが正しく解釈されない
 def add_sora_arguments(parser):
     parser.add_argument(
-        "--sora-dir",
+        "--local-sora-cpp-sdk-dir",
         type=os.path.abspath,
         default=None,
         help="Refer to local Sora C++ SDK. "
         "When this option is specified, Sora C++ SDK will also be built.",
     )
     parser.add_argument(
-        "--sora-args",
+        "--local-sora-cpp-sdk-args",
         type=shlex.split,
         default=[],
-        help="Options for building local Sora C++ SDK when `--sora-dir` is specified.",
+        help="Options for building local Sora C++ SDK when `--local-sora-cpp-sdk-dir` is specified.",
     )
 
 
 # add_sora_arguments と同様の注意点があるので注意すること
 def add_webrtc_build_arguments(parser):
     parser.add_argument(
-        "--webrtc-build-dir",
+        "--local-webrtc-build-dir",
         type=os.path.abspath,
         default=None,
         help="Refer to local webrtc-build. "
         "When this option is specified, webrtc-build will also be built.",
     )
     parser.add_argument(
-        "--webrtc-build-args",
+        "--local-webrtc-build-args",
         type=shlex.split,
         default=[],
-        help="Options for building local webrtc-build when `--webrtc-build-dir` is specified.",
+        help="Options for building local webrtc-build when `--local-webrtc-build-dir` is specified.",
     )

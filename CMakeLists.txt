@@ -21,11 +21,6 @@ find_package(Blend2D REQUIRED)
 find_package(CLI11 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
-if (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64")
-  find_package(Libva REQUIRED)
-  find_package(Libdrm REQUIRED)
-endif()
-
 add_executable(zakuro)
 
 set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
@@ -40,13 +35,10 @@ target_include_directories(zakuro PRIVATE ${OPENH264_ROOT_DIR}/include)
 
 target_sources(zakuro
   PRIVATE
-    src/dynamic_h264_video_encoder.cpp
     src/embedded_binary.cpp
-    src/enable_media_with_fake_call.cpp
     src/fake_video_capturer.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
-    src/sctp_transport_factory.cpp
     src/util.cpp
     src/virtual_client.cpp
     src/wav_reader.cpp
@@ -150,7 +142,7 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   # バイナリの組み込み
   if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
     target_link_options(zakuro PRIVATE "SHELL:-sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file}")
-  elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64")
+  elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
       COMMAND ld
@@ -187,5 +179,5 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
-elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64")
+elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
 endif()

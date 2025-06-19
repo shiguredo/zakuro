@@ -19,5 +19,9 @@ Discord へお願いします。
 `WebRTC Load Testing Tool Zakuro` に対する有料でのテクニカルサポート契約については、
 WebRTC SFU Sora ライセンス契約をしているお客様が前提となります。
 
+- Zakuro への優先実装
 - Zakuro のテクニカルサポート
 - Zakuro を利用した負荷試験のサポート
+- クローズドソースでの Zakuro カスタマイズ版の提供
+
+サポートまでご相談ください。

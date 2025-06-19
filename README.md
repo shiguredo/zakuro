@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m122.6261-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/6261)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m136.7103-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7103)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -8,30 +8,30 @@
 
 We will not respond to PRs or issues that have not been discussed on Discord. Also, Discord is only available in Japanese.
 
-Please read https://github.com/shiguredo/oss before use.
+Please read <https://github.com/shiguredo/oss> before use.
 
 ## 時雨堂のオープンソースソフトウェアについて
 
-利用前に https://github.com/shiguredo/oss をお読みください。
+利用前に <https://github.com/shiguredo/oss> をお読みください。
 
 ## WebRTC Load Testing Tool Zakuro について
 
-WebRTC Load Testing Tool Zakuro は libwebrtc を利用した WebRTC SFU Sora 向けの WebRTC 負荷試験ツールです。
+WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/src.git/) を利用した [WebRTC SFU Sora](https://sora.shiguredo.jp/) 向けの WebRTC 負荷試験ツールです。
 
 ## 特徴
 
 - 最新の WebRTC SFU Sora に対応
-- YAML による設定ファイルへ対応
+- YAML によるシナリオファイルへ対応
 - 動的インスタンス作成へ対応
 - クラスター機能への対応
+  - 複数シグナリング URL を指定できる
 - フェイク音声/映像に対応
-- データチャネルメッセージング機能へ対応
-- フェイクネットワークへ対応
-- クライアント証明書へ対応
+- リアルタイムメッセージング機能へ対応
+- シグナリングのクライアント証明書 (mTLS) へ対応
 - 最新の libwebrtc へ対応
-- OpenH264 対応
-- Sora C++ SDK ベース
-- 期間繰り返し
+- [OpenH264](https://www.openh264.org/) を利用した H.264 コーデックに対応
+- [Sora C++ SDK](https://github.com/shiguredo/sora-cpp-sdk) ベース
+- 期間繰り返し対応
   - 30 秒負荷かけて切断を繰り返すなど
 
 ## 使ってみる
@@ -98,6 +98,8 @@ Options:
                               Mute video initialy (default: false)
   --initial-mute-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Mute audio initialy (default: false)
+  --degradation-preference ENUM:value in {disabled->0,maintain_framerate->1,maintain_resolution->2,balanced->3} OR {0,1,2,3}
+                              Degradation preference
   --sora-signaling-url TEXT ...
                               Signaling URLs
   --sora-disable-signaling-url-randomization
@@ -111,22 +113,14 @@ Options:
                               Send video to sora (default: true)
   --sora-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send audio to sora (default: true)
-  --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264}
+  --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264,H265}
                               Video codec for send (default: none)
-  --sora-audio-codec-type TEXT:{OPUS,LYRA}
+  --sora-audio-codec-type TEXT:{OPUS}
                               Audio codec for send (default: none)
-  --sora-audio-codec-lyra-bitrate INT:INT in [0 - 9200]
-                              Lyra audio codec bitrate (default: none)
-  --sora-audio-codec-lyra-usedtx TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
-                              Lyra usedtx (default: none)
-  --sora-check-lyra-version BOOLEAN
-                              Lyra version check (default: false)
   --sora-video-bit-rate INT:INT in [0 - 30000]
                               Video bit rate (default: none)
   --sora-audio-bit-rate INT:INT in [0 - 510]
                               Audio bit rate (default: none)
-  --sora-multistream BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              Use multistream (default: false)
   --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use simulcast (default: false)
   --sora-simulcast-rid TEXT   Simulcast rid (default: none)
@@ -138,11 +132,11 @@ Options:
                               Spotlight focus rid (default: none)
   --sora-spotlight-unfocus-rid TEXT
                               Spotlight unfocus rid (default: none)
-  --sora-data-channel-signaling TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
+  --sora-data-channel-signaling TEXT:value in {false->,true->,none->} OR {}
                               Use DataChannel for Sora signaling (default: none)
   --sora-data-channel-signaling-timeout INT:POSITIVE
                               Timeout for Data Channel in seconds (default: 180)
-  --sora-ignore-disconnect-websocket TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
+  --sora-ignore-disconnect-websocket TEXT:value in {false->,true->,none->} OR {}
                               Ignore WebSocket disconnection if using Data Channel (default: none)
   --sora-disconnect-wait-timeout INT:POSITIVE
                               Disconnecting timeout for Data Channel in seconds (default: 5)
@@ -152,48 +146,15 @@ Options:
                               Signaling metadata (default: none)
   --sora-data-channels TEXT:JSON Value
                               DataChannels (default: none)
-  --fake-network-send-queue-length-packets UINT
-                              Queue length in number of packets for sending
-  --fake-network-send-queue-delay-ms INT
-                              Delay in addition to capacity induced delay for sending
-  --fake-network-send-delay-standard-deviation-ms INT
-                              Standard deviation of the extra delay for sending
-  --fake-network-send-link-capacity-kbps INT
-                              Link capacity in kbps for sending
-  --fake-network-send-loss-percent INT
-                              Random packet loss for sending
-  --fake-network-send-allow-reordering BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              If packets are allowed to be reordered for sending
-  --fake-network-send-avg-burst-loss-length INT
-                              The average length of a burst of lost packets for sending
-  --fake-network-send-packet-overhead INT
-                              Additional bytes to add to packet size for sending
-  --fake-network-receive-queue-length-packets UINT
-                              Queue length in number of packets for receiving
-  --fake-network-receive-queue-delay-ms INT
-                              Delay in addition to capacity induced delay for receiving
-  --fake-network-receive-delay-standard-deviation-ms INT
-                              Standard deviation of the extra delay for receiving
-  --fake-network-receive-link-capacity-kbps INT
-                              Link capacity in kbps for receiving
-  --fake-network-receive-loss-percent INT
-                              Random packet loss for receiving
-  --fake-network-receive-allow-reordering BOOLEAN:value in {false->0,true->1} OR {0,1}
-                              If packets are allowed to be reordered for receiving
-  --fake-network-receive-avg-burst-loss-length INT
-                              The average length of a burst of lost packets for receiving
-  --fake-network-receive-packet-overhead INT
-                              Additional bytes to add to packet size for receiving
 ```
-
 
 ## ライセンス
 
 Apache License 2.0
 
 ```
-Copyright 2020-2023, Wandbox LLC (Original Author)
-Copyright 2020-2023, Shiguredo Inc.
+Copyright 2020-2025, Wandbox LLC (Original Author)
+Copyright 2020-2025, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -210,9 +171,9 @@ limitations under the License.
 
 ## OpenH264
 
-https://www.openh264.org/BINARY_LICENSE.txt
+<https://www.openh264.org/BINARY_LICENSE.txt>
 
-```
+```text
 "OpenH264 Video Codec provided by Cisco Systems, Inc."
 ```
 
@@ -231,4 +192,3 @@ https://www.openh264.org/BINARY_LICENSE.txt
 - Content Hint への対応
 - --fake-video-capture で mjpeg も指定可能にする
 - --audio-device 追加
-

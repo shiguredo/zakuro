@@ -6,8 +6,7 @@
 #include <string>
 
 // WebRTC
-#include <api/test/simulated_network.h>
-#include <call/degraded_call.h>
+#include <api/rtp_parameters.h>
 
 // Boost
 #include <boost/json.hpp>
@@ -46,6 +45,7 @@ struct ZakuroConfig {
   std::string client_key;
   bool initial_mute_video = false;
   bool initial_mute_audio = false;
+  std::optional<webrtc::DegradationPreference> degradation_preference;
 
   std::vector<std::string> sora_signaling_urls;
   std::string sora_channel_id;
@@ -57,31 +57,23 @@ struct ZakuroConfig {
   // 空文字の場合コーデックは Sora 側で決める
   std::string sora_video_codec_type = "";
   std::string sora_audio_codec_type = "";
-  // Lyra 用の設定
-  int sora_audio_codec_lyra_bit_rate = 0;
-  boost::optional<bool> sora_audio_codec_lyra_usedtx;
-  bool sora_check_lyra_version = false;
   // 0 の場合ビットレートは Sora 側で決める
   int sora_video_bit_rate = 0;
   int sora_audio_bit_rate = 0;
   std::string sora_role = "";
-  bool sora_multistream = false;
   bool sora_simulcast = false;
   std::string sora_simulcast_rid;
   bool sora_spotlight = false;
   int sora_spotlight_number = 0;
   std::string sora_spotlight_focus_rid;
   std::string sora_spotlight_unfocus_rid;
-  boost::optional<bool> sora_data_channel_signaling;
+  std::optional<bool> sora_data_channel_signaling;
   int sora_data_channel_signaling_timeout = 180;
-  boost::optional<bool> sora_ignore_disconnect_websocket;
+  std::optional<bool> sora_ignore_disconnect_websocket;
   int sora_disconnect_wait_timeout = 5;
   boost::json::value sora_metadata;
   boost::json::value sora_signaling_notify_metadata;
   boost::json::value sora_data_channels;
-
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_send;
-  webrtc::DegradedCall::TimeScopedNetworkConfig fake_network_receive;
 
   std::shared_ptr<GameKeyCore> key_core;
 

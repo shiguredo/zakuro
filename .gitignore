@@ -38,17 +38,10 @@ webrtc_logs_0
 .DS_Store
 *.swp
 
-/_package
-/build/macos/_source
-/build/macos/_build
-/build/macos/_install
-/build/ubuntu-20.04_x86_64/_source
-/build/ubuntu-20.04_x86_64/_build
-/build/ubuntu-20.04_x86_64/_install
-/build/ubuntu-20.04_x86_64/_cache
-
 *.yaml
 
+/_package
 /_source
 /_build
 /_install
+/__pycache__

@@ -12,12 +12,10 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/json.hpp>
-#include <boost/optional.hpp>
-#include <boost/optional/optional_io.hpp>
 #include <boost/preprocessor/stringize.hpp>
 
 // WebRTC
-#include <rtc_base/helpers.h>
+#include <rtc_base/crypto_random.h>
 
 #include "zakuro.h"
 #include "zakuro_version.h"
@@ -85,8 +83,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   auto bool_map = std::vector<std::pair<std::string, bool>>(
       {{"false", false}, {"true", true}});
   auto optional_bool_map =
-      std::vector<std::pair<std::string, boost::optional<bool>>>(
-          {{"false", false}, {"true", true}, {"none", boost::none}});
+      std::vector<std::pair<std::string, std::optional<bool>>>(
+          {{"false", false}, {"true", true}, {"none", std::nullopt}});
 
   app.add_option("--name", config.name, "Client Name");
   app.add_option("--vcs", config.vcs, "Virtual Clients (default: 1)")
@@ -167,6 +165,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--initial-mute-audio", config.initial_mute_audio,
                  "Mute audio initialy (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
+  auto degradation_preference_map =
+      std::vector<std::pair<std::string, webrtc::DegradationPreference>>(
+          {{"disabled", webrtc::DegradationPreference::DISABLED},
+           {"maintain_framerate",
+            webrtc::DegradationPreference::MAINTAIN_FRAMERATE},
+           {"maintain_resolution",
+            webrtc::DegradationPreference::MAINTAIN_RESOLUTION},
+           {"balanced", webrtc::DegradationPreference::BALANCED}});
+  app.add_option("--degradation-preference", config.degradation_preference,
+                 "Degradation preference")
+      ->transform(CLI::CheckedTransformer(degradation_preference_map,
+                                          CLI::ignore_case));
 
   // Sora 系オプション
   app.add_option("--sora-signaling-url", config.sora_signaling_urls,
@@ -189,7 +199,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-video-codec-type", config.sora_video_codec_type,
                  "Video codec for send (default: none)")
-      ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264"}));
+      ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264", "H265"}));
   app.add_option("--sora-audio-codec-type", config.sora_audio_codec_type,
                  "Audio codec for send (default: none)")
       ->check(CLI::IsMember({"", "OPUS"}));
@@ -199,9 +209,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-audio-bit-rate", config.sora_audio_bit_rate,
                  "Audio bit rate (default: none)")
       ->check(CLI::Range(0, 510));
-  app.add_option("--sora-multistream", config.sora_multistream,
-                 "Use multistream (default: false)")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-simulcast", config.sora_simulcast,
                  "Use simulcast (default: false)")
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
@@ -240,7 +247,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
 
   auto is_json = CLI::Validator(
       [](std::string input) -> std::string {
-        boost::json::error_code ec;
+        boost::system::error_code ec;
         boost::json::parse(input, ec);
         if (ec) {
           return "Value " + input + " is not JSON Value";
@@ -261,58 +268,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-data-channels", sora_data_channels,
                  "DataChannels (default: none)")
       ->check(is_json);
-
-  // Fake network 系
-  app.add_option("--fake-network-send-queue-length-packets",
-                 config.fake_network_send.queue_length_packets,
-                 "Queue length in number of packets for sending");
-  app.add_option("--fake-network-send-queue-delay-ms",
-                 config.fake_network_send.queue_delay_ms,
-                 "Delay in addition to capacity induced delay for sending");
-  app.add_option("--fake-network-send-delay-standard-deviation-ms",
-                 config.fake_network_send.delay_standard_deviation_ms,
-                 "Standard deviation of the extra delay for sending");
-  app.add_option("--fake-network-send-link-capacity-kbps",
-                 config.fake_network_send.link_capacity_kbps,
-                 "Link capacity in kbps for sending");
-  app.add_option("--fake-network-send-loss-percent",
-                 config.fake_network_send.loss_percent,
-                 "Random packet loss for sending");
-  app.add_option("--fake-network-send-allow-reordering",
-                 config.fake_network_send.allow_reordering,
-                 "If packets are allowed to be reordered for sending")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
-  app.add_option("--fake-network-send-avg-burst-loss-length",
-                 config.fake_network_send.avg_burst_loss_length,
-                 "The average length of a burst of lost packets for sending");
-  app.add_option("--fake-network-send-packet-overhead",
-                 config.fake_network_send.packet_overhead,
-                 "Additional bytes to add to packet size for sending");
-  app.add_option("--fake-network-receive-queue-length-packets",
-                 config.fake_network_receive.queue_length_packets,
-                 "Queue length in number of packets for receiving");
-  app.add_option("--fake-network-receive-queue-delay-ms",
-                 config.fake_network_receive.queue_delay_ms,
-                 "Delay in addition to capacity induced delay for receiving");
-  app.add_option("--fake-network-receive-delay-standard-deviation-ms",
-                 config.fake_network_receive.delay_standard_deviation_ms,
-                 "Standard deviation of the extra delay for receiving");
-  app.add_option("--fake-network-receive-link-capacity-kbps",
-                 config.fake_network_receive.link_capacity_kbps,
-                 "Link capacity in kbps for receiving");
-  app.add_option("--fake-network-receive-loss-percent",
-                 config.fake_network_receive.loss_percent,
-                 "Random packet loss for receiving");
-  app.add_option("--fake-network-receive-allow-reordering",
-                 config.fake_network_receive.allow_reordering,
-                 "If packets are allowed to be reordered for receiving")
-      ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
-  app.add_option("--fake-network-receive-avg-burst-loss-length",
-                 config.fake_network_receive.avg_burst_loss_length,
-                 "The average length of a burst of lost packets for receiving");
-  app.add_option("--fake-network-receive-packet-overhead",
-                 config.fake_network_receive.packet_overhead,
-                 "Additional bytes to add to packet size for receiving");
 
   try {
     app.parse(args);
@@ -347,18 +302,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   }
   if (config.sora_role.empty()) {
     std::cerr << "--sora-role is required" << std::endl;
-    std::exit(1);
-  }
-
-  // サイマルキャストは VP8 か H264 のみで動作する
-  if (config.sora_video && config.sora_simulcast &&
-      config.sora_video_codec_type != "VP8" &&
-      config.sora_video_codec_type != "VP9" &&
-      config.sora_video_codec_type != "AV1" &&
-      config.sora_video_codec_type != "H264") {
-    std::cerr
-        << "Simulcast works only --sora-video-codec=VP8, VP9, AV1 or H264."
-        << std::endl;
     std::exit(1);
   }
 
@@ -433,23 +376,23 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     }
   }
 
-#define DEF_SCALAR(x, prefix, key, type, type_name)                                       \
-  try {                                                                                   \
-    const YAML::Node& node = x[key];                                                      \
-    if (node) {                                                                           \
-      if (!node.IsScalar()) {                                                             \
+#define DEF_SCALAR(x, prefix, key, type, type_name)                            \
+  try {                                                                        \
+    const YAML::Node& node = x[key];                                           \
+    if (node) {                                                                \
+      if (!node.IsScalar()) {                                                  \
         std::cerr << "\"" key "\" の値は " type_name " である必要があります。" \
-                  << std::endl;                                                           \
-        has_error = true;                                                                 \
-      } else {                                                                            \
-        args.push_back("--" prefix key);                                                  \
-        args.push_back(ConvertEnv<type>(node, envs));                                     \
-      }                                                                                   \
-    }                                                                                     \
-  } catch (YAML::BadConversion & e) {                                                     \
+                  << std::endl;                                                \
+        has_error = true;                                                      \
+      } else {                                                                 \
+        args.push_back("--" prefix key);                                       \
+        args.push_back(ConvertEnv<type>(node, envs));                          \
+      }                                                                        \
+    }                                                                          \
+  } catch (YAML::BadConversion & e) {                                          \
     std::cerr << "\"" key "\" の値は " type_name " である必要があります。"     \
-              << std::endl;                                                               \
-    has_error = true;                                                                     \
+              << std::endl;                                                    \
+    has_error = true;                                                          \
   }
 
 #define DEF_STRING(x, prefix, key) \
@@ -458,24 +401,24 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
 #define DEF_DOUBLE(x, prefix, key) DEF_SCALAR(x, prefix, key, double, "実数")
 #define DEF_BOOLEAN(x, prefix, key) DEF_SCALAR(x, prefix, key, bool, "bool値")
 
-#define DEF_FLAG(x, prefix, key)                                                       \
-  try {                                                                                \
-    const YAML::Node& node = x[key];                                                   \
-    if (node) {                                                                        \
-      if (!node.IsScalar()) {                                                          \
+#define DEF_FLAG(x, prefix, key)                                        \
+  try {                                                                 \
+    const YAML::Node& node = x[key];                                    \
+    if (node) {                                                         \
+      if (!node.IsScalar()) {                                           \
         std::cerr << "\"" key "\" の値は bool値 である必要があります。" \
-                  << std::endl;                                                        \
-        has_error = true;                                                              \
-      } else {                                                                         \
-        if (node.as<bool>()) {                                                         \
-          args.push_back("--" prefix key);                                             \
-        }                                                                              \
-      }                                                                                \
-    }                                                                                  \
-  } catch (YAML::BadConversion & e) {                                                  \
+                  << std::endl;                                         \
+        has_error = true;                                               \
+      } else {                                                          \
+        if (node.as<bool>()) {                                          \
+          args.push_back("--" prefix key);                              \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  } catch (YAML::BadConversion & e) {                                   \
     std::cerr << "\"" key "\" の値は bool値 である必要があります。"     \
-              << std::endl;                                                            \
-    has_error = true;                                                                  \
+              << std::endl;                                             \
+    has_error = true;                                                   \
   }
 
   for (int i = 0; i < instance_num; i++) {
@@ -509,6 +452,7 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "client-key");
     DEF_BOOLEAN(inst, "", "initial-mute-video");
     DEF_BOOLEAN(inst, "", "initial-mute-audio");
+    DEF_STRING(inst, "", "degradation-preference");
 
     const YAML::Node& sora = inst["sora"];
     if (sora) {
@@ -545,7 +489,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       DEF_STRING(sora, "sora-", "audio-codec-type");
       DEF_INTEGER(sora, "sora-", "video-bit-rate");
       DEF_INTEGER(sora, "sora-", "audio-bit-rate");
-      DEF_BOOLEAN(sora, "sora-", "multistream");
       DEF_BOOLEAN(sora, "sora-", "simulcast");
       DEF_STRING(sora, "sora-", "simulcast-rid");
       DEF_BOOLEAN(sora, "sora-", "spotlight");
@@ -572,34 +515,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
         args.push_back("--sora-data-channels");
         args.push_back(boost::json::serialize(value));
       }
-    }
-
-    const YAML::Node& fake_network = inst["fake-network"];
-    if (fake_network) {
-      DEF_INTEGER(fake_network, "fake-network-", "send-queue-length-packets");
-      DEF_INTEGER(fake_network, "fake-network-", "send-queue-delay-ms");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "send-delay-standard-deviation-ms");
-      DEF_INTEGER(fake_network, "fake-network-", "send-link-capacity-kbps");
-      DEF_INTEGER(fake_network, "fake-network-", "send-loss-percent");
-      DEF_BOOLEAN(fake_network, "fake-network-", "send-allow-reordering");
-      DEF_INTEGER(fake_network, "fake-network-", "send-avg-burst-loss-length");
-      DEF_INTEGER(fake_network, "fake-network-", "send-packet-overhead");
-      DEF_BOOLEAN(fake_network, "fake-network-",
-                  "send-codel-active-queue-management");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "receive-queue-length-packets");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-queue-delay-ms");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "receive-delay-standard-deviation-ms");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-link-capacity-kbps");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-loss-percent");
-      DEF_BOOLEAN(fake_network, "fake-network-", "receive-allow-reordering");
-      DEF_INTEGER(fake_network, "fake-network-",
-                  "receive-avg-burst-loss-length");
-      DEF_INTEGER(fake_network, "fake-network-", "receive-packet-overhead");
-      DEF_BOOLEAN(fake_network, "fake-network-",
-                  "receive-codel-active-queue-management");
     }
 
     if (has_error) {
