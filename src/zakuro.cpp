@@ -379,45 +379,52 @@ int Zakuro::Run() {
         vc_config.openh264;
   }
   // コーデックプリファレンスの設定
-  context_config.video_codec_factory_config.preference = std::invoke([this, &context_config]() {
-    std::optional<sora::VideoCodecPreference> preference;
-    
-    // 個別のコーデックプリファレンスを設定
-    auto add_codec_preference =
-        [&preference](webrtc::VideoCodecType type,
-                     std::optional<sora::VideoCodecImplementation> encoder,
-                     std::optional<sora::VideoCodecImplementation> decoder) {
-          if (encoder || decoder) {
-            if (!preference) {
-              preference = sora::VideoCodecPreference();
-            }
-            auto& codec = preference->GetOrAdd(type);
-            codec.encoder = encoder;
-            codec.decoder = decoder;
-          }
-        };
-    
-    add_codec_preference(webrtc::kVideoCodecVP8, config_.vp8_encoder, config_.vp8_decoder);
-    add_codec_preference(webrtc::kVideoCodecVP9, config_.vp9_encoder, config_.vp9_decoder);
-    add_codec_preference(webrtc::kVideoCodecH264, config_.h264_encoder, config_.h264_decoder);
-    add_codec_preference(webrtc::kVideoCodecH265, config_.h265_encoder, config_.h265_decoder);
-    add_codec_preference(webrtc::kVideoCodecAV1, config_.av1_encoder, config_.av1_decoder);
-    
-    // デフォルトのプリファレンスがない場合は、従来の実装を使用
-    if (!preference) {
-      preference = sora::VideoCodecPreference();
-      auto capability = sora::GetVideoCodecCapability(
-          context_config.video_codec_factory_config.capability_config);
-      preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-          capability, sora::VideoCodecImplementation::kInternal));
-      preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-          capability, sora::VideoCodecImplementation::kCiscoOpenH264));
-      preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-          capability, sora::VideoCodecImplementation::kCustom_1));
-    }
-    
-    return preference;
-  });
+  context_config.video_codec_factory_config.preference =
+      std::invoke([this, &context_config]() {
+        std::optional<sora::VideoCodecPreference> preference;
+
+        // 個別のコーデックプリファレンスを設定
+        auto add_codec_preference =
+            [&preference](
+                webrtc::VideoCodecType type,
+                std::optional<sora::VideoCodecImplementation> encoder,
+                std::optional<sora::VideoCodecImplementation> decoder) {
+              if (encoder || decoder) {
+                if (!preference) {
+                  preference = sora::VideoCodecPreference();
+                }
+                auto& codec = preference->GetOrAdd(type);
+                codec.encoder = encoder;
+                codec.decoder = decoder;
+              }
+            };
+
+        add_codec_preference(webrtc::kVideoCodecVP8, config_.vp8_encoder,
+                             config_.vp8_decoder);
+        add_codec_preference(webrtc::kVideoCodecVP9, config_.vp9_encoder,
+                             config_.vp9_decoder);
+        add_codec_preference(webrtc::kVideoCodecH264, config_.h264_encoder,
+                             config_.h264_decoder);
+        add_codec_preference(webrtc::kVideoCodecH265, config_.h265_encoder,
+                             config_.h265_decoder);
+        add_codec_preference(webrtc::kVideoCodecAV1, config_.av1_encoder,
+                             config_.av1_decoder);
+
+        // デフォルトのプリファレンスがない場合は、従来の実装を使用
+        if (!preference) {
+          preference = sora::VideoCodecPreference();
+          auto capability = sora::GetVideoCodecCapability(
+              context_config.video_codec_factory_config.capability_config);
+          preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+              capability, sora::VideoCodecImplementation::kInternal));
+          preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+              capability, sora::VideoCodecImplementation::kCiscoOpenH264));
+          preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+              capability, sora::VideoCodecImplementation::kCustom_1));
+        }
+
+        return preference;
+      });
   context_config.video_codec_factory_config.create_video_decoder =
       [](sora::VideoCodecImplementation implementation,
          const sora::VideoCodecCapabilityConfig& capability_config,

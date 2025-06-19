@@ -51,7 +51,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_flag("--version", version, "Show version information");
 
   bool show_video_codec_capability = false;
-  app.add_flag("--show-video-codec-capability", show_video_codec_capability, 
+  app.add_flag("--show-video-codec-capability", show_video_codec_capability,
                "Show available video codec capability");
 
   app.add_option("--config", config_file, "YAML config file path")
@@ -302,55 +302,66 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
            {"nvidia_video_codec_sdk",
             sora::VideoCodecImplementation::kNvidiaVideoCodecSdk},
            {"amd_amf", sora::VideoCodecImplementation::kAmdAmf}});
-  auto video_codec_description = "(internal, cisco_openh264, intel_vpl, "
-                                  "nvidia_video_codec_sdk, amd_amf)";
+  auto video_codec_description =
+      "(internal, cisco_openh264, intel_vpl, "
+      "nvidia_video_codec_sdk, amd_amf)";
 
   // VP8
-  app.add_option("--vp8-encoder", config.vp8_encoder, "VP8 encoder implementation")
+  app.add_option("--vp8-encoder", config.vp8_encoder,
+                 "VP8 encoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
-  app.add_option("--vp8-decoder", config.vp8_decoder, "VP8 decoder implementation")
+  app.add_option("--vp8-decoder", config.vp8_decoder,
+                 "VP8 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
 
   // VP9
-  app.add_option("--vp9-encoder", config.vp9_encoder, "VP9 encoder implementation")
+  app.add_option("--vp9-encoder", config.vp9_encoder,
+                 "VP9 encoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
-  app.add_option("--vp9-decoder", config.vp9_decoder, "VP9 decoder implementation")
+  app.add_option("--vp9-decoder", config.vp9_decoder,
+                 "VP9 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
 
   // AV1
-  app.add_option("--av1-encoder", config.av1_encoder, "AV1 encoder implementation")
+  app.add_option("--av1-encoder", config.av1_encoder,
+                 "AV1 encoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
-  app.add_option("--av1-decoder", config.av1_decoder, "AV1 decoder implementation")
+  app.add_option("--av1-decoder", config.av1_decoder,
+                 "AV1 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
 
   // H264
-  app.add_option("--h264-encoder", config.h264_encoder, "H.264 encoder implementation")
+  app.add_option("--h264-encoder", config.h264_encoder,
+                 "H.264 encoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
-  app.add_option("--h264-decoder", config.h264_decoder, "H.264 decoder implementation")
+  app.add_option("--h264-decoder", config.h264_decoder,
+                 "H.264 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
 
   // H265
-  app.add_option("--h265-encoder", config.h265_encoder, "H.265 encoder implementation")
+  app.add_option("--h265-encoder", config.h265_encoder,
+                 "H.265 encoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
-  app.add_option("--h265-decoder", config.h265_decoder, "H.265 decoder implementation")
+  app.add_option("--h265-decoder", config.h265_decoder,
+                 "H.265 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
@@ -373,20 +384,20 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   if (show_video_codec_capability) {
     // ビデオコーデック能力表示
     sora::VideoCodecCapabilityConfig capability_config;
-    
+
     // CUDA コンテキストが利用可能な場合
     if (sora::CudaContext::CanCreate()) {
       capability_config.cuda_context = sora::CudaContext::Create();
     }
-    
+
     // OpenH264 パスが指定されている場合
     // コマンドライン引数は既にパースされているので、config.openh264 に値が入っている
     if (!config.openh264.empty()) {
       capability_config.openh264_path = config.openh264;
     }
-    
+
     auto capability = sora::GetVideoCodecCapability(capability_config);
-    
+
     for (const auto& engine : capability.engines) {
       std::string engine_name;
       switch (engine.name) {
@@ -436,14 +447,14 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
           engine_name = "Unknown";
           break;
       }
-      
+
       // カスタムエンジンの場合、名前があれば使用
       if (engine.parameters.custom_engine_name) {
         engine_name = *engine.parameters.custom_engine_name;
       }
-      
+
       std::cout << "Engine: " << engine_name << std::endl;
-      
+
       for (const auto& codec : engine.codecs) {
         std::string codec_type = webrtc::CodecTypeToPayloadString(codec.type);
         if (codec.encoder) {
@@ -452,18 +463,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
         if (codec.decoder) {
           std::cout << "  - " << codec_type << " Decoder" << std::endl;
         }
-        
+
         // コーデックパラメータの表示
         boost::json::object params;
         if (codec.parameters.version) {
           params["version"] = *codec.parameters.version;
         }
         if (!params.empty()) {
-          std::cout << "    - Codec Parameters: " 
+          std::cout << "    - Codec Parameters: "
                     << boost::json::serialize(params) << std::endl;
         }
       }
-      
+
       // エンジンパラメータの表示
       boost::json::object engine_params;
       if (engine.parameters.version) {
@@ -476,21 +487,24 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
         engine_params["vpl_impl"] = *engine.parameters.vpl_impl;
       }
       if (engine.parameters.nvcodec_gpu_device_name) {
-        engine_params["nvcodec_gpu_device_name"] = *engine.parameters.nvcodec_gpu_device_name;
+        engine_params["nvcodec_gpu_device_name"] =
+            *engine.parameters.nvcodec_gpu_device_name;
       }
       if (engine.parameters.amf_runtime_version) {
-        engine_params["amf_runtime_version"] = *engine.parameters.amf_runtime_version;
+        engine_params["amf_runtime_version"] =
+            *engine.parameters.amf_runtime_version;
       }
       if (engine.parameters.custom_engine_description) {
-        engine_params["custom_engine_description"] = *engine.parameters.custom_engine_description;
+        engine_params["custom_engine_description"] =
+            *engine.parameters.custom_engine_description;
       }
-      
+
       if (!engine_params.empty()) {
-        std::cout << "  - Engine Parameters: " 
+        std::cout << "  - Engine Parameters: "
                   << boost::json::serialize(engine_params) << std::endl;
       }
     }
-    
+
     std::exit(0);
   }
 
