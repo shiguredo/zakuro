@@ -547,6 +547,18 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_BOOLEAN(inst, "", "initial-mute-audio");
     DEF_STRING(inst, "", "degradation-preference");
 
+    // コーデックプリファレンス
+    DEF_STRING(inst, "", "vp8-encoder");
+    DEF_STRING(inst, "", "vp8-decoder");
+    DEF_STRING(inst, "", "vp9-encoder");
+    DEF_STRING(inst, "", "vp9-decoder");
+    DEF_STRING(inst, "", "av1-encoder");
+    DEF_STRING(inst, "", "av1-decoder");
+    DEF_STRING(inst, "", "h264-encoder");
+    DEF_STRING(inst, "", "h264-decoder");
+    DEF_STRING(inst, "", "h265-encoder");
+    DEF_STRING(inst, "", "h265-decoder");
+
     const YAML::Node& sora = inst["sora"];
     if (sora) {
       // --sora-signaling-url: string or string[]
@@ -606,6 +618,27 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       if (sora["data-channels"]) {
         boost::json::value value = NodeToJson(sora["data-channels"]);
         args.push_back("--sora-data-channels");
+        args.push_back(boost::json::serialize(value));
+      }
+      // ビデオコーデックパラメータ
+      if (sora["video-vp9-params"]) {
+        boost::json::value value = NodeToJson(sora["video-vp9-params"]);
+        args.push_back("--sora-video-vp9-params");
+        args.push_back(boost::json::serialize(value));
+      }
+      if (sora["video-av1-params"]) {
+        boost::json::value value = NodeToJson(sora["video-av1-params"]);
+        args.push_back("--sora-video-av1-params");
+        args.push_back(boost::json::serialize(value));
+      }
+      if (sora["video-h264-params"]) {
+        boost::json::value value = NodeToJson(sora["video-h264-params"]);
+        args.push_back("--sora-video-h264-params");
+        args.push_back(boost::json::serialize(value));
+      }
+      if (sora["video-h265-params"]) {
+        boost::json::value value = NodeToJson(sora["video-h265-params"]);
+        args.push_back("--sora-video-h265-params");
         args.push_back(boost::json::serialize(value));
       }
     }
