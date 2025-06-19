@@ -17,6 +17,9 @@
 // WebRTC
 #include <rtc_base/crypto_random.h>
 
+// Sora
+#include <sora/sora_video_codec.h>
+
 #include "zakuro.h"
 #include "zakuro_version.h"
 
@@ -199,7 +202,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-video-codec-type", config.sora_video_codec_type,
                  "Video codec for send (default: none)")
-      ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264"}));
+      ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264", "H265"}));
   app.add_option("--sora-audio-codec-type", config.sora_audio_codec_type,
                  "Audio codec for send (default: none)")
       ->check(CLI::IsMember({"", "OPUS"}));
@@ -268,6 +271,84 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-data-channels", sora_data_channels,
                  "DataChannels (default: none)")
       ->check(is_json);
+  std::string sora_video_vp9_params;
+  app.add_option("--sora-video-vp9-params", sora_video_vp9_params,
+                 "Parameters for VP9 video codec (default: none)")
+      ->check(is_json);
+  std::string sora_video_av1_params;
+  app.add_option("--sora-video-av1-params", sora_video_av1_params,
+                 "Parameters for AV1 video codec (default: none)")
+      ->check(is_json);
+  std::string sora_video_h264_params;
+  app.add_option("--sora-video-h264-params", sora_video_h264_params,
+                 "Parameters for H.264 video codec (default: none)")
+      ->check(is_json);
+  std::string sora_video_h265_params;
+  app.add_option("--sora-video-h265-params", sora_video_h265_params,
+                 "Parameters for H.265 video codec (default: none)")
+      ->check(is_json);
+
+  // ビデオコーデック実装の選択肢
+  auto video_codec_implementation_map =
+      std::vector<std::pair<std::string, sora::VideoCodecImplementation>>(
+          {{"internal", sora::VideoCodecImplementation::kInternal},
+           {"cisco_openh264", sora::VideoCodecImplementation::kCiscoOpenH264},
+           {"intel_vpl", sora::VideoCodecImplementation::kIntelVpl},
+           {"nvidia_video_codec_sdk",
+            sora::VideoCodecImplementation::kNvidiaVideoCodecSdk},
+           {"amd_amf", sora::VideoCodecImplementation::kAmdAmf}});
+  auto video_codec_description = "(internal, cisco_openh264, intel_vpl, "
+                                  "nvidia_video_codec_sdk, amd_amf)";
+
+  // VP8
+  app.add_option("--vp8-encoder", config.vp8_encoder, "VP8 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+  app.add_option("--vp8-decoder", config.vp8_decoder, "VP8 decoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // VP9
+  app.add_option("--vp9-encoder", config.vp9_encoder, "VP9 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+  app.add_option("--vp9-decoder", config.vp9_decoder, "VP9 decoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // AV1
+  app.add_option("--av1-encoder", config.av1_encoder, "AV1 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+  app.add_option("--av1-decoder", config.av1_decoder, "AV1 decoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // H264
+  app.add_option("--h264-encoder", config.h264_encoder, "H.264 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+  app.add_option("--h264-decoder", config.h264_decoder, "H.264 decoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // H265
+  app.add_option("--h265-encoder", config.h265_encoder, "H.265 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+  app.add_option("--h265-decoder", config.h265_decoder, "H.265 decoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
 
   try {
     app.parse(args);
@@ -327,6 +408,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   }
   if (!sora_data_channels.empty()) {
     config.sora_data_channels = boost::json::parse(sora_data_channels);
+  }
+  if (!sora_video_vp9_params.empty()) {
+    config.sora_video_vp9_params = boost::json::parse(sora_video_vp9_params);
+  }
+  if (!sora_video_av1_params.empty()) {
+    config.sora_video_av1_params = boost::json::parse(sora_video_av1_params);
+  }
+  if (!sora_video_h264_params.empty()) {
+    config.sora_video_h264_params = boost::json::parse(sora_video_h264_params);
+  }
+  if (!sora_video_h265_params.empty()) {
+    config.sora_video_h265_params = boost::json::parse(sora_video_h265_params);
   }
 }
 
