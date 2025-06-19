@@ -66,6 +66,7 @@ NopVideoDecoderFactory::GetSupportedFormats() const {
   for (const webrtc::SdpVideoFormat& format : h264_codecs) {
     supported_codecs.push_back(format);
   }
+  supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kH265CodecName));
   return supported_codecs;
 }
 

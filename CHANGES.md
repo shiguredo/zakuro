@@ -11,6 +11,10 @@
 
 ## develop
 
+- [ADD] NopVideoDecoderFactory に H.265 対応を追加
+  - NopVideoDecoderFactory は実際のデコード処理を行わず、固定サイズ（320x240）のダミーフレームを返すデコーダー
+  - GetSupportedFormats() に cricket::kH265CodecName を追加し、H.265 コーデックのサポートを宣言
+  - @voluntas
 - [CHANGE] `--sora-dir`, `--sora-args` を `--local-sora-cpp-sdk-dir` と `--local-sora-cpp-sdk-args` に変更する
   - @melpon
 - [CHANGE] `--webrtc-build-dir`, `--webrtc-build-args` を `--local-webrtc-build-dir` と `--local-webrtc-build-args` に変更する
