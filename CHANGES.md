@@ -11,6 +11,30 @@
 
 ## develop
 
+- [ADD] H.265 コーデックサポートを追加
+  - `--sora-video-codec-type` に H265 を追加
+  - `--sora-video-h265-params` オプションを追加
+  - @voluntas
+- [ADD] 各ビデオコーデックのパラメータ設定オプションを追加
+  - `--sora-video-vp9-params` オプションを追加
+  - `--sora-video-av1-params` オプションを追加
+  - `--sora-video-h264-params` オプションを追加
+  - @voluntas
+- [ADD] コーデックプリファレンス設定オプションを追加
+  - VP8, VP9, AV1, H.264, H.265 の各コーデックに対して、エンコーダー/デコーダーの実装を選択可能
+  - `--vp8-encoder`, `--vp8-decoder`
+  - `--vp9-encoder`, `--vp9-decoder`
+  - `--av1-encoder`, `--av1-decoder`
+  - `--h264-encoder`, `--h264-decoder`
+  - `--h265-encoder`, `--h265-decoder`
+  - 選択可能な実装: internal, cisco_openh264, intel_vpl, nvidia_video_codec_sdk, amd_amf
+  - @voluntas
+- [ADD] YAML 設定ファイルで全てのコーデックパラメータとプリファレンスに対応
+  - @voluntas
+- [ADD] `--show-video-codec-capability` オプションを追加
+  - 利用可能なビデオコーデックのエンコーダーとデコーダーなどを出力
+  - @voluntas
+
 ## 2025.1.0
 
 **リリース日**: 2025-06-19
