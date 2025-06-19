@@ -11,11 +11,6 @@
 
 ## develop
 
-- [ADD] H.265 でも実際のデコード処理を行わず、固定サイズ（320x240）のダミーフレームを返すデコーダーを追加する
-  - @voluntas
-- [ADD] --sora-video-codec-type オプションに H265 を追加
-  - 利用可能な映像コーデックに H.265 を追加
-  - @voluntas
 - [CHANGE] `--sora-dir`, `--sora-args` を `--local-sora-cpp-sdk-dir` と `--local-sora-cpp-sdk-args` に変更する
   - @melpon
 - [CHANGE] `--webrtc-build-dir`, `--webrtc-build-args` を `--local-webrtc-build-dir` と `--local-webrtc-build-args` に変更する
@@ -63,6 +58,11 @@
   - @melpon
 - [ADD] `--degradation-preference` 引数を追加
   - @melpon
+- [ADD] H.265 でも実際のデコード処理を行わず、固定サイズ（320x240）のダミーフレームを返すデコーダーを追加する
+  - @voluntas
+- [ADD] --sora-video-codec-type オプションに H265 を追加
+  - 利用可能な映像コーデックに H.265 を追加
+  - @voluntas
 - [FIX] ビデオコーデックが未指定かつサイマルキャスト利用時に入力チェックエラーになる問題を修正する
   - ビデオコーデックが未指定でもサイマルキャストは利用可能であるため、チェックを削除
   - @miosakuma
