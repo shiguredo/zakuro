@@ -199,7 +199,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->transform(CLI::CheckedTransformer(bool_map, CLI::ignore_case));
   app.add_option("--sora-video-codec-type", config.sora_video_codec_type,
                  "Video codec for send (default: none)")
-      ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264"}));
+      ->check(CLI::IsMember({"", "VP8", "VP9", "AV1", "H264", "H265"}));
   app.add_option("--sora-audio-codec-type", config.sora_audio_codec_type,
                  "Audio codec for send (default: none)")
       ->check(CLI::IsMember({"", "OPUS"}));
