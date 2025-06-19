@@ -18,6 +18,7 @@
 #include <rtc_base/crypto_random.h>
 
 // Sora
+#include <sora/cuda_context.h>
 #include <sora/sora_video_codec.h>
 
 #include "zakuro.h"
@@ -48,6 +49,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   // アプリケーション全体で１個しか存在しない共通オプション
   bool version = false;
   app.add_flag("--version", version, "Show version information");
+
+  bool show_video_codec_capability = false;
+  app.add_flag("--show-video-codec-capability", show_video_codec_capability, 
+               "Show available video codec capability");
 
   app.add_option("--config", config_file, "YAML config file path")
       ->check(CLI::ExistingFile);
@@ -362,6 +367,130 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::cout << "WebRTC: " << ZakuroVersion::GetLibwebrtcName() << std::endl;
     std::cout << "Environment: " << ZakuroVersion::GetEnvironmentName()
               << std::endl;
+    std::exit(0);
+  }
+
+  if (show_video_codec_capability) {
+    // ビデオコーデック能力表示
+    sora::VideoCodecCapabilityConfig capability_config;
+    
+    // CUDA コンテキストが利用可能な場合
+    if (sora::CudaContext::CanCreate()) {
+      capability_config.cuda_context = sora::CudaContext::Create();
+    }
+    
+    // OpenH264 パスが指定されている場合
+    // コマンドライン引数は既にパースされているので、config.openh264 に値が入っている
+    if (!config.openh264.empty()) {
+      capability_config.openh264_path = config.openh264;
+    }
+    
+    auto capability = sora::GetVideoCodecCapability(capability_config);
+    
+    for (const auto& engine : capability.engines) {
+      std::string engine_name;
+      switch (engine.name) {
+        case sora::VideoCodecImplementation::kInternal:
+          engine_name = "Internal";
+          break;
+        case sora::VideoCodecImplementation::kCiscoOpenH264:
+          engine_name = "Cisco OpenH264";
+          break;
+        case sora::VideoCodecImplementation::kIntelVpl:
+          engine_name = "Intel VPL";
+          break;
+        case sora::VideoCodecImplementation::kNvidiaVideoCodecSdk:
+          engine_name = "NVIDIA Video Codec SDK";
+          break;
+        case sora::VideoCodecImplementation::kAmdAmf:
+          engine_name = "AMD AMF";
+          break;
+        case sora::VideoCodecImplementation::kCustom_1:
+          engine_name = "Custom 1";
+          break;
+        case sora::VideoCodecImplementation::kCustom_2:
+          engine_name = "Custom 2";
+          break;
+        case sora::VideoCodecImplementation::kCustom_3:
+          engine_name = "Custom 3";
+          break;
+        case sora::VideoCodecImplementation::kCustom_4:
+          engine_name = "Custom 4";
+          break;
+        case sora::VideoCodecImplementation::kCustom_5:
+          engine_name = "Custom 5";
+          break;
+        case sora::VideoCodecImplementation::kCustom_6:
+          engine_name = "Custom 6";
+          break;
+        case sora::VideoCodecImplementation::kCustom_7:
+          engine_name = "Custom 7";
+          break;
+        case sora::VideoCodecImplementation::kCustom_8:
+          engine_name = "Custom 8";
+          break;
+        case sora::VideoCodecImplementation::kCustom_9:
+          engine_name = "Custom 9";
+          break;
+        default:
+          engine_name = "Unknown";
+          break;
+      }
+      
+      // カスタムエンジンの場合、名前があれば使用
+      if (engine.parameters.custom_engine_name) {
+        engine_name = *engine.parameters.custom_engine_name;
+      }
+      
+      std::cout << "Engine: " << engine_name << std::endl;
+      
+      for (const auto& codec : engine.codecs) {
+        std::string codec_type = webrtc::CodecTypeToPayloadString(codec.type);
+        if (codec.encoder) {
+          std::cout << "  - " << codec_type << " Encoder" << std::endl;
+        }
+        if (codec.decoder) {
+          std::cout << "  - " << codec_type << " Decoder" << std::endl;
+        }
+        
+        // コーデックパラメータの表示
+        boost::json::object params;
+        if (codec.parameters.version) {
+          params["version"] = *codec.parameters.version;
+        }
+        if (!params.empty()) {
+          std::cout << "    - Codec Parameters: " 
+                    << boost::json::serialize(params) << std::endl;
+        }
+      }
+      
+      // エンジンパラメータの表示
+      boost::json::object engine_params;
+      if (engine.parameters.version) {
+        engine_params["version"] = *engine.parameters.version;
+      }
+      if (engine.parameters.openh264_path) {
+        engine_params["openh264_path"] = *engine.parameters.openh264_path;
+      }
+      if (engine.parameters.vpl_impl) {
+        engine_params["vpl_impl"] = *engine.parameters.vpl_impl;
+      }
+      if (engine.parameters.nvcodec_gpu_device_name) {
+        engine_params["nvcodec_gpu_device_name"] = *engine.parameters.nvcodec_gpu_device_name;
+      }
+      if (engine.parameters.amf_runtime_version) {
+        engine_params["amf_runtime_version"] = *engine.parameters.amf_runtime_version;
+      }
+      if (engine.parameters.custom_engine_description) {
+        engine_params["custom_engine_description"] = *engine.parameters.custom_engine_description;
+      }
+      
+      if (!engine_params.empty()) {
+        std::cout << "  - Engine Parameters: " 
+                  << boost::json::serialize(engine_params) << std::endl;
+      }
+    }
+    
     std::exit(0);
   }
 
