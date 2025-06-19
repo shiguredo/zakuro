@@ -305,18 +305,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::exit(1);
   }
 
-  // サイマルキャストは VP8 か H264 のみで動作する
-  if (config.sora_video && config.sora_simulcast &&
-      config.sora_video_codec_type != "VP8" &&
-      config.sora_video_codec_type != "VP9" &&
-      config.sora_video_codec_type != "AV1" &&
-      config.sora_video_codec_type != "H264") {
-    std::cerr
-        << "Simulcast works only --sora-video-codec=VP8, VP9, AV1 or H264."
-        << std::endl;
-    std::exit(1);
-  }
-
   // H264 は --openh264 が指定されてる場合のみ動作する
   if (config.sora_video_codec_type == "H264" && config.openh264.empty()) {
     std::cerr << "Specify --openh264=/path/to/libopenh264.so for H.264 codec"
