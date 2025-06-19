@@ -369,7 +369,7 @@ int Zakuro::Run() {
     engine.codecs.emplace_back(webrtc::kVideoCodecVP8, false, true);
     engine.codecs.emplace_back(webrtc::kVideoCodecVP9, false, true);
     engine.codecs.emplace_back(webrtc::kVideoCodecH264, false, true);
-    engine.codecs.emplace_back(webrtc::kVideoCodecH265, false, false);
+    engine.codecs.emplace_back(webrtc::kVideoCodecH265, false, true);
     engine.codecs.emplace_back(webrtc::kVideoCodecAV1, false, true);
     return std::vector<sora::VideoCodecCapability::Engine>{engine};
   };
