@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m132.6834-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/6834)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m136.7103-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7103)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -113,7 +113,7 @@ Options:
                               Send video to sora (default: true)
   --sora-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send audio to sora (default: true)
-  --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264}
+  --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264,H265}
                               Video codec for send (default: none)
   --sora-audio-codec-type TEXT:{OPUS}
                               Audio codec for send (default: none)
@@ -132,11 +132,11 @@ Options:
                               Spotlight focus rid (default: none)
   --sora-spotlight-unfocus-rid TEXT
                               Spotlight unfocus rid (default: none)
-  --sora-data-channel-signaling TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
+  --sora-data-channel-signaling TEXT:value in {false->,true->,none->} OR {}
                               Use DataChannel for Sora signaling (default: none)
   --sora-data-channel-signaling-timeout INT:POSITIVE
                               Timeout for Data Channel in seconds (default: 180)
-  --sora-ignore-disconnect-websocket TEXT:value in {false-> 0,true-> 1,none->--} OR { 0, 1,--}
+  --sora-ignore-disconnect-websocket TEXT:value in {false->,true->,none->} OR {}
                               Ignore WebSocket disconnection if using Data Channel (default: none)
   --sora-disconnect-wait-timeout INT:POSITIVE
                               Disconnecting timeout for Data Channel in seconds (default: 5)
