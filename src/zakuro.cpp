@@ -374,10 +374,19 @@ int Zakuro::Run() {
     return std::vector<sora::VideoCodecCapability::Engine>{engine};
   };
 
+  if (sora::CudaContext::CanCreate()) {
+    context_config.video_codec_factory_config.capability_config.cuda_context =
+        sora::CudaContext::Create();
+  }
+  if (sora::AMFContext::CanCreate()) {
+    context_config.video_codec_factory_config.capability_config.amf_context =
+        sora::AMFContext::Create();
+  }
   if (!vc_config.openh264.empty()) {
     context_config.video_codec_factory_config.capability_config.openh264_path =
         vc_config.openh264;
   }
+
   // コーデックプリファレンスの設定
   context_config.video_codec_factory_config.preference =
       std::invoke([this, &context_config]() {
@@ -400,28 +409,31 @@ int Zakuro::Run() {
             };
 
         add_codec_preference(webrtc::kVideoCodecVP8, config_.vp8_encoder,
-                             config_.vp8_decoder);
+                             std::nullopt);
         add_codec_preference(webrtc::kVideoCodecVP9, config_.vp9_encoder,
-                             config_.vp9_decoder);
+                             std::nullopt);
         add_codec_preference(webrtc::kVideoCodecH264, config_.h264_encoder,
-                             config_.h264_decoder);
+                             std::nullopt);
         add_codec_preference(webrtc::kVideoCodecH265, config_.h265_encoder,
-                             config_.h265_decoder);
+                             std::nullopt);
         add_codec_preference(webrtc::kVideoCodecAV1, config_.av1_encoder,
-                             config_.av1_decoder);
+                             std::nullopt);
+
+        auto capability = sora::GetVideoCodecCapability(
+            context_config.video_codec_factory_config.capability_config);
 
         // デフォルトのプリファレンスがない場合は、従来の実装を使用
         if (!preference) {
           preference = sora::VideoCodecPreference();
-          auto capability = sora::GetVideoCodecCapability(
-              context_config.video_codec_factory_config.capability_config);
           preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
               capability, sora::VideoCodecImplementation::kInternal));
           preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
               capability, sora::VideoCodecImplementation::kCiscoOpenH264));
-          preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-              capability, sora::VideoCodecImplementation::kCustom_1));
         }
+
+        // デコーダーは常に NopVideoDecoder を使用する
+        preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+            capability, sora::VideoCodecImplementation::kCustom_1));
 
         return preference;
       });

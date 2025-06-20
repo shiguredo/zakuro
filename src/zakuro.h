@@ -84,15 +84,10 @@ struct ZakuroConfig {
 
   // コーデックプリファレンス
   std::optional<sora::VideoCodecImplementation> vp8_encoder;
-  std::optional<sora::VideoCodecImplementation> vp8_decoder;
   std::optional<sora::VideoCodecImplementation> vp9_encoder;
-  std::optional<sora::VideoCodecImplementation> vp9_decoder;
   std::optional<sora::VideoCodecImplementation> av1_encoder;
-  std::optional<sora::VideoCodecImplementation> av1_decoder;
   std::optional<sora::VideoCodecImplementation> h264_encoder;
-  std::optional<sora::VideoCodecImplementation> h264_decoder;
   std::optional<sora::VideoCodecImplementation> h265_encoder;
-  std::optional<sora::VideoCodecImplementation> h265_decoder;
 
   std::shared_ptr<GameKeyCore> key_core;
 

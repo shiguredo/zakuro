@@ -18,6 +18,7 @@
 #include <rtc_base/crypto_random.h>
 
 // Sora
+#include <sora/amf_context.h>
 #include <sora/cuda_context.h>
 #include <sora/sora_video_codec.h>
 
@@ -303,17 +304,11 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
             sora::VideoCodecImplementation::kNvidiaVideoCodecSdk},
            {"amd_amf", sora::VideoCodecImplementation::kAmdAmf}});
   auto video_codec_description =
-      "(internal, cisco_openh264, intel_vpl, "
-      "nvidia_video_codec_sdk, amd_amf)";
+      "(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)";
 
   // VP8
   app.add_option("--vp8-encoder", config.vp8_encoder,
                  "VP8 encoder implementation")
-      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
-                                          CLI::ignore_case)
-                      .description(video_codec_description));
-  app.add_option("--vp8-decoder", config.vp8_decoder,
-                 "VP8 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
@@ -324,20 +319,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
-  app.add_option("--vp9-decoder", config.vp9_decoder,
-                 "VP9 decoder implementation")
-      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
-                                          CLI::ignore_case)
-                      .description(video_codec_description));
 
   // AV1
   app.add_option("--av1-encoder", config.av1_encoder,
                  "AV1 encoder implementation")
-      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
-                                          CLI::ignore_case)
-                      .description(video_codec_description));
-  app.add_option("--av1-decoder", config.av1_decoder,
-                 "AV1 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
@@ -348,20 +333,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
-  app.add_option("--h264-decoder", config.h264_decoder,
-                 "H.264 decoder implementation")
-      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
-                                          CLI::ignore_case)
-                      .description(video_codec_description));
 
   // H265
   app.add_option("--h265-encoder", config.h265_encoder,
                  "H.265 encoder implementation")
-      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
-                                          CLI::ignore_case)
-                      .description(video_codec_description));
-  app.add_option("--h265-decoder", config.h265_decoder,
-                 "H.265 decoder implementation")
       ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
                                           CLI::ignore_case)
                       .description(video_codec_description));
@@ -382,14 +357,14 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   }
 
   if (show_video_codec_capability) {
-    // ビデオコーデック能力表示
     sora::VideoCodecCapabilityConfig capability_config;
 
-    // CUDA コンテキストが利用可能な場合
     if (sora::CudaContext::CanCreate()) {
       capability_config.cuda_context = sora::CudaContext::Create();
     }
-
+    if (sora::AMFContext::CanCreate()) {
+      capability_config.amf_context = sora::AMFContext::Create();
+    }
     // OpenH264 パスが指定されている場合
     // コマンドライン引数は既にパースされているので、config.openh264 に値が入っている
     if (!config.openh264.empty()) {
@@ -399,64 +374,12 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     auto capability = sora::GetVideoCodecCapability(capability_config);
 
     for (const auto& engine : capability.engines) {
-      std::string engine_name;
-      switch (engine.name) {
-        case sora::VideoCodecImplementation::kInternal:
-          engine_name = "Internal";
-          break;
-        case sora::VideoCodecImplementation::kCiscoOpenH264:
-          engine_name = "Cisco OpenH264";
-          break;
-        case sora::VideoCodecImplementation::kIntelVpl:
-          engine_name = "Intel VPL";
-          break;
-        case sora::VideoCodecImplementation::kNvidiaVideoCodecSdk:
-          engine_name = "NVIDIA Video Codec SDK";
-          break;
-        case sora::VideoCodecImplementation::kAmdAmf:
-          engine_name = "AMD AMF";
-          break;
-        case sora::VideoCodecImplementation::kCustom_1:
-          engine_name = "Custom 1";
-          break;
-        case sora::VideoCodecImplementation::kCustom_2:
-          engine_name = "Custom 2";
-          break;
-        case sora::VideoCodecImplementation::kCustom_3:
-          engine_name = "Custom 3";
-          break;
-        case sora::VideoCodecImplementation::kCustom_4:
-          engine_name = "Custom 4";
-          break;
-        case sora::VideoCodecImplementation::kCustom_5:
-          engine_name = "Custom 5";
-          break;
-        case sora::VideoCodecImplementation::kCustom_6:
-          engine_name = "Custom 6";
-          break;
-        case sora::VideoCodecImplementation::kCustom_7:
-          engine_name = "Custom 7";
-          break;
-        case sora::VideoCodecImplementation::kCustom_8:
-          engine_name = "Custom 8";
-          break;
-        case sora::VideoCodecImplementation::kCustom_9:
-          engine_name = "Custom 9";
-          break;
-        default:
-          engine_name = "Unknown";
-          break;
-      }
-
-      // カスタムエンジンの場合、名前があれば使用
-      if (engine.parameters.custom_engine_name) {
-        engine_name = *engine.parameters.custom_engine_name;
-      }
-
-      std::cout << "Engine: " << engine_name << std::endl;
+      std::cout << "Engine: "
+                << boost::json::value_from(engine.name).as_string()
+                << std::endl;
 
       for (const auto& codec : engine.codecs) {
-        std::string codec_type = webrtc::CodecTypeToPayloadString(codec.type);
+        auto codec_type = boost::json::value_from(codec.type).as_string();
         if (codec.encoder) {
           std::cout << "  - " << codec_type << " Encoder" << std::endl;
         }
@@ -465,41 +388,16 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
         }
 
         // コーデックパラメータの表示
-        boost::json::object params;
-        if (codec.parameters.version) {
-          params["version"] = *codec.parameters.version;
-        }
-        if (!params.empty()) {
+        auto params = boost::json::value_from(codec.parameters);
+        if (params.as_object().size() > 0) {
           std::cout << "    - Codec Parameters: "
                     << boost::json::serialize(params) << std::endl;
         }
       }
 
       // エンジンパラメータの表示
-      boost::json::object engine_params;
-      if (engine.parameters.version) {
-        engine_params["version"] = *engine.parameters.version;
-      }
-      if (engine.parameters.openh264_path) {
-        engine_params["openh264_path"] = *engine.parameters.openh264_path;
-      }
-      if (engine.parameters.vpl_impl) {
-        engine_params["vpl_impl"] = *engine.parameters.vpl_impl;
-      }
-      if (engine.parameters.nvcodec_gpu_device_name) {
-        engine_params["nvcodec_gpu_device_name"] =
-            *engine.parameters.nvcodec_gpu_device_name;
-      }
-      if (engine.parameters.amf_runtime_version) {
-        engine_params["amf_runtime_version"] =
-            *engine.parameters.amf_runtime_version;
-      }
-      if (engine.parameters.custom_engine_description) {
-        engine_params["custom_engine_description"] =
-            *engine.parameters.custom_engine_description;
-      }
-
-      if (!engine_params.empty()) {
+      auto engine_params = boost::json::value_from(engine.parameters);
+      if (engine_params.as_object().size() > 0) {
         std::cout << "  - Engine Parameters: "
                   << boost::json::serialize(engine_params) << std::endl;
       }
