@@ -35,6 +35,12 @@
   - 利用可能なビデオコーデックのエンコーダーとデコーダーなどを出力
   - @voluntas
 
+### misc
+
+- [ADD] .github ディレクトリに copilot-instructions.md を追加
+  - @torikizi
+
+
 ## 2025.1.0
 
 **リリース日**: 2025-06-19
