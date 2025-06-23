@@ -450,6 +450,15 @@ int Zakuro::Run() {
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
 
+  // signaling URL のバリデーション
+  for (const auto& url : config_.sora_signaling_urls) {
+    if (url.find("wss://") != 0 && url.find("ws://") != 0) {
+      std::cerr << "[" << config_.name << "] Error: Invalid signaling URL: " << url << std::endl;
+      std::cerr << "Signaling URL must start with 'ws://' or 'wss://'" << std::endl;
+      return 1;
+    }
+  }
+
   sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
   sora_config.client_cert = config_.client_cert;

@@ -11,6 +11,9 @@
 
 ## develop
 
+- [ADD] signaling URL のバリデーションを追加
+  - signaling URL が ws:// または wss:// で始まらない場合はエラーを出力
+  - @voluntas
 - [ADD] H.265 コーデックサポートを追加
   - `--sora-video-codec-type` に H265 を追加
   - `--sora-video-h265-params` オプションを追加
