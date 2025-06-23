@@ -197,6 +197,17 @@ limitations under the License.
 "OpenH264 Video Codec provided by Cisco Systems, Inc."
 ```
 
+## NVIDIA Video Codec SDK
+
+<https://docs.nvidia.com/video-technologies/video-codec-sdk/12.2/index.html>
+
+
+<https://docs.nvidia.com/video-technologies/video-codec-sdk/12.2/license/index.html>
+
+```text
+“This software contains source code provided by NVIDIA Corporation.”
+```
+
 ### 音声ファイルのライセンス
 
 スポットライト機能検証時に利用する音声ファイルには [あみたろの声素材工房](https://amitaro.net/) 様の声素材を使用しています。
