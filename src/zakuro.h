@@ -12,6 +12,9 @@
 #include <boost/json.hpp>
 #include <boost/optional.hpp>
 
+// Sora
+#include <sora/sora_video_codec.h>
+
 #include "game/game_key_core.h"
 
 class ZakuroStats;
@@ -74,6 +77,17 @@ struct ZakuroConfig {
   boost::json::value sora_metadata;
   boost::json::value sora_signaling_notify_metadata;
   boost::json::value sora_data_channels;
+  boost::json::value sora_video_vp9_params;
+  boost::json::value sora_video_av1_params;
+  boost::json::value sora_video_h264_params;
+  boost::json::value sora_video_h265_params;
+
+  // コーデックプリファレンス
+  std::optional<sora::VideoCodecImplementation> vp8_encoder;
+  std::optional<sora::VideoCodecImplementation> vp9_encoder;
+  std::optional<sora::VideoCodecImplementation> av1_encoder;
+  std::optional<sora::VideoCodecImplementation> h264_encoder;
+  std::optional<sora::VideoCodecImplementation> h265_encoder;
 
   std::shared_ptr<GameKeyCore> key_core;
 

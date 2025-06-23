@@ -3,6 +3,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <csignal>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -10,6 +11,7 @@
 
 // WebRTC
 #include <api/enable_media.h>
+#include <api/video_codecs/video_codec.h>
 
 // Sora C++ SDK
 #include <sora/camera_device_capturer.h>
@@ -372,20 +374,69 @@ int Zakuro::Run() {
     return std::vector<sora::VideoCodecCapability::Engine>{engine};
   };
 
+  if (sora::CudaContext::CanCreate()) {
+    context_config.video_codec_factory_config.capability_config.cuda_context =
+        sora::CudaContext::Create();
+  }
+  if (sora::AMFContext::CanCreate()) {
+    context_config.video_codec_factory_config.capability_config.amf_context =
+        sora::AMFContext::Create();
+  }
   if (!vc_config.openh264.empty()) {
     context_config.video_codec_factory_config.capability_config.openh264_path =
         vc_config.openh264;
   }
-  auto capability = sora::GetVideoCodecCapability(
-      context_config.video_codec_factory_config.capability_config);
-  auto& preference =
-      context_config.video_codec_factory_config.preference.emplace();
-  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-      capability, sora::VideoCodecImplementation::kInternal));
-  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-      capability, sora::VideoCodecImplementation::kCiscoOpenH264));
-  preference.Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-      capability, sora::VideoCodecImplementation::kCustom_1));
+
+  // コーデックプリファレンスの設定
+  context_config.video_codec_factory_config.preference =
+      std::invoke([this, &context_config]() {
+        std::optional<sora::VideoCodecPreference> preference;
+
+        // 個別のコーデックプリファレンスを設定
+        auto add_codec_preference =
+            [&preference](
+                webrtc::VideoCodecType type,
+                std::optional<sora::VideoCodecImplementation> encoder,
+                std::optional<sora::VideoCodecImplementation> decoder) {
+              if (encoder || decoder) {
+                if (!preference) {
+                  preference = sora::VideoCodecPreference();
+                }
+                auto& codec = preference->GetOrAdd(type);
+                codec.encoder = encoder;
+                codec.decoder = decoder;
+              }
+            };
+
+        add_codec_preference(webrtc::kVideoCodecVP8, config_.vp8_encoder,
+                             std::nullopt);
+        add_codec_preference(webrtc::kVideoCodecVP9, config_.vp9_encoder,
+                             std::nullopt);
+        add_codec_preference(webrtc::kVideoCodecH264, config_.h264_encoder,
+                             std::nullopt);
+        add_codec_preference(webrtc::kVideoCodecH265, config_.h265_encoder,
+                             std::nullopt);
+        add_codec_preference(webrtc::kVideoCodecAV1, config_.av1_encoder,
+                             std::nullopt);
+
+        auto capability = sora::GetVideoCodecCapability(
+            context_config.video_codec_factory_config.capability_config);
+
+        // デフォルトのプリファレンスがない場合は、従来の実装を使用
+        if (!preference) {
+          preference = sora::VideoCodecPreference();
+          preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+              capability, sora::VideoCodecImplementation::kInternal));
+          preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+              capability, sora::VideoCodecImplementation::kCiscoOpenH264));
+        }
+
+        // デコーダーは常に NopVideoDecoder を使用する
+        preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
+            capability, sora::VideoCodecImplementation::kCustom_1));
+
+        return preference;
+      });
   context_config.video_codec_factory_config.create_video_decoder =
       [](sora::VideoCodecImplementation implementation,
          const sora::VideoCodecCapabilityConfig& capability_config,
@@ -415,6 +466,10 @@ int Zakuro::Run() {
   sora_config.audio_codec_type = config_.sora_audio_codec_type;
   sora_config.video_bit_rate = config_.sora_video_bit_rate;
   sora_config.audio_bit_rate = config_.sora_audio_bit_rate;
+  sora_config.video_vp9_params = config_.sora_video_vp9_params;
+  sora_config.video_av1_params = config_.sora_video_av1_params;
+  sora_config.video_h264_params = config_.sora_video_h264_params;
+  sora_config.video_h265_params = config_.sora_video_h265_params;
   sora_config.metadata = config_.sora_metadata;
   sora_config.signaling_notify_metadata =
       config_.sora_signaling_notify_metadata;
