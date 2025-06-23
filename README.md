@@ -56,6 +56,8 @@ Usage: [OPTIONS]
 Options:
   -h,--help                   Print this help message and exit
   --version                   Show version information
+  --show-video-codec-capability
+                              Show available video codec capability
   --config TEXT:FILE          YAML config file path
   --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
                               Log severity level threshold
@@ -81,7 +83,7 @@ Options:
   --fake-audio-capture TEXT:FILE
                               Fake Audio from File
   --sandstorm                 Fake Sandstorm Video (default: false)
-  --video-device TEXT:FILE    Use the video input device specified by a name (some device will be used if not specified)
+  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
   --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT]) (default: VGA)
   --framerate INT:INT in [1 - 60]
                               Video framerate (default: 30)
@@ -146,6 +148,24 @@ Options:
                               Signaling metadata (default: none)
   --sora-data-channels TEXT:JSON Value
                               DataChannels (default: none)
+  --sora-video-vp9-params TEXT:JSON Value
+                              Parameters for VP9 video codec (default: none)
+  --sora-video-av1-params TEXT:JSON Value
+                              Parameters for AV1 video codec (default: none)
+  --sora-video-h264-params TEXT:JSON Value
+                              Parameters for H.264 video codec (default: none)
+  --sora-video-h265-params TEXT:JSON Value
+                              Parameters for H.265 video codec (default: none)
+  --vp8-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+                              VP8 encoder implementation
+  --vp9-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+                              VP9 encoder implementation
+  --av1-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+                              AV1 encoder implementation
+  --h264-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+                              H.264 encoder implementation
+  --h265-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+                              H.265 encoder implementation
 ```
 
 ## ライセンス
