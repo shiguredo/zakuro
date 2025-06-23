@@ -21,18 +21,18 @@
   - `--sora-video-h264-params` オプションを追加
   - @voluntas
 - [ADD] コーデックプリファレンス設定オプションを追加
-  - VP8, VP9, AV1, H.264, H.265 の各コーデックに対して、エンコーダー/デコーダーの実装を選択可能
-  - `--vp8-encoder`, `--vp8-decoder`
-  - `--vp9-encoder`, `--vp9-decoder`
-  - `--av1-encoder`, `--av1-decoder`
-  - `--h264-encoder`, `--h264-decoder`
-  - `--h265-encoder`, `--h265-decoder`
+  - VP8, VP9, AV1, H.264, H.265 の各コーデックに対して、エンコーダーの実装を選択可能
+  - `--vp8-encoder`
+  - `--vp9-encoder`
+  - `--av1-encoder`
+  - `--h264-encoder`
+  - `--h265-encoder`
   - 選択可能な実装: internal, cisco_openh264, intel_vpl, nvidia_video_codec_sdk, amd_amf
   - @voluntas
 - [ADD] YAML 設定ファイルで全てのコーデックパラメータとプリファレンスに対応
   - @voluntas
 - [ADD] `--show-video-codec-capability` オプションを追加
-  - 利用可能なビデオコーデックのエンコーダーとデコーダーなどを出力
+  - 利用可能なビデオコーデックのエンコーダーなどを出力
   - @voluntas
 
 ### misc
