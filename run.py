@@ -160,7 +160,11 @@ def install_deps(
         # Sora C++ SDK
         if local_sora_cpp_sdk_dir is None:
             install_sora_and_deps(
-                deps["SORA_VERSION"], deps["BOOST_VERSION"], platform, source_dir, install_dir
+                deps["SORA_CPP_SDK_VERSION"],
+                deps["BOOST_VERSION"],
+                platform,
+                source_dir,
+                install_dir,
             )
         else:
             build_sora(
