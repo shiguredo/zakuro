@@ -11,6 +11,9 @@
 
 ## develop
 
+- [UPDATE] Blend2D を公式サイトからダウンロードするように変更する
+  - 今までは現時点の master のコミットハッシュを使っていたが、asmjit と一緒にバージョンを管理しないといけなかった
+  - 公式サイトからのダウンロードだと asmjit を内包してるのでこっちの方が管理が楽そうという判断
 - [ADD] signaling URL のバリデーションを追加
   - signaling URL が ws:// または wss:// で始まらない場合はエラーを出力
   - @voluntas

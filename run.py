@@ -20,7 +20,7 @@ from buildbase import (
     enum_all_files,
     get_sora_info,
     get_webrtc_info,
-    install_blend2d,
+    install_blend2d_official,
     install_cli11,
     install_cmake,
     install_llvm,
@@ -29,7 +29,6 @@ from buildbase import (
     install_webrtc,
     install_yaml,
     mkdir_p,
-    read_deps_file,
     read_version_file,
     rm_rf,
 )
@@ -86,7 +85,7 @@ def install_deps(
     local_sora_cpp_sdk_args: List[str],
 ):
     with cd(BASE_DIR):
-        deps = read_deps_file("DEPS")
+        deps = read_version_file("DEPS")
 
         # WebRTC
         if local_webrtc_build_dir is None:
@@ -115,7 +114,7 @@ def install_deps(
             platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64")
             and local_webrtc_build_dir is None
         ):
-            webrtc_version = read_deps_file(webrtc_info.version_file)
+            webrtc_version = read_version_file(webrtc_info.version_file)
 
             # LLVM
             tools_url = webrtc_version["WEBRTC_SRC_TOOLS_URL"]
@@ -160,7 +159,9 @@ def install_deps(
 
         # Sora C++ SDK
         if local_sora_cpp_sdk_dir is None:
-            install_sora_and_deps(platform, source_dir, install_dir)
+            install_sora_and_deps(
+                deps["SORA_VERSION"], deps["BOOST_VERSION"], platform, source_dir, install_dir
+            )
         else:
             build_sora(
                 platform,
@@ -182,18 +183,16 @@ def install_deps(
 
         # Blend2D
         install_blend2d_args = {
-            "version": deps["BLEND2D_VERSION"] + "-" + deps["ASMJIT_VERSION"],
+            "version": deps["BLEND2D_VERSION"],
             "version_file": os.path.join(install_dir, "blend2d.version"),
             "configuration": "Debug" if debug else "Release",
             "source_dir": source_dir,
             "build_dir": build_dir,
             "install_dir": install_dir,
-            "blend2d_version": deps["BLEND2D_VERSION"],
-            "asmjit_version": deps["ASMJIT_VERSION"],
             "ios": False,
             "cmake_args": cmake_args,
         }
-        install_blend2d(**install_blend2d_args)
+        install_blend2d_official(**install_blend2d_args)
 
         # OpenH264
         install_openh264_args = {
@@ -265,11 +264,11 @@ def main():
         webrtc_info = get_webrtc_info(
             platform, args.local_webrtc_build_dir, install_dir, args.debug
         )
-        webrtc_version = read_deps_file(webrtc_info.version_file)
+        webrtc_version = read_version_file(webrtc_info.version_file)
         sora_info = get_sora_info(platform, args.local_sora_cpp_sdk_dir, install_dir, args.debug)
 
         with cd(BASE_DIR):
-            zakuro_version = read_version_file("VERSION")
+            zakuro_version = open("VERSION", encoding="utf-8").read().strip()
             zakuro_commit = cmdcap(["git", "rev-parse", "HEAD"])
 
         cmake_args = []
