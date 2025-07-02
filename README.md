@@ -31,6 +31,7 @@ WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/
 - 最新の libwebrtc へ対応
 - [OpenH264](https://www.openh264.org/) を利用した H.264 コーデックに対応
 - [Sora C++ SDK](https://github.com/shiguredo/sora-cpp-sdk) ベース
+  - ハードウェアアクセラレーターが利用できる
 - 期間繰り返し対応
   - 30 秒負荷かけて切断を繰り返すなど
 
@@ -172,7 +173,7 @@ Options:
 
 Apache License 2.0
 
-```
+```text
 Copyright 2020-2025, Wandbox LLC (Original Author)
 Copyright 2020-2025, Shiguredo Inc.
 
@@ -200,7 +201,6 @@ limitations under the License.
 ## NVIDIA Video Codec SDK
 
 <https://docs.nvidia.com/video-technologies/video-codec-sdk/12.2/index.html>
-
 
 <https://docs.nvidia.com/video-technologies/video-codec-sdk/12.2/license/index.html>
 
