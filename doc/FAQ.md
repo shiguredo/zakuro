@@ -27,10 +27,11 @@ Zakuro のスポットライト機能検証時に利用する音声ファイル�
 
 ## Zakuro の動作環境を教えて下さい
 
-サーバでの用途を前提としているため Linux での動作を想定しています。
+サーバでの用途を前提としているため Linux での動作を想定しています。ただし簡易的な検証をできるように macOS arm64 でも利用できます。
 
 - Ubuntu 24.04 x86_64
 - Ubuntu 22.04 x86_64
+- macOS arm64
 
 ## Zakuro は破壊的変更を行いますか？
 
@@ -91,12 +92,12 @@ Zakuro は Sora に膨大な負荷をかけますので、利用する場合は�
 
 FFmpeg を利用すると簡単に作成できます。
 
-```
+```bash
 ffmpeg -i in.mp4 -f yuv4mpegpipe out.y4m
 ```
 
 ## mp4 ファイルから wav ファイルはどうやって作成すればいいですか？
 
-```
+```bash
 ffmpeg -i in.mp4 -f wav -vn out.wav
 ```

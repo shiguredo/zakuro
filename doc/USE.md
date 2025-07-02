@@ -6,15 +6,15 @@
 
 以下からダウンロードしてください。
 
-https://github.com/shiguredo/zakuro/releases
+<https://github.com/shiguredo/zakuro/releases>
 
 ## セットアップ
 
 ### Ubuntu
 
-```shell
-$ sudo apt update
-$ sudo apt install libnspr4 libnss3 libxext6 libx11-6 libdrm2 libva2 libva-drm2
+```bash
+sudo apt update
+sudo apt install libnspr4 libnss3 libxext6 libx11-6 libdrm2 libva2 libva-drm2
 ```
 
 ## 負荷をかけてみる
@@ -25,7 +25,7 @@ $ sudo apt install libnspr4 libnss3 libxext6 libx11-6 libdrm2 libva2 libva-drm2
 
 まず 5 人の会議を行う簡単な負荷をかけてみましょう
 
-```
+```bash
 $ ./zakuro \
     --sora-signaling-url wss://example.com/signaling \
     --sora-role sendrecv \
@@ -90,7 +90,7 @@ Zakuro ではソフトウェアエンコーダを OpenH264 のライブラリを
 
 OpenH264 のバイナリの最新版は以下からダウンロード可能です。
 
-https://github.com/cisco/openh264/releases/tag/v2.1.1
+<https://github.com/cisco/openh264/releases/tag/v2.1.1>
 
 ### 音声ファイル指定
 

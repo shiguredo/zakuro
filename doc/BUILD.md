@@ -8,13 +8,13 @@ git clone git@github.com:shiguredo/zakuro.git
 
 ## macOS (arm64) 向けバイナリを作成する
 
-build ディレクトリ以下で `python3 run.py ubuntu-24.04_x86_64` と打つことで Zakuro の Ubuntu 24.04 x86_64 向けバイナリが生成されます。
+build ディレクトリ以下で `python3 run.py macos_arm64` と打つことで Zakuro の macOS arm64 向けバイナリが生成されます。
 
 ```shell
 python3 run.py macos_arm64
 ```
 
-うまくいかない場合は `git clean -ffdx && python3 run.py ubuntu-24.04_x86_64` を試してみてください。
+うまくいかない場合は `git clean -ffdx && python3 run.py macos_arm64` を試してみてください。
 
 ## Ubuntu 向けバイナリを作成する
 
