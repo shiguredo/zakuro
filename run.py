@@ -307,7 +307,7 @@ def main():
         rm_rf(os.path.join(package_dir, "zakuro.env"))
 
         with cd(BASE_DIR):
-            zakuro_version = read_version_file("VERSION")
+            zakuro_version = open("VERSION", encoding="utf-8").read().strip()
 
         mkdir_p(zakuro_package_dir)
         with cd(zakuro_package_dir):
