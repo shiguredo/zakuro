@@ -331,13 +331,11 @@ int Zakuro::Run() {
                 webrtc::AudioDeviceModule::kPlatformDefaultAudio;
 #endif
             admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-            auto env = admconfig.env_factory.Create();
             admconfig.adm = webrtc::CreateAudioDeviceModule(env, audio_layer);
           } else if (vc.audio_type == VirtualClientConfig::AudioType::NoAudio) {
             webrtc::AudioDeviceModule::AudioLayer audio_layer =
                 webrtc::AudioDeviceModule::kDummyAudio;
             admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-            auto env = admconfig.env_factory.Create();
             admconfig.adm = webrtc::CreateAudioDeviceModule(env, audio_layer);
           } else if (vc.audio_type ==
                      VirtualClientConfig::AudioType::SpecifiedFakeAudio) {
