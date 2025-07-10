@@ -11,6 +11,7 @@
 
 // webrtc
 #include "api/make_ref_counted.h"
+#include "api/environment/environment_factory.h"
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "rtc_base/ref_counted_object.h"
@@ -39,7 +40,7 @@ struct ZakuroAudioDeviceModuleConfig {
   int sample_rate;
   int channels;
 
-  webrtc::TaskQueueFactory* task_queue_factory;
+  webrtc::EnvironmentFactory env_factory;
 };
 
 class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
@@ -82,8 +83,9 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 
   // Main initialization and termination
   virtual int32_t Init() override {
+    auto env = config_.env_factory.Create();
     device_buffer_ =
-        std::make_unique<webrtc::AudioDeviceBuffer>(config_.task_queue_factory);
+        std::make_unique<webrtc::AudioDeviceBuffer>(&env.task_queue_factory());
     initialized_ = true;
     if (adm_) {
       return adm_->Init();
