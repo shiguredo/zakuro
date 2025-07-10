@@ -3,6 +3,7 @@
 // WebRTC
 #include <api/video/i420_buffer.h>
 #include <media/base/media_constants.h>
+#include <modules/video_coding/include/video_error_codes.h>
 #include <modules/video_coding/codecs/av1/libaom_av1_encoder.h>
 #include <modules/video_coding/codecs/h264/include/h264.h>
 #include <modules/video_coding/codecs/vp8/include/vp8.h>
@@ -20,7 +21,7 @@ int32_t NopVideoDecoder::Decode(const webrtc::EncodedImage& input_image,
   }
 
   // 適当に小さいフレームをデコーダに渡す
-  rtc::scoped_refptr<webrtc::I420Buffer> i420_buffer =
+  webrtc::scoped_refptr<webrtc::I420Buffer> i420_buffer =
       webrtc::I420Buffer::Create(320, 240);
 
   webrtc::VideoFrame decoded_image =
@@ -49,11 +50,11 @@ const char* NopVideoDecoder::ImplementationName() const {
 std::vector<webrtc::SdpVideoFormat>
 NopVideoDecoderFactory::GetSupportedFormats() const {
   std::vector<webrtc::SdpVideoFormat> supported_codecs;
-  supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kVp8CodecName));
+  supported_codecs.push_back(webrtc::SdpVideoFormat(webrtc::kVp8CodecName));
   for (const webrtc::SdpVideoFormat& format : webrtc::SupportedVP9Codecs()) {
     supported_codecs.push_back(format);
   }
-  supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kAv1CodecName));
+  supported_codecs.push_back(webrtc::SdpVideoFormat(webrtc::kAv1CodecName));
   std::vector<webrtc::SdpVideoFormat> h264_codecs = {
       CreateH264Format(webrtc::H264Profile::kProfileBaseline,
                        webrtc::H264Level::kLevel3_1, "1"),
@@ -66,7 +67,7 @@ NopVideoDecoderFactory::GetSupportedFormats() const {
   for (const webrtc::SdpVideoFormat& format : h264_codecs) {
     supported_codecs.push_back(format);
   }
-  supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kH265CodecName));
+  supported_codecs.push_back(webrtc::SdpVideoFormat(webrtc::kH265CodecName));
   return supported_codecs;
 }
 

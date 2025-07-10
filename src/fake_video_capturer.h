@@ -39,9 +39,9 @@ class FakeVideoCapturer : public sora::ScalableVideoTrackSource {
   friend class webrtc::RefCountedObject<FakeVideoCapturer>;
 
  public:
-  static rtc::scoped_refptr<FakeVideoCapturer> Create(
+  static webrtc::scoped_refptr<FakeVideoCapturer> Create(
       FakeVideoCapturerConfig config) {
-    return rtc::make_ref_counted<FakeVideoCapturer>(std::move(config));
+    return webrtc::make_ref_counted<FakeVideoCapturer>(std::move(config));
   }
 
   ~FakeVideoCapturer();
@@ -73,7 +73,7 @@ class FakeVideoCapturer : public sora::ScalableVideoTrackSource {
   //Random<uint32_t> random_{0, 256 * 256 * 256 - 1};
   Xorshift random_;
   Y4MReader y4m_reader_;
-  rtc::scoped_refptr<webrtc::I420Buffer> y4m_buffer_;
+  webrtc::scoped_refptr<webrtc::I420Buffer> y4m_buffer_;
 };
 
 #endif

@@ -40,7 +40,7 @@ void VirtualClient::Connect() {
   retry_timer_.cancel();
 
   if (config_.audio_type != VirtualClientConfig::AudioType::NoAudio) {
-    cricket::AudioOptions ao;
+    webrtc::AudioOptions ao;
     if (config_.disable_echo_cancellation)
       ao.echo_cancellation = false;
     if (config_.disable_auto_gain_control)
@@ -49,14 +49,14 @@ void VirtualClient::Connect() {
       ao.noise_suppression = false;
     if (config_.disable_highpass_filter)
       ao.highpass_filter = false;
-    std::string audio_track_id = rtc::CreateRandomString(16);
+    std::string audio_track_id = webrtc::CreateRandomString(16);
     audio_track_ = config_.context->peer_connection_factory()->CreateAudioTrack(
         audio_track_id, config_.context->peer_connection_factory()
                             ->CreateAudioSource(ao)
                             .get());
   }
   if (!config_.no_video_device) {
-    std::string video_track_id = rtc::CreateRandomString(16);
+    std::string video_track_id = webrtc::CreateRandomString(16);
     video_track_ = config_.context->peer_connection_factory()->CreateVideoTrack(
         config_.capturer, video_track_id);
 
@@ -127,12 +127,12 @@ VirtualClientStats VirtualClient::GetStats() const {
 }
 
 void VirtualClient::OnSetOffer(std::string offer) {
-  std::string stream_id = rtc::CreateRandomString(16);
+  std::string stream_id = webrtc::CreateRandomString(16);
   if (audio_track_ != nullptr) {
     if (config_.initial_mute_audio) {
       audio_track_->set_enabled(false);
     }
-    webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpSenderInterface>>
+    webrtc::RTCErrorOr<webrtc::scoped_refptr<webrtc::RtpSenderInterface>>
         audio_result = signaling_->GetPeerConnection()->AddTrack(audio_track_,
                                                                  {stream_id});
   }
@@ -140,11 +140,11 @@ void VirtualClient::OnSetOffer(std::string offer) {
     if (config_.initial_mute_video) {
       video_track_->set_enabled(false);
     }
-    webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpSenderInterface>>
+    webrtc::RTCErrorOr<webrtc::scoped_refptr<webrtc::RtpSenderInterface>>
         video_result = signaling_->GetPeerConnection()->AddTrack(video_track_,
                                                                  {stream_id});
     if (video_result.ok()) {
-      rtc::scoped_refptr<webrtc::RtpSenderInterface> video_sender =
+      webrtc::scoped_refptr<webrtc::RtpSenderInterface> video_sender =
           video_result.value();
       webrtc::RtpParameters parameters = video_sender->GetParameters();
       if (config_.priority == "FRAMERATE") {
