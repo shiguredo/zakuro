@@ -428,12 +428,12 @@ int Zakuro::Run() {
           preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
               capability, sora::VideoCodecImplementation::kInternal));
           preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-        capability, sora::VideoCodecImplementation::kCiscoOpenH264));
-  }
+              capability, sora::VideoCodecImplementation::kCiscoOpenH264));
+        }
 
         // デコーダーは常に NopVideoDecoder を使用する
         preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
-      capability, sora::VideoCodecImplementation::kCustom_1));
+            capability, sora::VideoCodecImplementation::kCustom_1));
 
         return preference;
       });
