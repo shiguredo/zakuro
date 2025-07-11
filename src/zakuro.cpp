@@ -12,6 +12,7 @@
 // WebRTC
 #include <api/audio/create_audio_device_module.h>
 #include <api/enable_media.h>
+#include <api/environment/environment_factory.h>
 #include <api/video_codecs/video_codec.h>
 
 // Sora C++ SDK
@@ -321,7 +322,7 @@ int Zakuro::Run() {
            vc_config](webrtc::PeerConnectionFactoryDependencies& dependencies) {
         auto adm = dependencies.worker_thread->BlockingCall([&] {
           ZakuroAudioDeviceModuleConfig admconfig;
-          auto env = admconfig.env_factory.Create();
+          auto env = webrtc::CreateEnvironment();
           if (vc.audio_type == VirtualClientConfig::AudioType::Device) {
 #if defined(__linux__)
             webrtc::AudioDeviceModule::AudioLayer audio_layer =

@@ -40,7 +40,6 @@ struct ZakuroAudioDeviceModuleConfig {
   int sample_rate;
   int channels;
 
-  webrtc::EnvironmentFactory env_factory;
 };
 
 class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
@@ -83,7 +82,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 
   // Main initialization and termination
   virtual int32_t Init() override {
-    auto env = config_.env_factory.Create();
+    auto env = webrtc::CreateEnvironment();
     device_buffer_ =
         std::make_unique<webrtc::AudioDeviceBuffer>(&env.task_queue_factory());
     initialized_ = true;

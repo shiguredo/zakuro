@@ -16,7 +16,7 @@
   - libwebrtc のバージョンを `m138.7204.0.1` に上げる
     - `rtc::` を `webrtc::` に変更する
     - `cricket::` を `webrtc::` に変更する
-    - `ZakuroAudioDeviceModuleConfig` のメンバーを `TaskQueueFactory` から `EnvironmentFactory` に変更する
+    - `ZakuroAudioDeviceModuleConfig` のメンバー `TaskQueueFactory` を削除し、都度 `webrtc::CreateEnvironment()` を生成するようにする
     - `webrtc::AudioDeviceModule::Create` から `webrtc::CreateAudioDeviceModule` に変更する
   - CMake のバージョンを `4.0.3` に上げる
   - @miosakuma
