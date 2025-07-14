@@ -82,9 +82,8 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 
   // Main initialization and termination
   virtual int32_t Init() override {
-    auto env = webrtc::CreateEnvironment();
     device_buffer_ =
-        std::make_unique<webrtc::AudioDeviceBuffer>(&env.task_queue_factory());
+        std::make_unique<webrtc::AudioDeviceBuffer>(&env_.task_queue_factory());
     initialized_ = true;
     if (adm_) {
       return adm_->Init();
@@ -324,6 +323,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 #endif  // WEBRTC_IOS
 
  private:
+  webrtc::Environment env_;
   ZakuroAudioDeviceModuleConfig config_;
   webrtc::scoped_refptr<webrtc::AudioDeviceModule> adm_;
   std::unique_ptr<std::thread> audio_thread_;
