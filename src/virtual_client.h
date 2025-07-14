@@ -20,7 +20,7 @@ struct VirtualClientStats {
 };
 
 struct VirtualClientConfig {
-  rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> capturer;
+  webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> capturer;
   sora::SoraSignalingConfig sora_config;
 
   int max_retry = 0;
@@ -76,10 +76,10 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   void OnPush(std::string text) override {}
   void OnMessage(std::string label, std::string data) override {}
 
-  void OnTrack(rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)
+  void OnTrack(webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)
       override {}
   void OnRemoveTrack(
-      rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override {}
+      webrtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override {}
 
   void OnDataChannel(std::string label) override {}
 
@@ -93,8 +93,8 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   std::function<void(std::string)> on_close_;
   boost::asio::deadline_timer retry_timer_;
   std::shared_ptr<sora::SoraSignaling> signaling_;
-  rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
-  rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
+  webrtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
+  webrtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
 };
 
 #endif

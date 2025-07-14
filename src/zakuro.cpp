@@ -10,7 +10,9 @@
 #include <vector>
 
 // WebRTC
+#include <api/audio/create_audio_device_module.h>
 #include <api/enable_media.h>
+#include <api/environment/environment_factory.h>
 #include <api/video_codecs/video_codec.h>
 
 // Sora C++ SDK
@@ -222,7 +224,7 @@ int Zakuro::Run() {
   }
 
   auto capturer =
-      ([&]() -> rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> {
+      ([&]() -> webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> {
         if (config_.no_video_device) {
           return nullptr;
         }
@@ -320,7 +322,7 @@ int Zakuro::Run() {
            vc_config](webrtc::PeerConnectionFactoryDependencies& dependencies) {
         auto adm = dependencies.worker_thread->BlockingCall([&] {
           ZakuroAudioDeviceModuleConfig admconfig;
-          admconfig.task_queue_factory = dependencies.task_queue_factory.get();
+          auto env = webrtc::CreateEnvironment();
           if (vc.audio_type == VirtualClientConfig::AudioType::Device) {
 #if defined(__linux__)
             webrtc::AudioDeviceModule::AudioLayer audio_layer =
@@ -330,14 +332,12 @@ int Zakuro::Run() {
                 webrtc::AudioDeviceModule::kPlatformDefaultAudio;
 #endif
             admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-            admconfig.adm = webrtc::AudioDeviceModule::Create(
-                audio_layer, dependencies.task_queue_factory.get());
+            admconfig.adm = webrtc::CreateAudioDeviceModule(env, audio_layer);
           } else if (vc.audio_type == VirtualClientConfig::AudioType::NoAudio) {
             webrtc::AudioDeviceModule::AudioLayer audio_layer =
                 webrtc::AudioDeviceModule::kDummyAudio;
             admconfig.type = ZakuroAudioDeviceModuleConfig::Type::ADM;
-            admconfig.adm = webrtc::AudioDeviceModule::Create(
-                audio_layer, dependencies.task_queue_factory.get());
+            admconfig.adm = webrtc::CreateAudioDeviceModule(env, audio_layer);
           } else if (vc.audio_type ==
                      VirtualClientConfig::AudioType::SpecifiedFakeAudio) {
             admconfig.type = ZakuroAudioDeviceModuleConfig::Type::FakeAudio;
