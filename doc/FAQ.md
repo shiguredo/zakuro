@@ -105,3 +105,29 @@ ffmpeg -i in.mp4 -f yuv4mpegpipe out.y4m
 ```bash
 ffmpeg -i in.mp4 -f wav -vn out.wav
 ```
+
+## Ubuntu で zakuro から送信した H.264 の映像が受信できません
+
+適切な H.264 エンコーダーが指定されているかを確認してください。
+
+- Intel Video Processing Library (VPL) を利用する場合
+  - `--h264-encoder intel_vpl` を指定してください
+- NVIDIA Video Codec SDK を利用する場合
+  - `--h264-encoder nvidia_video_codec_sdk` を指定してください
+- AMD Advanced Media Framework (AMF) を利用する場合
+  - `--h264-encoder amd_amf` を指定してください
+- 上記エンコーダーを利用しない場合は OpenH264 をダウンロードして利用してください
+  - [--openH264](https://github.com/shiguredo/zakuro/blob/develop/doc/USE.md#openh264) を指定してください
+
+## Ubuntu で zakuro から送信した H.265 の映像が受信できません
+
+適切な H.265 エンコーダーが指定されているかを確認してください。
+
+H.265 の送信にはハードウェアエンコーダーが必須です。
+
+- Intel Video Processing Library (VPL) を利用する場合
+  - `--h265-encoder intel_vpl` を指定してください
+- NVIDIA Video Codec SDK を利用する場合
+  - `--h265-encoder nvidia_video_codec_sdk` を指定してください
+- AMD Advanced Media Framework (AMF) を利用する場合
+  - `--h265-encoder amd_amf` を指定してください
