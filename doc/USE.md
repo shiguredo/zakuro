@@ -92,6 +92,17 @@ OpenH264 のバイナリの最新版は以下からダウンロード可能で�
 
 <https://github.com/cisco/openh264/releases/tag/v2.1.1>
 
+### 利用するエンコーダーの指定
+
+`--vp8-encoder`
+`--vp9-encoder`
+`--av1-encoder`
+`--h264-encoder`
+`--h265-encoder`
+
+Zakuro では映像送信時に利用するエンコーダーの指定が可能です。設定できる内容は以下の通りです。
+`internal`, `cisco_openh264`, `intel_vpl`, `nvidia_video_codec_sdk`, `amd_amf`
+
 ### 音声ファイル指定
 
 `--fake-audio-capture /path/to/sample.wav`
