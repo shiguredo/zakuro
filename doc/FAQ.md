@@ -105,3 +105,20 @@ ffmpeg -i in.mp4 -f yuv4mpegpipe out.y4m
 ```bash
 ffmpeg -i in.mp4 -f wav -vn out.wav
 ```
+
+## Ubuntu で zakuro から送信した H.264 の映像が受信できません
+
+適切な H.264 エンコーダーが指定されているかを確認してください。
+
+- ハードウェアエンコーダーがある場合
+  - `--h264-encoder` に利用可能なハードウェアエンコーダーを指定してください
+- ハードウェアエンコーダーがない場合
+  - [--openH264](https://github.com/shiguredo/zakuro/blob/develop/doc/USE.md#openh264) を指定してください
+
+## Ubuntu で zakuro から送信した H.265 の映像が受信できません
+
+適切な H.265 エンコーダーが指定されているかを確認してください。
+H.265 の送信にはハードウェアエンコーダーが必須です。
+
+- ハードウェアエンコーダーがある場合
+  - `--h265-encoder` に利用可能なハードウェアエンコーダーを指定してください
