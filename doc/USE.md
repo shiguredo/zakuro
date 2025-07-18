@@ -92,6 +92,12 @@ OpenH264 のバイナリの最新版は以下からダウンロードできま�
 
 <https://github.com/cisco/openh264/releases/tag/v2.1.1>
 
+### 利用可能なエンコーダーとデコーダーの確認
+
+`--show-video-codec-capability`
+
+Zakuro では利用可能なエンコーダーとデコーダーの一覧を表示することができます。
+
 ### 利用するエンコーダーの指定
 
 - `--vp8-encoder`
