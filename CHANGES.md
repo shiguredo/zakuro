@@ -11,6 +11,59 @@
 
 ## develop
 
+## 2025.2.0
+
+**リリース日**: 2025-07-18
+
+- [UPDATE] Sora C++ SDK を `2025.4.0` に上げる
+  - それに伴って以下のライブラリのバージョンも上げる
+  - libwebrtc のバージョンを `m138.7204.0.1` に上げる
+    - `rtc::` を `webrtc::` に変更する
+    - `cricket::` を `webrtc::` に変更する
+    - `ZakuroAudioDeviceModuleConfig` のメンバー `TaskQueueFactory` を削除し、都度 webrtc::CreateEnvironment() で webrtc::Environment を生成するようにする
+    - `webrtc::AudioDeviceModule::Create` から `webrtc::CreateAudioDeviceModule` に変更する
+  - CMake のバージョンを `4.0.3` に上げる
+  - @miosakuma
+- [UPDATE] Blend2D を公式サイトからダウンロードするように変更する
+  - 今までは現時点の master のコミットハッシュを使っていたが、asmjit と一緒にバージョンを管理しないといけなかった
+  - 公式サイトからのダウンロードだと asmjit を内包してるのでこっちの方が管理が楽そうという判断
+  - @melpon
+- [UPDATE] `--sora-video-codec-type` H264 指定時の `--openh264` 必須チェックを削除する
+  - `--h264-encoder` の追加により `--openh264` 指定が必須ではなくなったため
+  - @miosakuma
+- [ADD] signaling URL のバリデーションを追加
+  - signaling URL が ws:// または wss:// で始まらない場合はエラーを出力
+  - @voluntas
+- [ADD] H.265 コーデックサポートを追加
+  - `--sora-video-codec-type` に H265 を追加
+  - `--sora-video-h265-params` オプションを追加
+  - @voluntas
+- [ADD] 各ビデオコーデックのパラメータ設定オプションを追加
+  - `--sora-video-vp9-params` オプションを追加
+  - `--sora-video-av1-params` オプションを追加
+  - `--sora-video-h264-params` オプションを追加
+  - @voluntas
+- [ADD] コーデックプリファレンス設定オプションを追加
+  - VP8, VP9, AV1, H.264, H.265 の各コーデックに対して、エンコーダーの実装を選択可能
+  - `--vp8-encoder`
+  - `--vp9-encoder`
+  - `--av1-encoder`
+  - `--h264-encoder`
+  - `--h265-encoder`
+  - 選択可能な実装: internal, cisco_openh264, intel_vpl, nvidia_video_codec_sdk, amd_amf
+  - @voluntas
+- [ADD] YAML 設定ファイルで全てのコーデックパラメータとプリファレンスに対応
+  - @voluntas
+- [ADD] `--show-video-codec-capability` オプションを追加
+  - 利用可能なビデオコーデックのエンコーダーなどを出力
+  - @voluntas
+
+### misc
+
+- [ADD] .github ディレクトリに copilot-instructions.md を追加
+  - @torikizi
+
+
 ## 2025.1.0
 
 **リリース日**: 2025-06-19

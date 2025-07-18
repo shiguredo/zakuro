@@ -51,7 +51,7 @@ void FakeVideoCapturer::StartCapture() {
 
     while (!stopped_) {
       auto now = std::chrono::high_resolution_clock::now();
-      rtc::scoped_refptr<webrtc::I420Buffer> buffer;
+      webrtc::scoped_refptr<webrtc::I420Buffer> buffer;
 
       if (config_.type == FakeVideoCapturerConfig::Type::Safari ||
           config_.type == FakeVideoCapturerConfig::Type::Sandstorm ||

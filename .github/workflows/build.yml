@@ -9,6 +9,12 @@ on:
     - 'LICENSE'
     - 'NOTICE'
   pull_request:
+    paths-ignore:
+    - 'doc/**'
+    - '**.md'
+    - 'THANKS'
+    - 'LICENSE'
+    - 'NOTICE'
 
 jobs:
   build-linux:

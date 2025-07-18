@@ -1,8 +1,8 @@
 #ifndef Y4M_READER_H_
 #define Y4M_READER_H_
 
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include <chrono>
 #include <memory>

@@ -27,10 +27,15 @@ Zakuro のスポットライト機能検証時に利用する音声ファイル�
 
 ## Zakuro の動作環境を教えて下さい
 
-サーバでの用途を前提としているため Linux での動作を想定しています。
+サーバでの用途を前提としているため Linux での動作を想定しています。ただし簡易的な検証をできるように macOS arm64 でも利用できます。
 
 - Ubuntu 24.04 x86_64
 - Ubuntu 22.04 x86_64
+- macOS arm64
+
+## macOS 版のバイナリは公開されますか？
+
+macOS arm64 版のバイナリは公開しておりません。自前ビルドをお願いします。
 
 ## Zakuro は破壊的変更を行いますか？
 
@@ -91,12 +96,38 @@ Zakuro は Sora に膨大な負荷をかけますので、利用する場合は�
 
 FFmpeg を利用すると簡単に作成できます。
 
-```
+```bash
 ffmpeg -i in.mp4 -f yuv4mpegpipe out.y4m
 ```
 
 ## mp4 ファイルから wav ファイルはどうやって作成すればいいですか？
 
-```
+```bash
 ffmpeg -i in.mp4 -f wav -vn out.wav
 ```
+
+## Ubuntu で zakuro から送信した H.264 の映像が受信できません
+
+適切な H.264 エンコーダーが指定されているかを確認してください。
+
+- Intel Video Processing Library (VPL) を利用する場合
+  - `--h264-encoder intel_vpl` を指定してください
+- NVIDIA Video Codec SDK を利用する場合
+  - `--h264-encoder nvidia_video_codec_sdk` を指定してください
+- AMD Advanced Media Framework (AMF) を利用する場合
+  - `--h264-encoder amd_amf` を指定してください
+- 上記エンコーダーを利用しない場合は OpenH264 をダウンロードして利用してください
+  - [--openH264](https://github.com/shiguredo/zakuro/blob/develop/doc/USE.md#openh264) を指定してください
+
+## Ubuntu で zakuro から送信した H.265 の映像が受信できません
+
+適切な H.265 エンコーダーが指定されているかを確認してください。
+
+H.265 の送信にはハードウェアエンコーダーが必須です。
+
+- Intel Video Processing Library (VPL) を利用する場合
+  - `--h265-encoder intel_vpl` を指定してください
+- NVIDIA Video Codec SDK を利用する場合
+  - `--h265-encoder nvidia_video_codec_sdk` を指定してください
+- AMD Advanced Media Framework (AMF) を利用する場合
+  - `--h265-encoder amd_amf` を指定してください

@@ -17,6 +17,11 @@
 // WebRTC
 #include <rtc_base/crypto_random.h>
 
+// Sora
+#include <sora/amf_context.h>
+#include <sora/cuda_context.h>
+#include <sora/sora_video_codec.h>
+
 #include "zakuro.h"
 #include "zakuro_version.h"
 
@@ -45,6 +50,10 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   // アプリケーション全体で１個しか存在しない共通オプション
   bool version = false;
   app.add_flag("--version", version, "Show version information");
+
+  bool show_video_codec_capability = false;
+  app.add_flag("--show-video-codec-capability", show_video_codec_capability,
+               "Show available video codec capability");
 
   app.add_option("--config", config_file, "YAML config file path")
       ->check(CLI::ExistingFile);
@@ -268,6 +277,69 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--sora-data-channels", sora_data_channels,
                  "DataChannels (default: none)")
       ->check(is_json);
+  std::string sora_video_vp9_params;
+  app.add_option("--sora-video-vp9-params", sora_video_vp9_params,
+                 "Parameters for VP9 video codec (default: none)")
+      ->check(is_json);
+  std::string sora_video_av1_params;
+  app.add_option("--sora-video-av1-params", sora_video_av1_params,
+                 "Parameters for AV1 video codec (default: none)")
+      ->check(is_json);
+  std::string sora_video_h264_params;
+  app.add_option("--sora-video-h264-params", sora_video_h264_params,
+                 "Parameters for H.264 video codec (default: none)")
+      ->check(is_json);
+  std::string sora_video_h265_params;
+  app.add_option("--sora-video-h265-params", sora_video_h265_params,
+                 "Parameters for H.265 video codec (default: none)")
+      ->check(is_json);
+
+  // ビデオコーデック実装の選択肢
+  auto video_codec_implementation_map =
+      std::vector<std::pair<std::string, sora::VideoCodecImplementation>>(
+          {{"internal", sora::VideoCodecImplementation::kInternal},
+           {"cisco_openh264", sora::VideoCodecImplementation::kCiscoOpenH264},
+           {"intel_vpl", sora::VideoCodecImplementation::kIntelVpl},
+           {"nvidia_video_codec_sdk",
+            sora::VideoCodecImplementation::kNvidiaVideoCodecSdk},
+           {"amd_amf", sora::VideoCodecImplementation::kAmdAmf}});
+  auto video_codec_description =
+      "(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)";
+
+  // VP8
+  app.add_option("--vp8-encoder", config.vp8_encoder,
+                 "VP8 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // VP9
+  app.add_option("--vp9-encoder", config.vp9_encoder,
+                 "VP9 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // AV1
+  app.add_option("--av1-encoder", config.av1_encoder,
+                 "AV1 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // H264
+  app.add_option("--h264-encoder", config.h264_encoder,
+                 "H.264 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
+
+  // H265
+  app.add_option("--h265-encoder", config.h265_encoder,
+                 "H.265 encoder implementation")
+      ->transform(CLI::CheckedTransformer(video_codec_implementation_map,
+                                          CLI::ignore_case)
+                      .description(video_codec_description));
 
   try {
     app.parse(args);
@@ -281,6 +353,56 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::cout << "WebRTC: " << ZakuroVersion::GetLibwebrtcName() << std::endl;
     std::cout << "Environment: " << ZakuroVersion::GetEnvironmentName()
               << std::endl;
+    std::exit(0);
+  }
+
+  if (show_video_codec_capability) {
+    sora::VideoCodecCapabilityConfig capability_config;
+
+    if (sora::CudaContext::CanCreate()) {
+      capability_config.cuda_context = sora::CudaContext::Create();
+    }
+    if (sora::AMFContext::CanCreate()) {
+      capability_config.amf_context = sora::AMFContext::Create();
+    }
+    // OpenH264 パスが指定されている場合
+    // コマンドライン引数は既にパースされているので、config.openh264 に値が入っている
+    if (!config.openh264.empty()) {
+      capability_config.openh264_path = config.openh264;
+    }
+
+    auto capability = sora::GetVideoCodecCapability(capability_config);
+
+    for (const auto& engine : capability.engines) {
+      std::cout << "Engine: "
+                << boost::json::value_from(engine.name).as_string()
+                << std::endl;
+
+      for (const auto& codec : engine.codecs) {
+        auto codec_type = boost::json::value_from(codec.type).as_string();
+        if (codec.encoder) {
+          std::cout << "  - " << codec_type << " Encoder" << std::endl;
+        }
+        if (codec.decoder) {
+          std::cout << "  - " << codec_type << " Decoder" << std::endl;
+        }
+
+        // コーデックパラメータの表示
+        auto params = boost::json::value_from(codec.parameters);
+        if (params.as_object().size() > 0) {
+          std::cout << "    - Codec Parameters: "
+                    << boost::json::serialize(params) << std::endl;
+        }
+      }
+
+      // エンジンパラメータの表示
+      auto engine_params = boost::json::value_from(engine.parameters);
+      if (engine_params.as_object().size() > 0) {
+        std::cout << "  - Engine Parameters: "
+                  << boost::json::serialize(engine_params) << std::endl;
+      }
+    }
+
     std::exit(0);
   }
 
@@ -305,12 +427,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::exit(1);
   }
 
-  // H264 は --openh264 が指定されてる場合のみ動作する
-  if (config.sora_video_codec_type == "H264" && config.openh264.empty()) {
-    std::cerr << "Specify --openh264=/path/to/libopenh264.so for H.264 codec"
-              << std::endl;
-    std::exit(1);
-  }
   // --openh264 のパスは絶対パスである必要がある
   if (!config.openh264.empty() && config.openh264[0] != '/') {
     std::cerr << "--openh264 file path must be absolute path" << std::endl;
@@ -327,6 +443,18 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   }
   if (!sora_data_channels.empty()) {
     config.sora_data_channels = boost::json::parse(sora_data_channels);
+  }
+  if (!sora_video_vp9_params.empty()) {
+    config.sora_video_vp9_params = boost::json::parse(sora_video_vp9_params);
+  }
+  if (!sora_video_av1_params.empty()) {
+    config.sora_video_av1_params = boost::json::parse(sora_video_av1_params);
+  }
+  if (!sora_video_h264_params.empty()) {
+    config.sora_video_h264_params = boost::json::parse(sora_video_h264_params);
+  }
+  if (!sora_video_h265_params.empty()) {
+    config.sora_video_h265_params = boost::json::parse(sora_video_h265_params);
   }
 }
 
@@ -454,6 +582,18 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_BOOLEAN(inst, "", "initial-mute-audio");
     DEF_STRING(inst, "", "degradation-preference");
 
+    // コーデックプリファレンス
+    DEF_STRING(inst, "", "vp8-encoder");
+    DEF_STRING(inst, "", "vp8-decoder");
+    DEF_STRING(inst, "", "vp9-encoder");
+    DEF_STRING(inst, "", "vp9-decoder");
+    DEF_STRING(inst, "", "av1-encoder");
+    DEF_STRING(inst, "", "av1-decoder");
+    DEF_STRING(inst, "", "h264-encoder");
+    DEF_STRING(inst, "", "h264-decoder");
+    DEF_STRING(inst, "", "h265-encoder");
+    DEF_STRING(inst, "", "h265-decoder");
+
     const YAML::Node& sora = inst["sora"];
     if (sora) {
       // --sora-signaling-url: string or string[]
@@ -513,6 +653,27 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
       if (sora["data-channels"]) {
         boost::json::value value = NodeToJson(sora["data-channels"]);
         args.push_back("--sora-data-channels");
+        args.push_back(boost::json::serialize(value));
+      }
+      // ビデオコーデックパラメータ
+      if (sora["video-vp9-params"]) {
+        boost::json::value value = NodeToJson(sora["video-vp9-params"]);
+        args.push_back("--sora-video-vp9-params");
+        args.push_back(boost::json::serialize(value));
+      }
+      if (sora["video-av1-params"]) {
+        boost::json::value value = NodeToJson(sora["video-av1-params"]);
+        args.push_back("--sora-video-av1-params");
+        args.push_back(boost::json::serialize(value));
+      }
+      if (sora["video-h264-params"]) {
+        boost::json::value value = NodeToJson(sora["video-h264-params"]);
+        args.push_back("--sora-video-h264-params");
+        args.push_back(boost::json::serialize(value));
+      }
+      if (sora["video-h265-params"]) {
+        boost::json::value value = NodeToJson(sora["video-h265-params"]);
+        args.push_back("--sora-video-h265-params");
         args.push_back(boost::json::serialize(value));
       }
     }
@@ -581,7 +742,7 @@ std::string Util::GenerateRandomChars() {
 
 std::string Util::GenerateRandomChars(size_t length) {
   std::string result;
-  rtc::CreateRandomString(length, &result);
+  webrtc::CreateRandomString(length, &result);
   return result;
 }
 

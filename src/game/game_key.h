@@ -18,9 +18,7 @@ class GameKey : public GameKeyInterface {
   GameKey(std::shared_ptr<GameKeyCore> core) : core_(core) {
     core->Register(this);
   }
-  ~GameKey() {
-    core_->Unregister(this);
-  }
+  ~GameKey() { core_->Unregister(this); }
 
   void PushKey(uint8_t c) override {
     std::lock_guard<std::mutex> guard(mutex_);

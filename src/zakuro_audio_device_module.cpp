@@ -4,7 +4,7 @@
 
 ZakuroAudioDeviceModule::ZakuroAudioDeviceModule(
     ZakuroAudioDeviceModuleConfig config)
-    : config_(std::move(config)) {
+    : env_(webrtc::CreateEnvironment()), config_(std::move(config)) {
   adm_ = config_.adm;
   if (config_.type == ZakuroAudioDeviceModuleConfig::Type::FakeAudio) {
     fake_audio_ = config_.fake_audio;

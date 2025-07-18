@@ -217,17 +217,18 @@ class ScenarioPlayer {
         break;
       }
       case ScenarioData::OP_EXIT: {
-        (*config_.vcs)[client_id]->Close([this, client_id](std::string message) {
+        (*config_.vcs)[client_id]->Close([this,
+                                          client_id](std::string message) {
           RTC_LOG(LS_INFO) << "Client " << client_id << " exited: " << message;
           client_infos_[client_id].exit = true;
-          bool all_exited = std::all_of(client_infos_.begin(), client_infos_.end(), [](auto& info) {
-            return info.exit;
-          });
+          bool all_exited =
+              std::all_of(client_infos_.begin(), client_infos_.end(),
+                          [](auto& info) { return info.exit; });
           if (all_exited) {
             config_.ioc->stop();
           }
         });
-        
+
         break;
       }
     }

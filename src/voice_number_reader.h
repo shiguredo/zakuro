@@ -8,7 +8,7 @@
 #include "wav_reader.h"
 
 class VoiceNumberReader {
-public:
+ public:
   std::vector<int16_t> Read(int n) {
     if (n < 0) {
       return {};
