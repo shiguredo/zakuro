@@ -108,7 +108,8 @@ ffmpeg -i in.mp4 -f wav -vn out.wav
 
 ## Ubuntu で zakuro から送信した H.264 の映像が受信できません
 
-適切な H.264 エンコーダーが指定されているかを確認してください。
+まずは `--show-video-codec-capability` を実行して H.264 のエンコーダーが利用可能かを確認してください。
+その後、利用可能だったハードウェアエンコーダーを指定してください。
 
 - Intel Video Processing Library (VPL) を利用する場合
   - `--h264-encoder intel_vpl` を指定してください
@@ -124,6 +125,9 @@ ffmpeg -i in.mp4 -f wav -vn out.wav
 適切な H.265 エンコーダーが指定されているかを確認してください。
 
 H.265 の送信にはハードウェアエンコーダーが必須です。
+
+まずは `--show-video-codec-capability` を実行して H.265 のエンコーダーが利用可能かを確認してください。
+その後、利用可能だったハードウェアエンコーダーを指定してください。
 
 - Intel Video Processing Library (VPL) を利用する場合
   - `--h265-encoder intel_vpl` を指定してください
