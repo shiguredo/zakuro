@@ -196,15 +196,17 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
   std::lock_guard<std::mutex> lock(mutex_);
   
   try {
+    // プリペアドステートメントを準備
     auto prepared = conn_->Prepare(
         "INSERT INTO stats (channel_id, session_id, connection_id, rtc_type, rtc_timestamp, rtc_data) "
         "VALUES ($1, $2, $3, $4, $5, CAST($6 AS JSON))");
     
     if (prepared->HasError()) {
-      RTC_LOG(LS_ERROR) << "Failed to prepare RTC stats statement: " << prepared->GetError();
+      RTC_LOG(LS_ERROR) << "Failed to prepare statement: " << prepared->GetError();
       return;
     }
     
+    // パラメータをバインドして実行
     auto result = prepared->Execute(
         channel_id,
         session_id,
