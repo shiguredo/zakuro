@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include <rtc_base/logging.h>
+#include <boost/json.hpp>
 
 DuckDBStatsWriter::DuckDBStatsWriter() = default;
 
@@ -43,6 +44,19 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
 }
 
 void DuckDBStatsWriter::CreateTable() {
+  // シーケンスを作成
+  auto seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS connections_pk_seq START 1");
+  if (seq_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create sequence: " << seq_result->GetError();
+    throw std::runtime_error("Failed to create sequence");
+  }
+  
+  auto stats_seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS stats_pk_seq START 1");
+  if (stats_seq_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create stats sequence: " << stats_seq_result->GetError();
+    throw std::runtime_error("Failed to create stats sequence");
+  }
+  
   // 接続情報テーブルを作成
   std::string create_table_sql = R"(
     CREATE TABLE IF NOT EXISTS connections (
@@ -58,23 +72,42 @@ void DuckDBStatsWriter::CreateTable() {
     )
   )";
   
-  // シーケンスを作成
-  auto seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS connections_pk_seq START 1");
-  if (seq_result->HasError()) {
-    RTC_LOG(LS_ERROR) << "Failed to create sequence: " << seq_result->GetError();
-    throw std::runtime_error("Failed to create sequence");
-  }
-  
   auto result = conn_->Query(create_table_sql);
   if (result->HasError()) {
     RTC_LOG(LS_ERROR) << "Failed to create table: " << result->GetError();
     throw std::runtime_error("Failed to create table");
   }
   
+  // WebRTC統計情報テーブルを作成
+  std::string create_stats_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS stats (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('stats_pk_seq'),
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      channel_id VARCHAR,
+      session_id VARCHAR,
+      connection_id VARCHAR,
+      rtc_type VARCHAR,
+      rtc_timestamp DOUBLE,
+      rtc_data JSON
+    )
+  )";
+  
+  auto stats_result = conn_->Query(create_stats_table_sql);
+  if (stats_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create stats table: " << stats_result->GetError();
+    throw std::runtime_error("Failed to create stats table");
+  }
+  
   // インデックスを作成
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_channel_id ON connections(channel_id)");
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_connection_id ON connections(connection_id)");
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_timestamp ON connections(timestamp)");
+  
+  // statsテーブルのインデックスを作成
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_channel_id ON stats(channel_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_connection_id ON stats(connection_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_rtc_type ON stats(rtc_type)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_timestamp ON stats(timestamp)");
 }
 
 void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats) {
@@ -146,6 +179,46 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error writing stats: " << e.what();
     conn_->Query("ROLLBACK");
+  }
+}
+
+void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
+                                     const std::string& session_id,
+                                     const std::string& connection_id,
+                                     const std::string& rtc_type,
+                                     double rtc_timestamp,
+                                     const std::string& rtc_data_json) {
+  if (!initialized_) {
+    RTC_LOG(LS_WARNING) << "DuckDBStatsWriter not initialized";
+    return;
+  }
+  
+  std::lock_guard<std::mutex> lock(mutex_);
+  
+  try {
+    auto prepared = conn_->Prepare(
+        "INSERT INTO stats (channel_id, session_id, connection_id, rtc_type, rtc_timestamp, rtc_data) "
+        "VALUES ($1, $2, $3, $4, $5, CAST($6 AS JSON))");
+    
+    if (prepared->HasError()) {
+      RTC_LOG(LS_ERROR) << "Failed to prepare RTC stats statement: " << prepared->GetError();
+      return;
+    }
+    
+    auto result = prepared->Execute(
+        channel_id,
+        session_id,
+        connection_id,
+        rtc_type,
+        rtc_timestamp,
+        rtc_data_json
+    );
+    
+    if (result->HasError()) {
+      RTC_LOG(LS_ERROR) << "Failed to insert RTC stats: " << result->GetError();
+    }
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_ERROR) << "Error writing RTC stats: " << e.what();
   }
 }
 

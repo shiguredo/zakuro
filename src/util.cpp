@@ -162,6 +162,11 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::IsMember({"kuzushi"}));
   app.add_option("--scenario", config.scenario, "Scenario type")
       ->check(CLI::IsMember({"", "reconnect"}));
+  
+  // WebRTC 統計情報の取得間隔
+  app.add_option("--rtc-stats-interval", config.rtc_stats_interval,
+                "WebRTC stats collection interval in seconds (default: 1, min: 1, max: 300)")
+      ->check(CLI::Range(1, 300));
   app.add_option("--client-cert", config.client_cert,
                  "Cert file path for client certification (PEM format)")
       ->check(CLI::ExistingFile);

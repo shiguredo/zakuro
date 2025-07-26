@@ -134,6 +134,11 @@ int main(int argc, char* argv[]) {
       common_args.push_back(
           zakuro_node["instance-hatch-rate"].as<std::string>());
     }
+    if (zakuro_node["rtc-stats-interval"]) {
+      common_args.push_back("--rtc-stats-interval");
+      common_args.push_back(
+          zakuro_node["rtc-stats-interval"].as<std::string>());
+    }
 
     std::vector<std::string> post_args;
     // args の --config を取り除きつつ post_args に追加

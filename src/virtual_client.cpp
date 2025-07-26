@@ -24,7 +24,9 @@ std::shared_ptr<VirtualClient> VirtualClient::Create(
   return std::shared_ptr<VirtualClient>(new VirtualClient(config));
 }
 VirtualClient::VirtualClient(const VirtualClientConfig& config)
-    : config_(config), retry_timer_(*config.sora_config.io_context) {}
+    : config_(config), 
+      retry_timer_(*config.sora_config.io_context),
+      rtc_stats_timer_(new boost::asio::deadline_timer(*config.sora_config.io_context)) {}
 
 void VirtualClient::Connect() {
   if (closing_) {
@@ -104,6 +106,9 @@ void VirtualClient::Close(std::function<void(std::string)> on_close) {
 
 void VirtualClient::Clear() {
   retry_timer_.cancel();
+  if (rtc_stats_timer_) {
+    rtc_stats_timer_->cancel();
+  }
   signaling_.reset();
 }
 
@@ -180,6 +185,9 @@ void VirtualClient::OnSetOffer(std::string offer) {
     stats.push_back(GetStats());
     config_.duckdb_writer->WriteStats(stats);
     RTC_LOG(LS_INFO) << "Wrote connection info to DuckDB on type:offer";
+    
+    // WebRTC統計情報の定期取得を開始
+    StartRTCStatsTimer();
   }
   
   std::string stream_id = rtc::CreateRandomString(16);
@@ -262,5 +270,77 @@ void VirtualClient::OnNotify(std::string text) {
     // 他人が接続された時もリセットされることになるけど、
     // その時は 0 のままになってるはずなので問題ない
     retry_count_ = 0;
+  }
+}
+
+void VirtualClient::StartRTCStatsTimer() {
+  if (!signaling_ || !rtc_stats_timer_ || !config_.duckdb_writer) {
+    return;
+  }
+  
+  rtc_stats_timer_->expires_from_now(boost::posix_time::seconds(config_.rtc_stats_interval));
+  rtc_stats_timer_->async_wait(
+      [this](const boost::system::error_code& ec) {
+        OnRTCStatsTimer(ec);
+      });
+}
+
+void VirtualClient::OnRTCStatsTimer(const boost::system::error_code& ec) {
+  if (ec || closing_ || !signaling_) {
+    return;
+  }
+  
+  // WebRTC統計情報を取得
+  auto pc = signaling_->GetPeerConnection();
+  if (pc) {
+    auto callback = rtc::make_ref_counted<StatsCollectorCallback>(shared_from_this());
+    pc->GetStats(callback.get());
+  }
+  
+  // 次回のタイマーを設定
+  StartRTCStatsTimer();
+}
+
+// StatsCollectorCallback の実装
+void StatsCollectorCallback::OnStatsDelivered(
+    const rtc::scoped_refptr<const webrtc::RTCStatsReport>& report) {
+  auto client = client_.lock();
+  if (!client || !client->config_.duckdb_writer) {
+    return;
+  }
+  
+  // GetStats() から情報を取得
+  VirtualClientStats client_stats = client->GetStats();
+  std::string channel_id = client_stats.channel_id;
+  std::string session_id = client_stats.session_id;
+  std::string connection_id = client_stats.connection_id;
+  
+  if (connection_id.empty()) {
+    return;
+  }
+  
+  // レポートから必要な統計情報を抽出
+  for (const auto& stats : *report) {
+    const std::string type = stats.type();
+    
+    // フィルタリング: inbound-rtp, outbound-rtp, codec のみ
+    if (type != "inbound-rtp" &&
+        type != "outbound-rtp" &&
+        type != "codec") {
+      continue;
+    }
+    
+    // RTCStats を JSON 文字列として取得
+    std::string json_str = stats.ToJson();
+    double rtc_timestamp = stats.timestamp().us() / 1000000.0;  // マイクロ秒を秒に変換
+    
+    client->config_.duckdb_writer->WriteRTCStats(
+        channel_id,
+        session_id,
+        connection_id,
+        type,
+        rtc_timestamp,
+        json_str
+    );
   }
 }

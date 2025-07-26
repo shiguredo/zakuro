@@ -95,6 +95,9 @@ struct ZakuroConfig {
   std::shared_ptr<ZakuroStats> stats;
   
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+  
+  // WebRTC 統計情報の取得間隔（秒）
+  int rtc_stats_interval = 1;  // デフォルト 1秒
 
   struct Size {
     int width;

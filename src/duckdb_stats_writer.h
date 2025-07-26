@@ -24,6 +24,14 @@ class DuckDBStatsWriter {
   // 統計情報を書き込む
   void WriteStats(const std::vector<VirtualClientStats>& stats);
   
+  // WebRTC統計情報を書き込む
+  void WriteRTCStats(const std::string& channel_id,
+                     const std::string& session_id,
+                     const std::string& connection_id,
+                     const std::string& rtc_type,
+                     double rtc_timestamp,
+                     const std::string& rtc_data_json);
+  
   // クリーンアップ処理
   void Close();
 
