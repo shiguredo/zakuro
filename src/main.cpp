@@ -20,6 +20,7 @@
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
+#include "http_server.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -199,6 +200,14 @@ int main(int argc, char* argv[]) {
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
     configs[i].id = i;
+  }
+
+  // HTTP サーバーの起動
+  std::unique_ptr<HttpServer> http_server;
+  if (port > 0) {
+    http_server.reset(new HttpServer(port));
+    http_server->Start();
+    std::cout << "HTTP server started on port " << port << std::endl;
   }
 
   // 集めた stats を定期的にファイルに出力する

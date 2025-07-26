@@ -23,7 +23,28 @@ find_package(yaml-cpp REQUIRED)
 
 # DuckDB を手動で設定（システムのライブラリを使わないため）
 set(DuckDB_INCLUDE_DIRS ${DUCKDB_ROOT_DIR}/include)
-set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb_static.a)
+set(DuckDB_LIBRARIES 
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_static.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_fmt.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_re2.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_miniz.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_utf8proc.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_hyperloglog.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_fastpforlib.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_mbedtls.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_fsst.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_pg_query.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_skiplistlib.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_yyjson.a
+    ${DUCKDB_ROOT_DIR}/lib/libduckdb_zstd.a
+    ${DUCKDB_ROOT_DIR}/lib/libcore_functions_extension.a
+    ${DUCKDB_ROOT_DIR}/lib/libautocomplete_extension.a
+    ${DUCKDB_ROOT_DIR}/lib/libparquet_extension.a
+    ${DUCKDB_ROOT_DIR}/lib/libjson_extension.a
+    ${DUCKDB_ROOT_DIR}/lib/libicu_extension.a
+    ${DUCKDB_ROOT_DIR}/lib/libtpch_extension.a
+    ${DUCKDB_ROOT_DIR}/lib/libtpcds_extension.a
+)
 
 add_executable(zakuro)
 
@@ -43,6 +64,7 @@ target_sources(zakuro
   PRIVATE
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
+    src/http_server.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
     src/util.cpp
