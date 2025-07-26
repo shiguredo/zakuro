@@ -196,25 +196,54 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
   std::lock_guard<std::mutex> lock(mutex_);
   
   try {
-    // プリペアドステートメントを準備
-    auto prepared = conn_->Prepare(
-        "INSERT INTO stats (channel_id, session_id, connection_id, rtc_type, rtc_timestamp, rtc_data) "
-        "VALUES ($1, $2, $3, $4, $5, CAST($6 AS JSON))");
+    // =========================================================================
+    // 重要: プリペアドステートメントを使用しない理由
+    // =========================================================================
+    // DuckDB v1.3.2 において、C++ APIからプリペアドステートメントを使用して
+    // JSON型カラムに文字列を挿入すると、以下の問題が発生します：
+    //
+    // 1. JSON文字列内のダブルクォート(")が\x22としてエスケープされる
+    // 2. これはDuckDBの内部実装によるもので、以下の処理が原因：
+    //    - プリペアドステートメントのパラメータはSTRING_LITERAL型として扱われる
+    //    - 内部的にBlob::ToString()が呼ばれる際、IsRegularCharacter()で
+    //      ダブルクォートが"regular character"ではないと判定される
+    //    - 結果として\x22形式でエスケープされる
+    //
+    // 3. CAST($6 AS JSON)を使用しても問題は解決しない
+    //    - キャスト処理はエスケープ後に行われるため
+    //    - 既にエスケープされた文字列がJSON型にキャストされるだけ
+    //
+    // 4. DuckDB CLIで同じSQL（PREPARE/EXECUTE）を実行すると正常に動作する
+    //    - CLIとC++ APIで内部処理が異なる可能性がある
+    //
+    // 5. この問題により、保存されたJSONは以下のようになる：
+    //    正常: {"type":"codec","id":"123"}
+    //    異常: {\x22type\x22:\x22codec\x22,\x22id\x22:\x22123\x22}
+    //
+    // 回避策として、プリペアドステートメントを使用せず、
+    // 直接SQL文を構築して実行しています。
+    // SQLインジェクション対策として、シングルクォートのエスケープ処理を行っています。
+    // =========================================================================
     
-    if (prepared->HasError()) {
-      RTC_LOG(LS_ERROR) << "Failed to prepare statement: " << prepared->GetError();
-      return;
+    // JSONに含まれるシングルクォートをエスケープ（SQLインジェクション対策）
+    std::string escaped_json = rtc_data_json;
+    size_t pos = 0;
+    while ((pos = escaped_json.find("'", pos)) != std::string::npos) {
+      escaped_json.replace(pos, 1, "''");
+      pos += 2;
     }
     
-    // パラメータをバインドして実行
-    auto result = prepared->Execute(
-        channel_id,
-        session_id,
-        connection_id,
-        rtc_type,
-        rtc_timestamp,
-        rtc_data_json
-    );
+    // SQL文を直接構築
+    // ::JSON キャストを使用することで、文字列をJSON型として正しく認識させる
+    std::string sql = "INSERT INTO stats (channel_id, session_id, connection_id, rtc_type, rtc_timestamp, rtc_data) VALUES ('" +
+        channel_id + "', '" +
+        session_id + "', '" +
+        connection_id + "', '" +
+        rtc_type + "', " +
+        std::to_string(rtc_timestamp) + ", '" +
+        escaped_json + "'::JSON)";
+    
+    auto result = conn_->Query(sql);
     
     if (result->HasError()) {
       RTC_LOG(LS_ERROR) << "Failed to insert RTC stats: " << result->GetError();

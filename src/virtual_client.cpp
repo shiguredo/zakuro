@@ -336,31 +336,14 @@ void StatsCollectorCallback::OnStatsDelivered(
     std::string json_str = stats.ToJson();
     double rtc_timestamp = stats.timestamp().us() / 1000000.0;  // マイクロ秒を秒に変換
     
-    // JSONの最初の200文字をログ出力
-    RTC_LOG(LS_INFO) << "Raw JSON for " << type << ": " << json_str.substr(0, 200);
-    
-    // 文字コードを確認
-    if (json_str.length() > 0) {
-      RTC_LOG(LS_INFO) << "First char code: " << (int)json_str[0] 
-                       << " (expected '{' = " << (int)'{' << ")";
-    }
-    
-    // Boost.JSONでパースして再シリアライズ
-    try {
-      auto parsed_json = boost::json::parse(json_str);
-      std::string reencoded_json = boost::json::serialize(parsed_json);
-      RTC_LOG(LS_INFO) << "Re-encoded JSON: " << reencoded_json.substr(0, 100);
-      
-      client->config_.duckdb_writer->WriteRTCStats(
-          channel_id,
-          session_id,
-          connection_id,
-          type,
-          rtc_timestamp,
-          reencoded_json
-      );
-    } catch (const std::exception& e) {
-      RTC_LOG(LS_ERROR) << "Failed to parse/serialize JSON: " << e.what();
-    }
+    // DuckDBにJSON文字列を保存
+    client->config_.duckdb_writer->WriteRTCStats(
+        channel_id,
+        session_id,
+        connection_id,
+        type,
+        rtc_timestamp,
+        json_str
+    );
   }
 }
