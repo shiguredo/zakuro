@@ -45,3 +45,6 @@ webrtc_logs_0
 /_build
 /_install
 /__pycache__
+*.db
+*.ddb
+*.pyc

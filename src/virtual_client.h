@@ -14,9 +14,12 @@
 struct VirtualClientStats {
   std::string channel_id;
   std::string connection_id;
+  std::string session_id;
   std::string connected_url;
   bool websocket_connected = false;
   bool datachannel_connected = false;
+  bool has_audio_track = false;
+  bool has_video_track = false;
 };
 
 struct VirtualClientConfig {
@@ -95,6 +98,14 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   std::shared_ptr<sora::SoraSignaling> signaling_;
   rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
+  
+  // OnSetOffer で取得した情報を保存
+  mutable std::mutex stats_mutex_;
+  std::string channel_id_;
+  std::string session_id_;
+  std::string connection_id_;
+  bool has_audio_ = false;
+  bool has_video_ = false;
 };
 
 #endif

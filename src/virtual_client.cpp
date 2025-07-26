@@ -118,15 +118,46 @@ VirtualClientStats VirtualClient::GetStats() const {
     return VirtualClientStats();
   }
   VirtualClientStats st;
-  st.channel_id = config_.sora_config.channel_id;
-  st.connection_id = signaling_->GetConnectionID();
+  
+  // OnSetOffer で保存した情報を使用
+  {
+    std::lock_guard<std::mutex> lock(stats_mutex_);
+    st.channel_id = channel_id_;
+    st.connection_id = connection_id_;
+    st.session_id = session_id_;
+  }
+  
   st.connected_url = signaling_->GetConnectedSignalingURL();
   st.datachannel_connected = signaling_->IsConnectedDataChannel();
   st.websocket_connected = signaling_->IsConnectedWebsocket();
+  // audio/video の状態は offer から取得した値を使用
+  st.has_audio_track = has_audio_;
+  st.has_video_track = has_video_;
   return st;
 }
 
 void VirtualClient::OnSetOffer(std::string offer) {
+  // offer メッセージから channel_id, connection_id, session_id, audio, video を取得
+  auto json = boost::json::parse(offer);
+  {
+    std::lock_guard<std::mutex> lock(stats_mutex_);
+    if (json.as_object().contains("channel_id")) {
+      channel_id_ = json.at("channel_id").as_string().c_str();
+    }
+    if (json.as_object().contains("connection_id")) {
+      connection_id_ = json.at("connection_id").as_string().c_str();
+    }
+    if (json.as_object().contains("session_id")) {
+      session_id_ = json.at("session_id").as_string().c_str();
+    }
+    if (json.as_object().contains("audio")) {
+      has_audio_ = json.at("audio").as_bool();
+    }
+    if (json.as_object().contains("video")) {
+      has_video_ = json.at("video").as_bool();
+    }
+  }
+  
   std::string stream_id = rtc::CreateRandomString(16);
   if (audio_track_ != nullptr) {
     if (config_.initial_mute_audio) {

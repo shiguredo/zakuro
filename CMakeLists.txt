@@ -62,6 +62,7 @@ target_include_directories(zakuro PRIVATE ${DuckDB_INCLUDE_DIRS})
 
 target_sources(zakuro
   PRIVATE
+    src/duckdb_stats_writer.cpp
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
     src/http_server.cpp

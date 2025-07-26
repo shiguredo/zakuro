@@ -21,6 +21,7 @@
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "http_server.h"
+#include "duckdb_stats_writer.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -29,6 +30,22 @@
 #include "zakuro_stats.h"
 
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
+
+// シグナルハンドラー用のグローバル変数
+static std::atomic<bool> g_shutdown_requested{false};
+static std::shared_ptr<DuckDBStatsWriter> g_duckdb_writer;
+
+void SignalHandler(int signal) {
+  if (signal == SIGINT || signal == SIGTERM) {
+    RTC_LOG(LS_INFO) << "Shutdown signal received: " << signal;
+    g_shutdown_requested = true;
+    
+    // DuckDB をクローズ
+    if (g_duckdb_writer) {
+      g_duckdb_writer->Close();
+    }
+  }
+}
 
 // 雑なエスケープ処理
 // 文字列中に \ や " が含まれてたら全体をエスケープする
@@ -52,6 +69,9 @@ std::string escape_if_needed(std::string str) {
 }
 
 int main(int argc, char* argv[]) {
+  // シグナルハンドラーを設定
+  std::signal(SIGINT, SignalHandler);
+  std::signal(SIGTERM, SignalHandler);
   rlimit lim;
   if (::getrlimit(RLIMIT_NOFILE, &lim) != 0) {
     std::cerr << "getrlimit 失敗" << std::endl;
@@ -186,6 +206,14 @@ int main(int argc, char* argv[]) {
   for (auto& config : configs) {
     config.stats = stats;
   }
+  
+  // DuckDB 統計ライターを初期化
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer(new DuckDBStatsWriter());
+  if (!duckdb_writer->Initialize(".")) {
+    RTC_LOG(LS_ERROR) << "Failed to initialize DuckDB stats writer";
+    // エラーでも続行（統計情報の記録は必須ではない）
+  }
+  g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
 
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
@@ -206,10 +234,11 @@ int main(int argc, char* argv[]) {
   std::mutex stats_mut;
   std::condition_variable stats_cv;
   int stats_countdown = configs.size();
-  if (!connection_id_stats_file.empty()) {
+  if (!connection_id_stats_file.empty() || duckdb_writer) {
     stats_th.reset(new std::thread([stats, &stats_cv, &stats_mut,
                                     &stats_countdown,
-                                    &connection_id_stats_file]() {
+                                    &connection_id_stats_file,
+                                    duckdb_writer]() {
       while (true) {
         std::unique_lock<std::mutex> lock(stats_mut);
         bool countzero = stats_cv.wait_for(
@@ -221,6 +250,19 @@ int main(int argc, char* argv[]) {
         }
         // ファイルに書き込む
         auto m = stats->Get();
+        
+        // DuckDB に統計情報を書き込む
+        if (duckdb_writer && !g_shutdown_requested) {
+          std::vector<VirtualClientStats> all_stats;
+          for (const auto& p : m) {
+            for (const auto& stat : p.second.stats) {
+              all_stats.push_back(stat);
+            }
+          }
+          if (!all_stats.empty()) {
+            duckdb_writer->WriteStats(all_stats);
+          }
+        }
         /*
         {
           "wss://hoge1.jp/signaling": {
@@ -257,10 +299,13 @@ int main(int argc, char* argv[]) {
           }
           obj[p.first] = obj2;
         }
-        std::string jstr = boost::json::serialize(obj);
-        // ファイルに出力
-        std::ofstream ofs(connection_id_stats_file);
-        ofs << jstr;
+        // connection_id_stats_file が指定されている場合はJSONファイルに出力
+        if (!connection_id_stats_file.empty()) {
+          std::string jstr = boost::json::serialize(obj);
+          // ファイルに出力
+          std::ofstream ofs(connection_id_stats_file);
+          ofs << jstr;
+        }
       }
     }));
   }
@@ -286,6 +331,11 @@ int main(int argc, char* argv[]) {
   }
   if (stats_th) {
     stats_th->join();
+  }
+  
+  // DuckDB をクローズ
+  if (duckdb_writer) {
+    duckdb_writer->Close();
   }
 
   return 0;
