@@ -174,16 +174,6 @@ int main(int argc, char* argv[]) {
   }
   rtc::LogMessage::AddLogToStream(log_sink.get(), rtc::LS_INFO);
 
-  // TODO: サーバの起動については別途考える
-  //if (config_.sora_port >= 0) {
-  //  SoraServerConfig config;
-  //  const boost::asio::ip::tcp::endpoint endpoint{
-  //      boost::asio::ip::make_address("127.0.0.1"),
-  //      static_cast<unsigned short>(config_.sora_port)};
-  //  // TODO: vcs をスレッドセーフにする（VC 生成スレッドと競合するので）
-  //  SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
-  //}
-
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();
   // 各 config に GameKeyCore の設定を入れていく
