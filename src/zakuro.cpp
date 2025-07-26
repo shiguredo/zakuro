@@ -286,6 +286,7 @@ int Zakuro::Run() {
   vc_config.openh264 = config_.openh264;
   vc_config.initial_mute_video = config_.initial_mute_video;
   vc_config.initial_mute_audio = config_.initial_mute_audio;
+  vc_config.duckdb_writer = config_.duckdb_writer;
   if (config_.no_audio_device) {
     vc_config.audio_type = VirtualClientConfig::AudioType::NoAudio;
   } else if (!config_.game.empty() || fake_audio_key_trigger) {

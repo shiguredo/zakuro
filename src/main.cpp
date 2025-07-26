@@ -214,6 +214,11 @@ int main(int argc, char* argv[]) {
     // エラーでも続行（統計情報の記録は必須ではない）
   }
   g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
+  
+  // 各 config に duckdb_writer を設定
+  for (auto& config : configs) {
+    config.duckdb_writer = duckdb_writer;
+  }
 
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
@@ -234,11 +239,10 @@ int main(int argc, char* argv[]) {
   std::mutex stats_mut;
   std::condition_variable stats_cv;
   int stats_countdown = configs.size();
-  if (!connection_id_stats_file.empty() || duckdb_writer) {
+  if (!connection_id_stats_file.empty()) {
     stats_th.reset(new std::thread([stats, &stats_cv, &stats_mut,
                                     &stats_countdown,
-                                    &connection_id_stats_file,
-                                    duckdb_writer]() {
+                                    &connection_id_stats_file]() {
       while (true) {
         std::unique_lock<std::mutex> lock(stats_mut);
         bool countzero = stats_cv.wait_for(
@@ -250,19 +254,6 @@ int main(int argc, char* argv[]) {
         }
         // ファイルに書き込む
         auto m = stats->Get();
-        
-        // DuckDB に統計情報を書き込む
-        if (duckdb_writer && !g_shutdown_requested) {
-          std::vector<VirtualClientStats> all_stats;
-          for (const auto& p : m) {
-            for (const auto& stat : p.second.stats) {
-              all_stats.push_back(stat);
-            }
-          }
-          if (!all_stats.empty()) {
-            duckdb_writer->WriteStats(all_stats);
-          }
-        }
         /*
         {
           "wss://hoge1.jp/signaling": {

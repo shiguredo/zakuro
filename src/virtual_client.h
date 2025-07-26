@@ -11,6 +11,8 @@
 
 #include "zakuro_audio_device_module.h"
 
+class DuckDBStatsWriter;
+
 struct VirtualClientStats {
   std::string channel_id;
   std::string connection_id;
@@ -58,6 +60,7 @@ struct VirtualClientConfig {
   std::string openh264;
 
   std::shared_ptr<sora::SoraClientContext> context;
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
 };
 
 class VirtualClient : public std::enable_shared_from_this<VirtualClient>,

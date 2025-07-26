@@ -104,12 +104,22 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
     }
     
     // 各統計情報を挿入
+    int inserted_count = 0;
     for (const auto& stat : stats) {
       // connection_id が空の場合はスキップ（まだ接続されていない）
       if (stat.connection_id.empty()) {
-        RTC_LOG(LS_VERBOSE) << "Skipping stats with empty connection_id";
+        RTC_LOG(LS_INFO) << "Skipping stats with empty connection_id"
+                          << " channel_id=" << stat.channel_id
+                          << " session_id=" << stat.session_id;
         continue;
       }
+      
+      RTC_LOG(LS_INFO) << "Inserting stats:"
+                        << " channel_id=" << stat.channel_id
+                        << " connection_id=" << stat.connection_id
+                        << " session_id=" << stat.session_id
+                        << " audio=" << stat.has_audio_track
+                        << " video=" << stat.has_video_track;
       
       auto result = prepared->Execute(
           stat.channel_id,
@@ -123,8 +133,12 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
       
       if (result->HasError()) {
         RTC_LOG(LS_ERROR) << "Failed to insert stats: " << result->GetError();
+      } else {
+        inserted_count++;
       }
     }
+    
+    RTC_LOG(LS_INFO) << "Inserted " << inserted_count << " records to DuckDB";
     
     // コミット
     conn_->Query("COMMIT");

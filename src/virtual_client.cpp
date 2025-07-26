@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "duckdb_stats_writer.h"
+
 // Sora C++ SDK
 #include <sora/sora_video_encoder_factory.h>
 
@@ -125,37 +127,59 @@ VirtualClientStats VirtualClient::GetStats() const {
     st.channel_id = channel_id_;
     st.connection_id = connection_id_;
     st.session_id = session_id_;
+    st.has_audio_track = has_audio_;
+    st.has_video_track = has_video_;
   }
   
   st.connected_url = signaling_->GetConnectedSignalingURL();
   st.datachannel_connected = signaling_->IsConnectedDataChannel();
   st.websocket_connected = signaling_->IsConnectedWebsocket();
-  // audio/video の状態は offer から取得した値を使用
-  st.has_audio_track = has_audio_;
-  st.has_video_track = has_video_;
+  
+  RTC_LOG(LS_INFO) << "GetStats returning:"
+                   << " channel_id=" << st.channel_id
+                   << " connection_id=" << st.connection_id
+                   << " session_id=" << st.session_id
+                   << " audio=" << st.has_audio_track
+                   << " video=" << st.has_video_track;
+  
   return st;
 }
 
 void VirtualClient::OnSetOffer(std::string offer) {
+  RTC_LOG(LS_INFO) << "OnSetOffer called with offer: " << offer;
+  
   // offer メッセージから channel_id, connection_id, session_id, audio, video を取得
   auto json = boost::json::parse(offer);
   {
     std::lock_guard<std::mutex> lock(stats_mutex_);
     if (json.as_object().contains("channel_id")) {
       channel_id_ = json.at("channel_id").as_string().c_str();
+      RTC_LOG(LS_INFO) << "Got channel_id: " << channel_id_;
     }
     if (json.as_object().contains("connection_id")) {
       connection_id_ = json.at("connection_id").as_string().c_str();
+      RTC_LOG(LS_INFO) << "Got connection_id: " << connection_id_;
     }
     if (json.as_object().contains("session_id")) {
       session_id_ = json.at("session_id").as_string().c_str();
+      RTC_LOG(LS_INFO) << "Got session_id: " << session_id_;
     }
     if (json.as_object().contains("audio")) {
       has_audio_ = json.at("audio").as_bool();
+      RTC_LOG(LS_INFO) << "Got audio: " << has_audio_;
     }
     if (json.as_object().contains("video")) {
       has_video_ = json.at("video").as_bool();
+      RTC_LOG(LS_INFO) << "Got video: " << has_video_;
     }
+  }
+  
+  // type:offer 時点で DuckDB に書き込む
+  if (config_.duckdb_writer && !connection_id_.empty()) {
+    std::vector<VirtualClientStats> stats;
+    stats.push_back(GetStats());
+    config_.duckdb_writer->WriteStats(stats);
+    RTC_LOG(LS_INFO) << "Wrote connection info to DuckDB on type:offer";
   }
   
   std::string stream_id = rtc::CreateRandomString(16);
@@ -230,6 +254,8 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
   }
 }
 void VirtualClient::OnNotify(std::string text) {
+  RTC_LOG(LS_INFO) << "OnNotify received: " << text;
+  
   auto json = boost::json::parse(text);
   if (json.at("event_type").as_string() == "connection.created") {
     // 接続できたらリトライ数をリセットする
