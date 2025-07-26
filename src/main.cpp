@@ -20,6 +20,7 @@
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
+#include "http_server.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -173,16 +174,6 @@ int main(int argc, char* argv[]) {
   }
   webrtc::LogMessage::AddLogToStream(log_sink.get(), webrtc::LS_INFO);
 
-  // TODO: サーバの起動については別途考える
-  //if (config_.sora_port >= 0) {
-  //  SoraServerConfig config;
-  //  const boost::asio::ip::tcp::endpoint endpoint{
-  //      boost::asio::ip::make_address("127.0.0.1"),
-  //      static_cast<unsigned short>(config_.sora_port)};
-  //  // TODO: vcs をスレッドセーフにする（VC 生成スレッドと競合するので）
-  //  SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
-  //}
-
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();
   // 各 config に GameKeyCore の設定を入れていく
@@ -199,6 +190,14 @@ int main(int argc, char* argv[]) {
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
     configs[i].id = i;
+  }
+
+  // HTTP サーバーの起動
+  std::unique_ptr<HttpServer> http_server;
+  if (port > 0) {
+    http_server.reset(new HttpServer(port));
+    http_server->Start();
+    std::cout << "HTTP server started on port " << port << std::endl;
   }
 
   // 集めた stats を定期的にファイルに出力する

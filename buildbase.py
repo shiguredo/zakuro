@@ -2000,6 +2000,58 @@ def install_aom(version, source_dir, build_dir, install_dir, configuration, cmak
         cmd(["cmake", "--install", aom_build_dir])
 
 
+@versioned
+def install_duckdb(version, source_dir, install_dir, platform):
+    duckdb_install_dir = os.path.join(install_dir, "duckdb")
+    rm_rf(duckdb_install_dir)
+    mkdir_p(duckdb_install_dir)
+    
+    # プラットフォーム別のダウンロードURL
+    if platform == "macos_arm64":
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/static-libs-osx-arm64.zip"
+    elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/static-libs-linux-amd64.zip"
+    else:
+        raise Exception(f"Unsupported platform for DuckDB: {platform}")
+    
+    # ダウンロードと展開
+    path = download(url, source_dir)
+    with cd(duckdb_install_dir):
+        cmd(["unzip", "-q", path])
+    
+    # ディレクトリ構造を整理
+    # include ディレクトリを作成してヘッダーファイルを移動
+    include_dir = os.path.join(duckdb_install_dir, "include")
+    mkdir_p(include_dir)
+    if os.path.exists(os.path.join(duckdb_install_dir, "duckdb.h")):
+        shutil.move(os.path.join(duckdb_install_dir, "duckdb.h"), include_dir)
+    
+    # lib ディレクトリを作成してライブラリファイルを移動
+    lib_dir = os.path.join(duckdb_install_dir, "lib")
+    mkdir_p(lib_dir)
+    for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.a")):
+        shutil.move(lib_file, lib_dir)
+    
+    # C++ ヘッダーファイル (duckdb.hpp) をダウンロード
+    # libduckdb-src.zip から取得する必要がある
+    header_url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-src.zip"
+    header_path = download(header_url, source_dir)
+    
+    # 一時ディレクトリに展開して duckdb.hpp を取得
+    temp_extract_dir = os.path.join(source_dir, "duckdb_temp")
+    rm_rf(temp_extract_dir)
+    mkdir_p(temp_extract_dir)
+    with cd(temp_extract_dir):
+        cmd(["unzip", "-q", header_path])
+        # duckdb.hpp を探してコピー
+        hpp_file = os.path.join(temp_extract_dir, "duckdb.hpp")
+        if os.path.exists(hpp_file):
+            shutil.copy(hpp_file, include_dir)
+    
+    # 一時ディレクトリを削除
+    rm_rf(temp_extract_dir)
+
+
 class PlatformTarget(object):
     def __init__(self, os, osver, arch, extra=None):
         self.os = os
