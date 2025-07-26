@@ -23,6 +23,7 @@ from buildbase import (
     install_blend2d_official,
     install_cli11,
     install_cmake,
+    install_duckdb,
     install_llvm,
     install_openh264,
     install_sora_and_deps,
@@ -219,6 +220,16 @@ def install_deps(
         }
         install_yaml(**install_yaml_args)
 
+        # DuckDB
+        install_duckdb_args = {
+            "version": deps["DUCKDB_VERSION"],
+            "version_file": os.path.join(install_dir, "duckdb.version"),
+            "source_dir": source_dir,
+            "install_dir": install_dir,
+            "platform": platform,
+        }
+        install_duckdb(**install_duckdb_args)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -293,6 +304,7 @@ def main():
             f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}"
         )
         cmake_args.append(f"-DYAML_ROOT_DIR={cmake_path(os.path.join(install_dir, 'yaml'))}")
+        cmake_args.append(f"-DDUCKDB_ROOT_DIR={cmake_path(os.path.join(install_dir, 'duckdb'))}")
         cmake_args += get_common_cmake_args(install_dir, args.target, webrtc_info)
 
         cmd(["cmake", BASE_DIR, *cmake_args])

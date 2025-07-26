@@ -21,6 +21,10 @@ find_package(Blend2D REQUIRED)
 find_package(CLI11 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
+# DuckDB を手動で設定（システムのライブラリを使わないため）
+set(DuckDB_INCLUDE_DIRS ${DUCKDB_ROOT_DIR}/include)
+set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb_static.a)
+
 add_executable(zakuro)
 
 set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
@@ -32,6 +36,8 @@ configure_file(src/zakuro_version.gen.h.template ${CMAKE_CURRENT_BINARY_DIR}/zak
 target_include_directories(zakuro PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 # OpenH264
 target_include_directories(zakuro PRIVATE ${OPENH264_ROOT_DIR}/include)
+# DuckDB
+target_include_directories(zakuro PRIVATE ${DuckDB_INCLUDE_DIRS})
 
 target_sources(zakuro
   PRIVATE
@@ -57,6 +63,7 @@ target_link_libraries(zakuro
     CLI11::CLI11
     Blend2D::Blend2D
     yaml-cpp::yaml-cpp
+    ${DuckDB_LIBRARIES}
 )
 
 target_compile_definitions(zakuro
