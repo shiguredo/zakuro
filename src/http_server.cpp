@@ -124,10 +124,10 @@ http::response<http::string_body> HttpSession::GetVersionResponse(
   json_response["duckdb_version"] = duckdb::DuckDB::LibraryVersion();
   
   // Sora C++ SDK のバージョン情報
-  json_response["sora_sdk_version"] = sora::Version::GetClientName();
+  json_response["sora_cpp_sdk_version"] = ZakuroVersion::GetSoraCppSdkVersion();
   
   // libwebrtc のバージョン情報
-  json_response["libwebrtc_version"] = ZakuroVersion::GetLibwebrtcName();
+  json_response["libwebrtc_version"] = ZakuroVersion::GetWebRTCVersion();
   
   // Boost のバージョン情報
   json_response["boost_version"] = std::to_string(BOOST_VERSION / 100000) + "." +
