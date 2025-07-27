@@ -5,7 +5,7 @@
 
 #include <boost/asio/strand.hpp>
 #include <boost/json.hpp>
-#include <boost/url/url.hpp>
+#include <boost/url.hpp>
 #include <boost/version.hpp>
 #include <duckdb.hpp>
 #include <rtc_base/logging.h>
@@ -79,7 +79,7 @@ http::response<http::string_body> HttpSession::HandleRequest(
   if (req.method() == http::verb::options) {
     http::response<http::string_body> res{http::status::ok, req.version()};
     res.set(http::field::server, "Zakuro");
-    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_origin, "*");
     res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
     res.set(http::field::access_control_allow_headers, "Content-Type");
     res.set(http::field::access_control_max_age, "3600");
@@ -88,28 +88,14 @@ http::response<http::string_body> HttpSession::HandleRequest(
     return res;
   }
   
-  // パスに応じて処理を分岐
   if (req.target() == "/version") {
     return GetVersionResponse(req);
   } else if (req.target() == "/query" && req.method() == http::verb::post) {
     return GetQueryResponse(req);
-  } else if (req.target() == "/" || req.target().starts_with("/?") || 
-             req.target().starts_with("/assets/") || req.target().starts_with("/static/")) {
-    // UIへのリバースプロキシ
-    return ProxyRequest(req);
+  } else {
+    // その他のパスはすべてUIへのリバースプロキシ
+    return SimpleProxyRequest(req);
   }
-
-  // 404 Not Found
-  http::response<http::string_body> res{http::status::not_found, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "text/plain");
-  res.set(http::field::access_control_allow_origin, ui_remote_url_);
-  res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
-  res.set(http::field::access_control_allow_headers, "Content-Type");
-  res.keep_alive(req.keep_alive());
-  res.body() = "Not Found";
-  res.prepare_payload();
-  return res;
 }
 
 http::response<http::string_body> HttpSession::GetVersionResponse(
@@ -118,21 +104,21 @@ http::response<http::string_body> HttpSession::GetVersionResponse(
   boost::json::object json_response;
   
   // Zakuro のバージョン情報
-  json_response["zakuro_version"] = ZakuroVersion::GetVersion();
+  json_response["zakuro"] = ZakuroVersion::GetVersion();
   
   // DuckDB のバージョン情報
-  json_response["duckdb_version"] = duckdb::DuckDB::LibraryVersion();
+  json_response["duckdb"] = duckdb::DuckDB::LibraryVersion();
   
   // Sora C++ SDK のバージョン情報
-  json_response["sora_cpp_sdk_version"] = ZakuroVersion::GetSoraCppSdkVersion();
+  json_response["sora_cpp_sdk"] = ZakuroVersion::GetSoraCppSdkVersion();
   
   // libwebrtc のバージョン情報
-  json_response["libwebrtc_version"] = ZakuroVersion::GetWebRTCVersion();
+  json_response["libwebrtc"] = ZakuroVersion::GetWebRTCVersion();
   
   // Boost のバージョン情報
-  json_response["boost_version"] = std::to_string(BOOST_VERSION / 100000) + "." +
-                                   std::to_string((BOOST_VERSION / 100) % 1000) + "." +
-                                   std::to_string(BOOST_VERSION % 100);
+  json_response["boost"] = std::to_string(BOOST_VERSION / 100000) + "." +
+                          std::to_string((BOOST_VERSION / 100) % 1000) + "." +
+                          std::to_string(BOOST_VERSION % 100);
   
   // レスポンスを作成
   http::response<http::string_body> res{http::status::ok, req.version()};
@@ -156,7 +142,7 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
     http::response<http::string_body> res{http::status::service_unavailable, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "application/json");
-    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_origin, "*");
     res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
     res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
@@ -177,7 +163,7 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
     http::response<http::string_body> res{http::status::bad_request, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "application/json");
-    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_origin, "*");
     res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
     res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
@@ -194,7 +180,7 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
     http::response<http::string_body> res{http::status::bad_request, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "application/json");
-    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_origin, "*");
     res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
     res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
@@ -223,72 +209,98 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
   return res;
 }
 
-http::response<http::string_body> HttpSession::ProxyRequest(
+http::response<http::string_body> HttpSession::SimpleProxyRequest(
     const http::request<http::string_body>& req) {
-  
   try {
     // URLをパース
-    boost::urls::url url(ui_remote_url_);
+    boost::url url(ui_remote_url_);
+    std::string host = std::string(url.host());
+    std::string scheme = url.scheme();
+    std::string port = url.has_port() ? std::string(url.port()) : 
+                      (scheme == "https" ? "443" : "80");
     
-    // ホストとポートを取得
-    std::string host = url.host();
-    std::string port = url.has_port() ? url.port() : (url.scheme() == "https" ? "443" : "80");
-    std::string path = std::string(req.target());
+    // HTTPSの場合はまだサポートしていない
+    if (scheme == "https") {
+      http::response<http::string_body> res{http::status::not_implemented, req.version()};
+      res.set(http::field::server, "Zakuro");
+      res.set(http::field::content_type, "text/plain");
+      res.set(http::field::access_control_allow_origin, "*");
+      res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+      res.set(http::field::access_control_allow_headers, "Content-Type");
+      res.body() = "HTTPS proxy not yet implemented";
+      res.keep_alive(req.keep_alive());
+      res.prepare_payload();
+      return res;
+    }
     
-    // 同期的なHTTPクライアントを作成
+    // 新しいio_contextを作成
     net::io_context ioc;
-    tcp::resolver resolver(ioc);
-    beast::tcp_stream stream(ioc);
     
-    // ホストを解決
-    auto const results = resolver.resolve(host, port);
-    
-    // 接続
-    stream.connect(results);
-    
-    // HTTPリクエストを作成
-    http::request<http::string_body> proxy_req{req.method(), path, 11};
-    proxy_req.set(http::field::host, host);
+    // プロキシリクエストを作成
+    http::request<http::string_body> proxy_req{req.method(), req.target(), req.version()};
+    proxy_req.set(http::field::host, port == "80" || port == "443" ? host : host + ":" + port);
     proxy_req.set(http::field::user_agent, "Zakuro/1.0");
     
-    // 元のリクエストからヘッダーをコピー（Hostは除く）
+    // ヘッダーをコピー（Host, Connection, User-Agent以外）
     for (auto const& field : req) {
-      if (field.name() != http::field::host && 
-          field.name() != http::field::connection) {
-        proxy_req.set(field.name(), field.value());
+      std::string field_name = field.name_string();
+      // Host, Connection, User-Agentは除外
+      if (field_name != "Host" && 
+          field_name != "Connection" &&
+          field_name != "User-Agent") {
+        // 文字列形式でヘッダーを設定（unknownフィールドも正しく処理される）
+        proxy_req.set(field_name, field.value());
       }
     }
     
-    // ボディがある場合はコピー
-    if (!req.body().empty()) {
-      proxy_req.body() = req.body();
-      proxy_req.prepare_payload();
-    }
+    
+    // ボディをコピー
+    proxy_req.body() = req.body();
+    proxy_req.prepare_payload();
+    
+    // TCPストリームを作成
+    beast::tcp_stream stream(ioc);
+    stream.expires_after(std::chrono::seconds(30));
+    
+    // 同期的にDNS解決と接続
+    tcp::resolver resolver(ioc);
+    auto const results = resolver.resolve(host, port);
+    stream.connect(results);
     
     // リクエストを送信
     http::write(stream, proxy_req);
     
-    // レスポンスを読み取り
+    // レスポンスを受信
     beast::flat_buffer buffer;
-    http::response<http::string_body> proxy_res;
+    http::response<http::dynamic_body> proxy_res;
     http::read(stream, buffer, proxy_res);
     
-    // エラーコードを無視してストリームを閉じる
+    // ストリームを閉じる
     beast::error_code ec;
     stream.socket().shutdown(tcp::socket::shutdown_both, ec);
     
-    // レスポンスを作成
+    std::string body_str = beast::buffers_to_string(proxy_res.body().data());
+    
+    // レスポンスを変換
     http::response<http::string_body> res{proxy_res.result(), req.version()};
+    res.set(http::field::server, "Zakuro");
     
     // ヘッダーをコピー
     for (auto const& field : proxy_res) {
       if (field.name() != http::field::connection &&
-          field.name() != http::field::transfer_encoding) {
+          field.name() != http::field::transfer_encoding &&
+          field.name() != http::field::server) {
         res.set(field.name(), field.value());
       }
     }
     
-    res.body() = proxy_res.body();
+    // CORSヘッダーを追加
+    res.set(http::field::access_control_allow_origin, "*");
+    res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+    res.set(http::field::access_control_allow_headers, "Content-Type");
+    
+    // ボディを変換
+    res.body() = body_str;
     res.keep_alive(req.keep_alive());
     res.prepare_payload();
     
@@ -301,7 +313,7 @@ http::response<http::string_body> HttpSession::ProxyRequest(
     http::response<http::string_body> res{http::status::bad_gateway, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "text/plain");
-    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_origin, "*");
     res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
     res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
@@ -310,6 +322,7 @@ http::response<http::string_body> HttpSession::ProxyRequest(
     return res;
   }
 }
+
 
 // HttpSession の実装
 
@@ -353,6 +366,7 @@ void HttpSession::SendResponse(http::response<http::string_body>&& res) {
       beast::bind_front_handler(&HttpSession::OnWrite, shared_from_this(),
                                 res_->keep_alive()));
 }
+
 
 void HttpSession::OnWrite(bool keep_alive,
                           beast::error_code ec,

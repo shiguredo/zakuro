@@ -40,6 +40,8 @@ class HttpServer {
 
   void Start();
   void Stop();
+  
+  net::io_context& GetIOContext() { return ioc_; }
 
  private:
   void Run();
@@ -74,7 +76,8 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
       const http::request<http::string_body>& req);
   http::response<http::string_body> GetQueryResponse(
       const http::request<http::string_body>& req);
-  http::response<http::string_body> ProxyRequest(
+  
+  http::response<http::string_body> SimpleProxyRequest(
       const http::request<http::string_body>& req);
 
  private:
