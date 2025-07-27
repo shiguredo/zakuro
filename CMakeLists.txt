@@ -46,6 +46,11 @@ set(DuckDB_LIBRARIES
     ${DUCKDB_ROOT_DIR}/lib/libtpcds_extension.a
 )
 
+# DuckDB の jemalloc 拡張を確認して追加
+if(EXISTS ${DUCKDB_ROOT_DIR}/lib/libjemalloc_extension.a)
+    list(APPEND DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libjemalloc_extension.a)
+endif()
+
 add_executable(zakuro)
 
 set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
@@ -88,6 +93,11 @@ target_link_libraries(zakuro
     yaml-cpp::yaml-cpp
     ${DuckDB_LIBRARIES}
 )
+
+# Ubuntu 24.04 での追加のリンクオプション
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(zakuro PRIVATE pthread dl)
+endif()
 
 target_compile_definitions(zakuro
   PRIVATE
