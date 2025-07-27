@@ -29,6 +29,14 @@ class HttpServer {
   std::shared_ptr<DuckDBStatsWriter> GetDuckDBWriter() const {
     return duckdb_writer_;
   }
+  
+  void SetUIRemoteURL(const std::string& url) {
+    ui_remote_url_ = url;
+  }
+  
+  std::string GetUIRemoteURL() const {
+    return ui_remote_url_;
+  }
 
   void Start();
   void Stop();
@@ -42,6 +50,7 @@ class HttpServer {
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;
+  std::string ui_remote_url_ = "http://localhost:5173";
   
   net::io_context ioc_;
   std::unique_ptr<tcp::acceptor> acceptor_;
@@ -51,8 +60,11 @@ class HttpServer {
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
   explicit HttpSession(tcp::socket&& socket, 
-                      std::shared_ptr<DuckDBStatsWriter> duckdb_writer) 
-      : stream_(std::move(socket)), duckdb_writer_(duckdb_writer) {}
+                      std::shared_ptr<DuckDBStatsWriter> duckdb_writer,
+                      const std::string& ui_remote_url) 
+      : stream_(std::move(socket)), 
+        duckdb_writer_(duckdb_writer),
+        ui_remote_url_(ui_remote_url) {}
 
   void Run();
   
@@ -61,6 +73,8 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   http::response<http::string_body> GetVersionResponse(
       const http::request<http::string_body>& req);
   http::response<http::string_body> GetQueryResponse(
+      const http::request<http::string_body>& req);
+  http::response<http::string_body> ProxyRequest(
       const http::request<http::string_body>& req);
 
  private:
@@ -77,6 +91,7 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   http::request<http::string_body> req_;
   std::shared_ptr<http::response<http::string_body>> res_;
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;
+  std::string ui_remote_url_;
 };
 
 #endif  // HTTP_SERVER_H_

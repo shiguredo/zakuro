@@ -96,10 +96,11 @@ int main(int argc, char* argv[]) {
   std::string config_file;
   int log_level = rtc::LS_NONE;
   int port = -1;
+  std::string ui_remote_url = "http://localhost:5173";
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, connection_id_stats_file,
+  Util::ParseArgs(args, config_file, log_level, port, ui_remote_url, connection_id_stats_file,
                   instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
@@ -177,7 +178,7 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, port,
+        Util::ParseArgs(args, config_file, log_level, port, ui_remote_url,
                         connection_id_stats_file, instance_hatch_rate, config,
                         true);
         configs.push_back(config);
@@ -235,6 +236,7 @@ int main(int argc, char* argv[]) {
   if (port > 0) {
     http_server.reset(new HttpServer(port));
     http_server->SetDuckDBWriter(duckdb_writer);
+    http_server->SetUIRemoteURL(ui_remote_url);
     http_server->Start();
     std::cout << "HTTP server started on port " << port << std::endl;
   }

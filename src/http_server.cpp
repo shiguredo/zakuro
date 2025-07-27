@@ -5,6 +5,7 @@
 
 #include <boost/asio/strand.hpp>
 #include <boost/json.hpp>
+#include <boost/url/url.hpp>
 #include <duckdb.hpp>
 #include <rtc_base/logging.h>
 
@@ -61,7 +62,7 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
   if (ec) {
     RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
   } else {
-    std::make_shared<HttpSession>(std::move(socket), duckdb_writer_)->Run();
+    std::make_shared<HttpSession>(std::move(socket), duckdb_writer_, ui_remote_url_)->Run();
   }
 
   if (running_) {
@@ -77,6 +78,10 @@ http::response<http::string_body> HttpSession::HandleRequest(
     return GetVersionResponse(req);
   } else if (req.target() == "/query" && req.method() == http::verb::post) {
     return GetQueryResponse(req);
+  } else if (req.target() == "/" || req.target().starts_with("/?") || 
+             req.target().starts_with("/assets/") || req.target().starts_with("/static/")) {
+    // UIへのリバースプロキシ
+    return ProxyRequest(req);
   }
 
   // 404 Not Found
@@ -172,6 +177,91 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
   res.prepare_payload();
   
   return res;
+}
+
+http::response<http::string_body> HttpSession::ProxyRequest(
+    const http::request<http::string_body>& req) {
+  
+  try {
+    // URLをパース
+    boost::urls::url url(ui_remote_url_);
+    
+    // ホストとポートを取得
+    std::string host = url.host();
+    std::string port = url.has_port() ? url.port() : (url.scheme() == "https" ? "443" : "80");
+    std::string path = std::string(req.target());
+    
+    // 同期的なHTTPクライアントを作成
+    net::io_context ioc;
+    tcp::resolver resolver(ioc);
+    beast::tcp_stream stream(ioc);
+    
+    // ホストを解決
+    auto const results = resolver.resolve(host, port);
+    
+    // 接続
+    stream.connect(results);
+    
+    // HTTPリクエストを作成
+    http::request<http::string_body> proxy_req{req.method(), path, 11};
+    proxy_req.set(http::field::host, host);
+    proxy_req.set(http::field::user_agent, "Zakuro/1.0");
+    
+    // 元のリクエストからヘッダーをコピー（Hostは除く）
+    for (auto const& field : req) {
+      if (field.name() != http::field::host && 
+          field.name() != http::field::connection) {
+        proxy_req.set(field.name(), field.value());
+      }
+    }
+    
+    // ボディがある場合はコピー
+    if (!req.body().empty()) {
+      proxy_req.body() = req.body();
+      proxy_req.prepare_payload();
+    }
+    
+    // リクエストを送信
+    http::write(stream, proxy_req);
+    
+    // レスポンスを読み取り
+    beast::flat_buffer buffer;
+    http::response<http::string_body> proxy_res;
+    http::read(stream, buffer, proxy_res);
+    
+    // エラーコードを無視してストリームを閉じる
+    beast::error_code ec;
+    stream.socket().shutdown(tcp::socket::shutdown_both, ec);
+    
+    // レスポンスを作成
+    http::response<http::string_body> res{proxy_res.result(), req.version()};
+    
+    // ヘッダーをコピー
+    for (auto const& field : proxy_res) {
+      if (field.name() != http::field::connection &&
+          field.name() != http::field::transfer_encoding) {
+        res.set(field.name(), field.value());
+      }
+    }
+    
+    res.body() = proxy_res.body();
+    res.keep_alive(req.keep_alive());
+    res.prepare_payload();
+    
+    return res;
+    
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_ERROR) << "Proxy error: " << e.what();
+    
+    // エラーレスポンス
+    http::response<http::string_body> res{http::status::bad_gateway, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::content_type, "text/plain");
+    res.keep_alive(req.keep_alive());
+    res.body() = "Proxy Error: " + std::string(e.what());
+    res.prepare_payload();
+    return res;
+  }
 }
 
 // HttpSession の実装

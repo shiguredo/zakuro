@@ -21,6 +21,7 @@ class Util {
                         std::string& config_file,
                         int& log_level,
                         int& port,
+                        std::string& ui_remote_url,
                         std::string& connection_id_stats_file,
                         double& instance_hatch_rate,
                         ZakuroConfig& config,

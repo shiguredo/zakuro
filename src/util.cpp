@@ -37,6 +37,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& config_file,
                      int& log_level,
                      int& port,
+                     std::string& ui_remote_url,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
                      ZakuroConfig& config,
@@ -64,6 +65,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
   app.add_option("--port", port, "Port number (default: -1)")
       ->check(CLI::Range(-1, 65535));
+  app.add_option("--ui-remote-url", ui_remote_url, 
+                 "Remote URL for UI reverse proxy (default: http://localhost:5173)");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,
