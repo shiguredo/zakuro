@@ -793,3 +793,93 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
   
   return oss.str();
 }
+
+std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
+  if (!initialized_) {
+    boost::json::object error;
+    error["error"] = "Database not initialized";
+    return boost::json::serialize(error);
+  }
+  
+  std::lock_guard<std::mutex> lock(mutex_);
+  
+  try {
+    auto result = conn_->Query(sql);
+    
+    if (result->HasError()) {
+      boost::json::object error;
+      error["error"] = result->GetError();
+      return boost::json::serialize(error);
+    }
+    
+    // 結果をJSON形式に変換
+    boost::json::object response;
+    boost::json::array rows;
+    
+    // カラム情報を取得
+    auto column_count = result->ColumnCount();
+    boost::json::array column_names;
+    boost::json::array column_types;
+    
+    for (size_t i = 0; i < column_count; i++) {
+      column_names.push_back(boost::json::string(result->ColumnName(i)));
+      column_types.push_back(boost::json::string(result->types[i].ToString()));
+    }
+    
+    // 各行のデータを取得
+    while (result->Fetch()) {
+      boost::json::object row;
+      
+      for (size_t i = 0; i < column_count; i++) {
+        auto value = result->GetValue(i, 0);
+        
+        if (value.IsNull()) {
+          row[result->ColumnName(i)] = nullptr;
+        } else {
+          switch (value.type().id()) {
+            case duckdb::LogicalTypeId::BOOLEAN:
+              row[result->ColumnName(i)] = value.GetValue<bool>();
+              break;
+            case duckdb::LogicalTypeId::TINYINT:
+            case duckdb::LogicalTypeId::SMALLINT:
+            case duckdb::LogicalTypeId::INTEGER:
+            case duckdb::LogicalTypeId::BIGINT:
+              row[result->ColumnName(i)] = value.GetValue<int64_t>();
+              break;
+            case duckdb::LogicalTypeId::FLOAT:
+            case duckdb::LogicalTypeId::DOUBLE:
+              row[result->ColumnName(i)] = value.GetValue<double>();
+              break;
+            case duckdb::LogicalTypeId::VARCHAR:
+            case duckdb::LogicalTypeId::CHAR:
+              row[result->ColumnName(i)] = value.GetValue<std::string>();
+              break;
+            case duckdb::LogicalTypeId::TIMESTAMP:
+            case duckdb::LogicalTypeId::TIMESTAMP_TZ:
+            case duckdb::LogicalTypeId::TIMESTAMP_MS:
+            case duckdb::LogicalTypeId::TIMESTAMP_NS:
+            case duckdb::LogicalTypeId::TIMESTAMP_SEC:
+              row[result->ColumnName(i)] = value.ToString();
+              break;
+            default:
+              row[result->ColumnName(i)] = value.ToString();
+              break;
+          }
+        }
+      }
+      
+      rows.push_back(row);
+    }
+    
+    response["columns"] = column_names;
+    response["column_types"] = column_types;
+    response["rows"] = rows;
+    response["row_count"] = rows.size();
+    
+    return boost::json::serialize(response);
+  } catch (const std::exception& e) {
+    boost::json::object error;
+    error["error"] = e.what();
+    return boost::json::serialize(error);
+  }
+}

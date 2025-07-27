@@ -234,6 +234,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<HttpServer> http_server;
   if (port > 0) {
     http_server.reset(new HttpServer(port));
+    http_server->SetDuckDBWriter(duckdb_writer);
     http_server->Start();
     std::cout << "HTTP server started on port " << port << std::endl;
   }

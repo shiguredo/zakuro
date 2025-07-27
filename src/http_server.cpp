@@ -8,6 +8,7 @@
 #include <duckdb.hpp>
 #include <rtc_base/logging.h>
 
+#include "duckdb_stats_writer.h"
 #include "zakuro_version.h"
 
 HttpServer::HttpServer(int port) : port_(port) {}
@@ -60,7 +61,7 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
   if (ec) {
     RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
   } else {
-    std::make_shared<HttpSession>(std::move(socket))->Run();
+    std::make_shared<HttpSession>(std::move(socket), duckdb_writer_)->Run();
   }
 
   if (running_) {
@@ -74,6 +75,8 @@ http::response<http::string_body> HttpSession::HandleRequest(
   // パスに応じて処理を分岐
   if (req.target() == "/version") {
     return GetVersionResponse(req);
+  } else if (req.target() == "/query" && req.method() == http::verb::post) {
+    return GetQueryResponse(req);
   }
 
   // 404 Not Found
@@ -103,6 +106,54 @@ http::response<http::string_body> HttpSession::GetVersionResponse(
   res.set(http::field::content_type, "application/json");
   res.keep_alive(req.keep_alive());
   res.body() = boost::json::serialize(json_response);
+  res.prepare_payload();
+  
+  return res;
+}
+
+http::response<http::string_body> HttpSession::GetQueryResponse(
+    const http::request<http::string_body>& req) {
+  
+  // DuckDBWriterが設定されていない場合
+  if (!duckdb_writer_) {
+    http::response<http::string_body> res{http::status::service_unavailable, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::content_type, "application/json");
+    res.keep_alive(req.keep_alive());
+    
+    boost::json::object error;
+    error["error"] = "Database not available";
+    res.body() = boost::json::serialize(error);
+    res.prepare_payload();
+    return res;
+  }
+  
+  // リクエストボディからSQL文を取得
+  std::string sql = req.body();
+  
+  // SQL文が空の場合
+  if (sql.empty()) {
+    http::response<http::string_body> res{http::status::bad_request, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::content_type, "application/json");
+    res.keep_alive(req.keep_alive());
+    
+    boost::json::object error;
+    error["error"] = "SQL query is required";
+    res.body() = boost::json::serialize(error);
+    res.prepare_payload();
+    return res;
+  }
+  
+  // クエリを実行
+  std::string result_json = duckdb_writer_->ExecuteQuery(sql);
+  
+  // レスポンスを作成
+  http::response<http::string_body> res{http::status::ok, req.version()};
+  res.set(http::field::server, "Zakuro");
+  res.set(http::field::content_type, "application/json");
+  res.keep_alive(req.keep_alive());
+  res.body() = result_json;
   res.prepare_payload();
   
   return res;

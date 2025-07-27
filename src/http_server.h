@@ -10,6 +10,8 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
+class DuckDBStatsWriter;
+
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
@@ -19,6 +21,14 @@ class HttpServer {
  public:
   HttpServer(int port);
   ~HttpServer();
+  
+  void SetDuckDBWriter(std::shared_ptr<DuckDBStatsWriter> writer) {
+    duckdb_writer_ = writer;
+  }
+  
+  std::shared_ptr<DuckDBStatsWriter> GetDuckDBWriter() const {
+    return duckdb_writer_;
+  }
 
   void Start();
   void Stop();
@@ -31,6 +41,7 @@ class HttpServer {
   int port_;
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;
   
   net::io_context ioc_;
   std::unique_ptr<tcp::acceptor> acceptor_;
@@ -39,13 +50,17 @@ class HttpServer {
 // HTTP セッションを処理するクラス
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
-  explicit HttpSession(tcp::socket&& socket) : stream_(std::move(socket)) {}
+  explicit HttpSession(tcp::socket&& socket, 
+                      std::shared_ptr<DuckDBStatsWriter> duckdb_writer) 
+      : stream_(std::move(socket)), duckdb_writer_(duckdb_writer) {}
 
   void Run();
   
-  static http::response<http::string_body> HandleRequest(
+  http::response<http::string_body> HandleRequest(
       http::request<http::string_body>&& req);
-  static http::response<http::string_body> GetVersionResponse(
+  http::response<http::string_body> GetVersionResponse(
+      const http::request<http::string_body>& req);
+  http::response<http::string_body> GetQueryResponse(
       const http::request<http::string_body>& req);
 
  private:
@@ -61,6 +76,7 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   beast::flat_buffer buffer_;
   http::request<http::string_body> req_;
   std::shared_ptr<http::response<http::string_body>> res_;
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;
 };
 
 #endif  // HTTP_SERVER_H_

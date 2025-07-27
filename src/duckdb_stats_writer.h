@@ -35,6 +35,9 @@ class DuckDBStatsWriter {
   
   // クリーンアップ処理
   void Close();
+  
+  // SQLクエリを実行してJSON形式で結果を返す
+  std::string ExecuteQuery(const std::string& sql);
 
  private:
   std::unique_ptr<duckdb::DuckDB> db_;
