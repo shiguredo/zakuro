@@ -73,6 +73,19 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
 http::response<http::string_body> HttpSession::HandleRequest(
     http::request<http::string_body>&& req) {
   
+  // OPTIONSメソッドの処理（CORS preflight）
+  if (req.method() == http::verb::options) {
+    http::response<http::string_body> res{http::status::ok, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+    res.set(http::field::access_control_allow_headers, "Content-Type");
+    res.set(http::field::access_control_max_age, "3600");
+    res.keep_alive(req.keep_alive());
+    res.prepare_payload();
+    return res;
+  }
+  
   // パスに応じて処理を分岐
   if (req.target() == "/version") {
     return GetVersionResponse(req);
@@ -88,6 +101,9 @@ http::response<http::string_body> HttpSession::HandleRequest(
   http::response<http::string_body> res{http::status::not_found, req.version()};
   res.set(http::field::server, "Zakuro");
   res.set(http::field::content_type, "text/plain");
+  res.set(http::field::access_control_allow_origin, ui_remote_url_);
+  res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+  res.set(http::field::access_control_allow_headers, "Content-Type");
   res.keep_alive(req.keep_alive());
   res.body() = "Not Found";
   res.prepare_payload();
@@ -109,6 +125,9 @@ http::response<http::string_body> HttpSession::GetVersionResponse(
   http::response<http::string_body> res{http::status::ok, req.version()};
   res.set(http::field::server, "Zakuro");
   res.set(http::field::content_type, "application/json");
+  res.set(http::field::access_control_allow_origin, ui_remote_url_);
+  res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+  res.set(http::field::access_control_allow_headers, "Content-Type");
   res.keep_alive(req.keep_alive());
   res.body() = boost::json::serialize(json_response);
   res.prepare_payload();
@@ -124,6 +143,9 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
     http::response<http::string_body> res{http::status::service_unavailable, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "application/json");
+    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+    res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
     
     boost::json::object error;
@@ -142,6 +164,9 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
     http::response<http::string_body> res{http::status::bad_request, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "application/json");
+    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+    res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
     
     boost::json::object error;
@@ -156,6 +181,9 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
     http::response<http::string_body> res{http::status::bad_request, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "application/json");
+    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+    res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
     
     boost::json::object error;
@@ -172,6 +200,9 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
   http::response<http::string_body> res{http::status::ok, req.version()};
   res.set(http::field::server, "Zakuro");
   res.set(http::field::content_type, "application/json");
+  res.set(http::field::access_control_allow_origin, ui_remote_url_);
+  res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+  res.set(http::field::access_control_allow_headers, "Content-Type");
   res.keep_alive(req.keep_alive());
   res.body() = result_json;
   res.prepare_payload();
@@ -257,6 +288,9 @@ http::response<http::string_body> HttpSession::ProxyRequest(
     http::response<http::string_body> res{http::status::bad_gateway, req.version()};
     res.set(http::field::server, "Zakuro");
     res.set(http::field::content_type, "text/plain");
+    res.set(http::field::access_control_allow_origin, ui_remote_url_);
+    res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+    res.set(http::field::access_control_allow_headers, "Content-Type");
     res.keep_alive(req.keep_alive());
     res.body() = "Proxy Error: " + std::string(e.what());
     res.prepare_payload();
