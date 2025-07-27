@@ -1,5 +1,6 @@
 #include "http_server.h"
 
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 
@@ -116,6 +117,10 @@ http::response<http::string_body> HttpSession::GetVersionResponse(
   json_response["libwebrtc"] = ZakuroVersion::GetWebRTCVersion();
   
   // Boost のバージョン情報
+  // BOOST_VERSION は 108800 のような整数値で、これは 1.88.0 を表す：
+  // - 1 = BOOST_VERSION / 100000 (メジャーバージョン)
+  // - 88 = (BOOST_VERSION / 100) % 1000 (マイナーバージョン)
+  // - 0 = BOOST_VERSION % 100 (パッチバージョン)
   json_response["boost"] = std::to_string(BOOST_VERSION / 100000) + "." +
                           std::to_string((BOOST_VERSION / 100) % 1000) + "." +
                           std::to_string(BOOST_VERSION % 100);
