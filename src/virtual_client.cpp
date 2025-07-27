@@ -1,5 +1,6 @@
 #include "virtual_client.h"
 
+#include <chrono>
 #include <iostream>
 
 #include <boost/json.hpp>
@@ -321,6 +322,11 @@ void StatsCollectorCallback::OnStatsDelivered(
     return;
   }
   
+  // 現在時刻を取得（すべてのレコードで共通のtimestampを使用）
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  double timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() / 1000.0;
+  
   // レポートから必要な統計情報を抽出
   for (const auto& stats : *report) {
     const std::string type = stats.type();
@@ -334,16 +340,17 @@ void StatsCollectorCallback::OnStatsDelivered(
     
     // RTCStats を JSON 文字列として取得
     std::string json_str = stats.ToJson();
-    double rtc_timestamp = stats.timestamp().us() / 1000000.0;  // マイクロ秒を秒に変換
+    double rtc_timestamp = stats.timestamp().us() / 1000000.0;  // rtc_timestampは別カラムで保存
     
-    // DuckDBにJSON文字列を保存
+    // DuckDBにJSON文字列を保存（共通のtimestampを使用）
     client->config_.duckdb_writer->WriteRTCStats(
         channel_id,
         session_id,
         connection_id,
         type,
         rtc_timestamp,
-        json_str
+        json_str,
+        timestamp
     );
   }
 }

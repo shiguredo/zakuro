@@ -51,17 +51,30 @@ void DuckDBStatsWriter::CreateTable() {
     throw std::runtime_error("Failed to create sequence");
   }
   
-  auto stats_seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS stats_pk_seq START 1");
-  if (stats_seq_result->HasError()) {
-    RTC_LOG(LS_ERROR) << "Failed to create stats sequence: " << stats_seq_result->GetError();
-    throw std::runtime_error("Failed to create stats sequence");
+  // 各統計情報テーブル用のシーケンスを作成
+  auto codec_seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS codec_stats_pk_seq START 1");
+  if (codec_seq_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create codec sequence: " << codec_seq_result->GetError();
+    throw std::runtime_error("Failed to create codec sequence");
+  }
+  
+  auto inbound_seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS inbound_rtp_stats_pk_seq START 1");
+  if (inbound_seq_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create inbound sequence: " << inbound_seq_result->GetError();
+    throw std::runtime_error("Failed to create inbound sequence");
+  }
+  
+  auto outbound_seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS outbound_rtp_stats_pk_seq START 1");
+  if (outbound_seq_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create outbound sequence: " << outbound_seq_result->GetError();
+    throw std::runtime_error("Failed to create outbound sequence");
   }
   
   // 接続情報テーブルを作成
   std::string create_table_sql = R"(
     CREATE TABLE IF NOT EXISTS connections (
       pk BIGINT PRIMARY KEY DEFAULT nextval('connections_pk_seq'),
-      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      timestamp TIMESTAMP,
       channel_id VARCHAR,
       connection_id VARCHAR,
       session_id VARCHAR,
@@ -78,24 +91,186 @@ void DuckDBStatsWriter::CreateTable() {
     throw std::runtime_error("Failed to create table");
   }
   
-  // WebRTC統計情報テーブルを作成
-  std::string create_stats_table_sql = R"(
-    CREATE TABLE IF NOT EXISTS stats (
-      pk BIGINT PRIMARY KEY DEFAULT nextval('stats_pk_seq'),
-      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  // codec統計情報テーブルを作成
+  std::string create_codec_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS codec_stats (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('codec_stats_pk_seq'),
+      timestamp TIMESTAMP,
       channel_id VARCHAR,
       session_id VARCHAR,
       connection_id VARCHAR,
-      rtc_type VARCHAR,
       rtc_timestamp DOUBLE,
-      rtc_data JSON
+      type VARCHAR,
+      id VARCHAR,
+      mime_type VARCHAR,
+      payload_type BIGINT,
+      clock_rate BIGINT,
+      channels BIGINT,
+      sdp_fmtp_line VARCHAR
     )
   )";
   
-  auto stats_result = conn_->Query(create_stats_table_sql);
-  if (stats_result->HasError()) {
-    RTC_LOG(LS_ERROR) << "Failed to create stats table: " << stats_result->GetError();
-    throw std::runtime_error("Failed to create stats table");
+  auto codec_result = conn_->Query(create_codec_table_sql);
+  if (codec_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create codec_stats table: " << codec_result->GetError();
+    throw std::runtime_error("Failed to create codec_stats table");
+  }
+  
+  // inbound-rtp統計情報テーブルを作成
+  std::string create_inbound_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS inbound_rtp_stats (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('inbound_rtp_stats_pk_seq'),
+      timestamp TIMESTAMP,
+      channel_id VARCHAR,
+      session_id VARCHAR,
+      connection_id VARCHAR,
+      rtc_timestamp DOUBLE,
+      -- RTCStats
+      type VARCHAR,
+      id VARCHAR,
+      -- RTCRtpStreamStats
+      ssrc BIGINT,
+      kind VARCHAR,
+      transport_id VARCHAR,
+      codec_id VARCHAR,
+      -- RTCReceivedRtpStreamStats
+      packets_received BIGINT,
+      packets_lost BIGINT,
+      bytes_received BIGINT,
+      jitter DOUBLE,
+      packets_received_with_ect1 BIGINT,
+      packets_received_with_ce BIGINT,
+      packets_reported_as_lost BIGINT,
+      packets_reported_as_lost_but_recovered BIGINT,
+      -- RTCInboundRtpStreamStats
+      last_packet_received_timestamp DOUBLE,
+      header_bytes_received BIGINT,
+      packets_discarded BIGINT,
+      fec_bytes_received BIGINT,
+      fec_packets_received BIGINT,
+      fec_packets_discarded BIGINT,
+      nack_count BIGINT,
+      pli_count BIGINT,
+      fir_count BIGINT,
+      track_identifier VARCHAR,
+      mid VARCHAR,
+      remote_id VARCHAR,
+      frames_decoded BIGINT,
+      key_frames_decoded BIGINT,
+      frames_rendered BIGINT,
+      frames_dropped BIGINT,
+      frame_width BIGINT,
+      frame_height BIGINT,
+      frames_per_second DOUBLE,
+      qp_sum BIGINT,
+      total_decode_time DOUBLE,
+      total_inter_frame_delay DOUBLE,
+      total_squared_inter_frame_delay DOUBLE,
+      pause_count BIGINT,
+      total_pauses_duration DOUBLE,
+      freeze_count BIGINT,
+      total_freezes_duration DOUBLE,
+      total_processing_delay DOUBLE,
+      estimated_playout_timestamp DOUBLE,
+      jitter_buffer_delay DOUBLE,
+      jitter_buffer_target_delay DOUBLE,
+      jitter_buffer_emitted_count BIGINT,
+      jitter_buffer_minimum_delay DOUBLE,
+      total_samples_received BIGINT,
+      concealed_samples BIGINT,
+      silent_concealed_samples BIGINT,
+      concealment_events BIGINT,
+      inserted_samples_for_deceleration BIGINT,
+      removed_samples_for_acceleration BIGINT,
+      audio_level DOUBLE,
+      total_audio_energy DOUBLE,
+      total_samples_duration DOUBLE,
+      frames_received BIGINT,
+      decoder_implementation VARCHAR,
+      playout_id VARCHAR,
+      power_efficient_decoder BOOLEAN,
+      frames_assembled_from_multiple_packets BIGINT,
+      total_assembly_time DOUBLE,
+      retransmitted_packets_received BIGINT,
+      retransmitted_bytes_received BIGINT,
+      rtx_ssrc BIGINT,
+      fec_ssrc BIGINT,
+      total_corruption_probability DOUBLE,
+      total_squared_corruption_probability DOUBLE,
+      corruption_measurements BIGINT
+    )
+  )";
+  
+  auto inbound_result = conn_->Query(create_inbound_table_sql);
+  if (inbound_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create inbound_rtp_stats table: " << inbound_result->GetError();
+    throw std::runtime_error("Failed to create inbound_rtp_stats table");
+  }
+  
+  // outbound-rtp統計情報テーブルを作成
+  std::string create_outbound_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS outbound_rtp_stats (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('outbound_rtp_stats_pk_seq'),
+      timestamp TIMESTAMP,
+      channel_id VARCHAR,
+      session_id VARCHAR,
+      connection_id VARCHAR,
+      rtc_timestamp DOUBLE,
+      -- RTCStats
+      type VARCHAR,
+      id VARCHAR,
+      -- RTCRtpStreamStats
+      ssrc BIGINT,
+      kind VARCHAR,
+      transport_id VARCHAR,
+      codec_id VARCHAR,
+      -- RTCSentRtpStreamStats
+      packets_sent BIGINT,
+      bytes_sent BIGINT,
+      packets_sent_with_ect1 BIGINT,
+      -- RTCOutboundRtpStreamStats
+      mid VARCHAR,
+      media_source_id VARCHAR,
+      remote_id VARCHAR,
+      rid VARCHAR,
+      encoding_index BIGINT,
+      header_bytes_sent BIGINT,
+      retransmitted_packets_sent BIGINT,
+      retransmitted_bytes_sent BIGINT,
+      rtx_ssrc BIGINT,
+      target_bitrate DOUBLE,
+      total_encoded_bytes_target BIGINT,
+      frame_width BIGINT,
+      frame_height BIGINT,
+      frames_per_second DOUBLE,
+      frames_sent BIGINT,
+      huge_frames_sent BIGINT,
+      frames_encoded BIGINT,
+      key_frames_encoded BIGINT,
+      qp_sum BIGINT,
+      -- psnrSum と psnrMeasurements は record<DOMString, double> 型なので別途処理が必要
+      total_encode_time DOUBLE,
+      total_packet_send_delay DOUBLE,
+      quality_limitation_reason VARCHAR,
+      quality_limitation_duration_none DOUBLE,
+      quality_limitation_duration_cpu DOUBLE,
+      quality_limitation_duration_bandwidth DOUBLE,
+      quality_limitation_duration_other DOUBLE,
+      quality_limitation_resolution_changes BIGINT,
+      nack_count BIGINT,
+      pli_count BIGINT,
+      fir_count BIGINT,
+      encoder_implementation VARCHAR,
+      power_efficient_encoder BOOLEAN,
+      active BOOLEAN,
+      scalability_mode VARCHAR
+    )
+  )";
+  
+  auto outbound_result = conn_->Query(create_outbound_table_sql);
+  if (outbound_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create outbound_rtp_stats table: " << outbound_result->GetError();
+    throw std::runtime_error("Failed to create outbound_rtp_stats table");
   }
   
   // インデックスを作成
@@ -103,11 +278,23 @@ void DuckDBStatsWriter::CreateTable() {
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_connection_id ON connections(connection_id)");
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_timestamp ON connections(timestamp)");
   
-  // statsテーブルのインデックスを作成
-  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_channel_id ON stats(channel_id)");
-  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_connection_id ON stats(connection_id)");
-  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_rtc_type ON stats(rtc_type)");
-  conn_->Query("CREATE INDEX IF NOT EXISTS idx_stats_timestamp ON stats(timestamp)");
+  // 各統計情報テーブルのインデックスを作成
+  // codec_stats
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_codec_channel_id ON codec_stats(channel_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_codec_connection_id ON codec_stats(connection_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_codec_timestamp ON codec_stats(timestamp)");
+  
+  // inbound_rtp_stats
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_inbound_channel_id ON inbound_rtp_stats(channel_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_inbound_connection_id ON inbound_rtp_stats(connection_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_inbound_timestamp ON inbound_rtp_stats(timestamp)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_inbound_kind ON inbound_rtp_stats(kind)");
+  
+  // outbound_rtp_stats
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_outbound_channel_id ON outbound_rtp_stats(channel_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_outbound_connection_id ON outbound_rtp_stats(connection_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_outbound_timestamp ON outbound_rtp_stats(timestamp)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_outbound_kind ON outbound_rtp_stats(kind)");
 }
 
 void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats) {
@@ -187,7 +374,8 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                                      const std::string& connection_id,
                                      const std::string& rtc_type,
                                      double rtc_timestamp,
-                                     const std::string& rtc_data_json) {
+                                     const std::string& rtc_data_json,
+                                     double timestamp) {
   if (!initialized_) {
     RTC_LOG(LS_WARNING) << "DuckDBStatsWriter not initialized";
     return;
@@ -196,57 +384,284 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
   std::lock_guard<std::mutex> lock(mutex_);
   
   try {
-    // =========================================================================
-    // 重要: プリペアドステートメントを使用しない理由
-    // =========================================================================
-    // DuckDB v1.3.2 において、C++ APIからプリペアドステートメントを使用して
-    // JSON型カラムに文字列を挿入すると、以下の問題が発生します：
-    //
-    // 1. JSON文字列内のダブルクォート(")が\x22としてエスケープされる
-    // 2. これはDuckDBの内部実装によるもので、以下の処理が原因：
-    //    - プリペアドステートメントのパラメータはSTRING_LITERAL型として扱われる
-    //    - 内部的にBlob::ToString()が呼ばれる際、IsRegularCharacter()で
-    //      ダブルクォートが"regular character"ではないと判定される
-    //    - 結果として\x22形式でエスケープされる
-    //
-    // 3. CAST($6 AS JSON)を使用しても問題は解決しない
-    //    - キャスト処理はエスケープ後に行われるため
-    //    - 既にエスケープされた文字列がJSON型にキャストされるだけ
-    //
-    // 4. DuckDB CLIで同じSQL（PREPARE/EXECUTE）を実行すると正常に動作する
-    //    - CLIとC++ APIで内部処理が異なる可能性がある
-    //
-    // 5. この問題により、保存されたJSONは以下のようになる：
-    //    正常: {"type":"codec","id":"123"}
-    //    異常: {\x22type\x22:\x22codec\x22,\x22id\x22:\x22123\x22}
-    //
-    // 回避策として、プリペアドステートメントを使用せず、
-    // 直接SQL文を構築して実行しています。
-    // SQLインジェクション対策として、シングルクォートのエスケープ処理を行っています。
-    // =========================================================================
+    // JSON文字列をパース
+    auto json = boost::json::parse(rtc_data_json);
+    auto json_obj = json.as_object();
     
-    // JSONに含まれるシングルクォートをエスケープ（SQLインジェクション対策）
-    std::string escaped_json = rtc_data_json;
-    size_t pos = 0;
-    while ((pos = escaped_json.find("'", pos)) != std::string::npos) {
-      escaped_json.replace(pos, 1, "''");
-      pos += 2;
-    }
+    // 値を取得するヘルパー関数
+    auto get_string = [&json_obj](const std::string& key, const std::string& default_val = "") -> std::string {
+      if (json_obj.contains(key) && json_obj.at(key).is_string()) {
+        return std::string(json_obj.at(key).as_string());
+      }
+      return default_val;
+    };
     
-    // SQL文を直接構築
-    // ::JSON キャストを使用することで、文字列をJSON型として正しく認識させる
-    std::string sql = "INSERT INTO stats (channel_id, session_id, connection_id, rtc_type, rtc_timestamp, rtc_data) VALUES ('" +
-        channel_id + "', '" +
-        session_id + "', '" +
-        connection_id + "', '" +
-        rtc_type + "', " +
-        std::to_string(rtc_timestamp) + ", '" +
-        escaped_json + "'::JSON)";
+    auto get_int64 = [&json_obj](const std::string& key, int64_t default_val = 0) -> int64_t {
+      if (json_obj.contains(key)) {
+        if (json_obj.at(key).is_int64()) return json_obj.at(key).as_int64();
+        if (json_obj.at(key).is_uint64()) return static_cast<int64_t>(json_obj.at(key).as_uint64());
+      }
+      return default_val;
+    };
     
-    auto result = conn_->Query(sql);
+    auto get_double = [&json_obj](const std::string& key, double default_val = 0.0) -> double {
+      if (json_obj.contains(key)) {
+        if (json_obj.at(key).is_double()) return json_obj.at(key).as_double();
+        if (json_obj.at(key).is_int64()) return static_cast<double>(json_obj.at(key).as_int64());
+        if (json_obj.at(key).is_uint64()) return static_cast<double>(json_obj.at(key).as_uint64());
+      }
+      return default_val;
+    };
     
-    if (result->HasError()) {
-      RTC_LOG(LS_ERROR) << "Failed to insert RTC stats: " << result->GetError();
+    auto get_bool = [&json_obj](const std::string& key, bool default_val = false) -> bool {
+      if (json_obj.contains(key) && json_obj.at(key).is_bool()) {
+        return json_obj.at(key).as_bool();
+      }
+      return default_val;
+    };
+    
+    // rtc_typeに応じて適切なテーブルに挿入
+    if (rtc_type == "codec") {
+      // NOT EXISTS を使用して、同じデータが存在しない場合のみ挿入
+      auto prepared = conn_->Prepare(
+          "INSERT INTO codec_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
+          "type, id, mime_type, payload_type, clock_rate, channels, sdp_fmtp_line) "
+          "SELECT TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 "
+          "WHERE NOT EXISTS ("
+          "  SELECT 1 FROM codec_stats "
+          "  WHERE connection_id = $4 "
+          "  AND id = $7 "
+          "  AND mime_type = $8 "
+          "  AND payload_type = $9 "
+          "  AND clock_rate = $10 "
+          "  AND channels = $11 "
+          "  AND sdp_fmtp_line = $12"
+          ")");
+      
+      if (prepared->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare codec statement: " << prepared->GetError();
+        return;
+      }
+      
+      auto result = prepared->Execute(
+          timestamp,
+          channel_id,
+          session_id,
+          connection_id,
+          rtc_timestamp,
+          get_string("type"),
+          get_string("id"),
+          get_string("mimeType"),
+          get_int64("payloadType"),
+          get_int64("clockRate"),
+          get_int64("channels"),
+          get_string("sdpFmtpLine")
+      );
+      
+      if (result->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to insert codec stats: " << result->GetError();
+      }
+    } else if (rtc_type == "inbound-rtp") {
+      auto prepared = conn_->Prepare(
+          "INSERT INTO inbound_rtp_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
+          "type, id, ssrc, kind, transport_id, codec_id, packets_received, packets_lost, "
+          "bytes_received, jitter, packets_received_with_ect1, packets_received_with_ce, "
+          "packets_reported_as_lost, packets_reported_as_lost_but_recovered, "
+          "last_packet_received_timestamp, header_bytes_received, "
+          "packets_discarded, fec_bytes_received, fec_packets_received, fec_packets_discarded, nack_count, "
+          "pli_count, fir_count, track_identifier, mid, remote_id, frames_decoded, key_frames_decoded, "
+          "frames_rendered, frames_dropped, frame_width, frame_height, frames_per_second, qp_sum, "
+          "total_decode_time, total_inter_frame_delay, total_squared_inter_frame_delay, pause_count, "
+          "total_pauses_duration, freeze_count, total_freezes_duration, total_processing_delay, "
+          "estimated_playout_timestamp, jitter_buffer_delay, jitter_buffer_target_delay, "
+          "jitter_buffer_emitted_count, jitter_buffer_minimum_delay, total_samples_received, "
+          "concealed_samples, silent_concealed_samples, concealment_events, "
+          "inserted_samples_for_deceleration, removed_samples_for_acceleration, audio_level, "
+          "total_audio_energy, total_samples_duration, frames_received, decoder_implementation, "
+          "playout_id, power_efficient_decoder, frames_assembled_from_multiple_packets, "
+          "total_assembly_time, retransmitted_packets_received, retransmitted_bytes_received, "
+          "rtx_ssrc, fec_ssrc, total_corruption_probability, total_squared_corruption_probability, "
+          "corruption_measurements) "
+          "VALUES (TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, "
+          "$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, "
+          "$38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, "
+          "$56, $57, $58, $59, $60, $61, $62, $63, $64, $65, $66, $67, $68, $69, $70, $71, $72, $73, "
+          "$74, $75)");
+      
+      if (prepared->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare inbound statement: " << prepared->GetError();
+        return;
+      }
+      
+      auto result = prepared->Execute(
+          timestamp,
+          channel_id,
+          session_id,
+          connection_id,
+          rtc_timestamp,
+          get_string("type"),
+          get_string("id"),
+          get_int64("ssrc"),
+          get_string("kind"),
+          get_string("transportId"),
+          get_string("codecId"),
+          get_int64("packetsReceived"),
+          get_int64("packetsLost"),
+          get_int64("bytesReceived"),
+          get_double("jitter"),
+          get_int64("packetsReceivedWithEct1"),
+          get_int64("packetsReceivedWithCe"),
+          get_int64("packetsReportedAsLost"),
+          get_int64("packetsReportedAsLostButRecovered"),
+          get_double("lastPacketReceivedTimestamp"),
+          get_int64("headerBytesReceived"),
+          get_int64("packetsDiscarded"),
+          get_int64("fecBytesReceived"),
+          get_int64("fecPacketsReceived"),
+          get_int64("fecPacketsDiscarded"),
+          get_int64("nackCount"),
+          get_int64("pliCount"),
+          get_int64("firCount"),
+          get_string("trackIdentifier"),
+          get_string("mid"),
+          get_string("remoteId"),
+          get_int64("framesDecoded"),
+          get_int64("keyFramesDecoded"),
+          get_int64("framesRendered"),
+          get_int64("framesDropped"),
+          get_int64("frameWidth"),
+          get_int64("frameHeight"),
+          get_double("framesPerSecond"),
+          get_int64("qpSum"),
+          get_double("totalDecodeTime"),
+          get_double("totalInterFrameDelay"),
+          get_double("totalSquaredInterFrameDelay"),
+          get_int64("pauseCount"),
+          get_double("totalPausesDuration"),
+          get_int64("freezeCount"),
+          get_double("totalFreezesDuration"),
+          get_double("totalProcessingDelay"),
+          get_double("estimatedPlayoutTimestamp"),
+          get_double("jitterBufferDelay"),
+          get_double("jitterBufferTargetDelay"),
+          get_int64("jitterBufferEmittedCount"),
+          get_double("jitterBufferMinimumDelay"),
+          get_int64("totalSamplesReceived"),
+          get_int64("concealedSamples"),
+          get_int64("silentConcealedSamples"),
+          get_int64("concealmentEvents"),
+          get_int64("insertedSamplesForDeceleration"),
+          get_int64("removedSamplesForAcceleration"),
+          get_double("audioLevel"),
+          get_double("totalAudioEnergy"),
+          get_double("totalSamplesDuration"),
+          get_int64("framesReceived"),
+          get_string("decoderImplementation"),
+          get_string("playoutId"),
+          get_bool("powerEfficientDecoder"),
+          get_int64("framesAssembledFromMultiplePackets"),
+          get_double("totalAssemblyTime"),
+          get_int64("retransmittedPacketsReceived"),
+          get_int64("retransmittedBytesReceived"),
+          get_int64("rtxSsrc"),
+          get_int64("fecSsrc"),
+          get_double("totalCorruptionProbability"),
+          get_double("totalSquaredCorruptionProbability"),
+          get_int64("corruptionMeasurements")
+      );
+      
+      if (result->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to insert inbound stats: " << result->GetError();
+      }
+    } else if (rtc_type == "outbound-rtp") {
+      // qualityLimitationDurationsの処理
+      double qld_none = 0.0, qld_cpu = 0.0, qld_bandwidth = 0.0, qld_other = 0.0;
+      if (json_obj.contains("qualityLimitationDurations") && json_obj.at("qualityLimitationDurations").is_object()) {
+        auto qld = json_obj.at("qualityLimitationDurations").as_object();
+        if (qld.contains("none") && qld.at("none").is_double()) qld_none = qld.at("none").as_double();
+        if (qld.contains("cpu") && qld.at("cpu").is_double()) qld_cpu = qld.at("cpu").as_double();
+        if (qld.contains("bandwidth") && qld.at("bandwidth").is_double()) qld_bandwidth = qld.at("bandwidth").as_double();
+        if (qld.contains("other") && qld.at("other").is_double()) qld_other = qld.at("other").as_double();
+      }
+      
+      auto prepared = conn_->Prepare(
+          "INSERT INTO outbound_rtp_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
+          "type, id, ssrc, kind, transport_id, codec_id, packets_sent, bytes_sent, "
+          "packets_sent_with_ect1, mid, media_source_id, remote_id, rid, encoding_index, "
+          "header_bytes_sent, retransmitted_packets_sent, retransmitted_bytes_sent, "
+          "rtx_ssrc, target_bitrate, total_encoded_bytes_target, frame_width, frame_height, "
+          "frames_per_second, frames_sent, huge_frames_sent, frames_encoded, "
+          "key_frames_encoded, qp_sum, total_encode_time, total_packet_send_delay, "
+          "quality_limitation_reason, quality_limitation_duration_none, "
+          "quality_limitation_duration_cpu, quality_limitation_duration_bandwidth, "
+          "quality_limitation_duration_other, quality_limitation_resolution_changes, "
+          "nack_count, pli_count, fir_count, encoder_implementation, "
+          "power_efficient_encoder, active, scalability_mode) "
+          "VALUES (TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, "
+          "$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, "
+          "$34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48)");
+      
+      if (prepared->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare outbound statement: " << prepared->GetError();
+        return;
+      }
+      
+      auto result = prepared->Execute(
+          timestamp,
+          channel_id,
+          session_id,
+          connection_id,
+          rtc_timestamp,
+          get_string("type"),
+          get_string("id"),
+          get_int64("ssrc"),
+          get_string("kind"),
+          get_string("transportId"),
+          get_string("codecId"),
+          get_int64("packetsSent"),
+          get_int64("bytesSent"),
+          get_int64("packetsSentWithEct1"),
+          get_string("mid"),
+          get_string("mediaSourceId"),
+          get_string("remoteId"),
+          get_string("rid"),
+          get_int64("encodingIndex"),
+          get_int64("headerBytesSent"),
+          get_int64("retransmittedPacketsSent"),
+          get_int64("retransmittedBytesSent"),
+          get_int64("rtxSsrc"),
+          get_double("targetBitrate"),
+          get_int64("totalEncodedBytesTarget"),
+          get_int64("frameWidth"),
+          get_int64("frameHeight"),
+          get_double("framesPerSecond"),
+          get_int64("framesSent"),
+          get_int64("hugeFramesSent"),
+          get_int64("framesEncoded"),
+          get_int64("keyFramesEncoded"),
+          get_int64("qpSum"),
+          get_double("totalEncodeTime"),
+          get_double("totalPacketSendDelay"),
+          get_string("qualityLimitationReason"),
+          qld_none,
+          qld_cpu,
+          qld_bandwidth,
+          qld_other,
+          get_int64("qualityLimitationResolutionChanges"),
+          get_int64("nackCount"),
+          get_int64("pliCount"),
+          get_int64("firCount"),
+          get_string("encoderImplementation"),
+          get_bool("powerEfficientEncoder"),
+          get_bool("active"),
+          get_string("scalabilityMode")
+      );
+      
+      if (result->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to insert outbound stats: " << result->GetError();
+      }
+    } else {
+      RTC_LOG(LS_WARNING) << "Unsupported rtc_type: " << rtc_type;
     }
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error writing RTC stats: " << e.what();

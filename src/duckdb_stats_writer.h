@@ -30,7 +30,8 @@ class DuckDBStatsWriter {
                      const std::string& connection_id,
                      const std::string& rtc_type,
                      double rtc_timestamp,
-                     const std::string& rtc_data_json);
+                     const std::string& rtc_data_json,
+                     double timestamp);
   
   // クリーンアップ処理
   void Close();
