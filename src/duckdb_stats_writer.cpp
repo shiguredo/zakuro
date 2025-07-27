@@ -70,6 +70,12 @@ void DuckDBStatsWriter::CreateTable() {
     throw std::runtime_error("Failed to create outbound sequence");
   }
   
+  auto media_source_seq_result = conn_->Query("CREATE SEQUENCE IF NOT EXISTS media_source_stats_pk_seq START 1");
+  if (media_source_seq_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create media source sequence: " << media_source_seq_result->GetError();
+    throw std::runtime_error("Failed to create media source sequence");
+  }
+  
   // 接続情報テーブルを作成
   std::string create_table_sql = R"(
     CREATE TABLE IF NOT EXISTS connections (
@@ -273,6 +279,41 @@ void DuckDBStatsWriter::CreateTable() {
     throw std::runtime_error("Failed to create outbound_rtp_stats table");
   }
   
+  // media-source統計情報テーブルを作成
+  std::string create_media_source_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS media_source_stats (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('media_source_stats_pk_seq'),
+      timestamp TIMESTAMP,
+      channel_id VARCHAR,
+      session_id VARCHAR,
+      connection_id VARCHAR,
+      rtc_timestamp DOUBLE,
+      -- RTCStats
+      type VARCHAR,
+      id VARCHAR,
+      -- RTCMediaSourceStats
+      track_identifier VARCHAR,
+      kind VARCHAR,
+      -- RTCAudioSourceStats
+      audio_level DOUBLE,
+      total_audio_energy DOUBLE,
+      total_samples_duration DOUBLE,
+      echo_return_loss DOUBLE,
+      echo_return_loss_enhancement DOUBLE,
+      -- RTCVideoSourceStats
+      width BIGINT,
+      height BIGINT,
+      frames BIGINT,
+      frames_per_second DOUBLE
+    )
+  )";
+  
+  auto media_source_result = conn_->Query(create_media_source_table_sql);
+  if (media_source_result->HasError()) {
+    RTC_LOG(LS_ERROR) << "Failed to create media_source_stats table: " << media_source_result->GetError();
+    throw std::runtime_error("Failed to create media_source_stats table");
+  }
+  
   // インデックスを作成
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_channel_id ON connections(channel_id)");
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_connection_id ON connections(connection_id)");
@@ -295,6 +336,12 @@ void DuckDBStatsWriter::CreateTable() {
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_outbound_connection_id ON outbound_rtp_stats(connection_id)");
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_outbound_timestamp ON outbound_rtp_stats(timestamp)");
   conn_->Query("CREATE INDEX IF NOT EXISTS idx_outbound_kind ON outbound_rtp_stats(kind)");
+  
+  // media_source_stats
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_media_source_channel_id ON media_source_stats(channel_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_media_source_connection_id ON media_source_stats(connection_id)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_media_source_timestamp ON media_source_stats(timestamp)");
+  conn_->Query("CREATE INDEX IF NOT EXISTS idx_media_source_kind ON media_source_stats(kind)");
 }
 
 void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats) {
@@ -659,6 +706,50 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       
       if (result->HasError()) {
         RTC_LOG(LS_ERROR) << "Failed to insert outbound stats: " << result->GetError();
+      }
+    } else if (rtc_type == "media-source") {
+      // media-sourceは常に挿入
+      auto prepared = conn_->Prepare(
+          "INSERT INTO media_source_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
+          "type, id, track_identifier, kind, audio_level, total_audio_energy, total_samples_duration, "
+          "echo_return_loss, echo_return_loss_enhancement, width, height, frames, frames_per_second) "
+          "VALUES (TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)");
+      
+      if (prepared->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare media source statement: " << prepared->GetError();
+        return;
+      }
+      
+      // kindが存在しない場合はスキップ
+      std::string kind = get_string("kind");
+      if (kind.empty()) {
+        RTC_LOG(LS_WARNING) << "Skipping media-source stats without kind field";
+        return;
+      }
+      
+      auto result = prepared->Execute(
+          timestamp,
+          channel_id,
+          session_id,
+          connection_id,
+          rtc_timestamp,
+          get_string("type"),
+          get_string("id"),
+          get_string("trackIdentifier"),
+          kind,
+          kind == "audio" ? duckdb::Value(get_double("audioLevel", 0.0)) : duckdb::Value(),
+          kind == "audio" ? duckdb::Value(get_double("totalAudioEnergy", 0.0)) : duckdb::Value(),
+          kind == "audio" ? duckdb::Value(get_double("totalSamplesDuration", 0.0)) : duckdb::Value(),
+          kind == "audio" ? duckdb::Value(get_double("echoReturnLoss", 0.0)) : duckdb::Value(),
+          kind == "audio" ? duckdb::Value(get_double("echoReturnLossEnhancement", 0.0)) : duckdb::Value(),
+          kind == "video" ? duckdb::Value(get_int64("width", 0)) : duckdb::Value(),
+          kind == "video" ? duckdb::Value(get_int64("height", 0)) : duckdb::Value(),
+          kind == "video" ? duckdb::Value(get_int64("frames", 0)) : duckdb::Value(),
+          kind == "video" ? duckdb::Value(get_double("framesPerSecond", 0.0)) : duckdb::Value()
+      );
+      
+      if (result->HasError()) {
+        RTC_LOG(LS_ERROR) << "Failed to insert media source stats: " << result->GetError();
       }
     } else {
       RTC_LOG(LS_WARNING) << "Unsupported rtc_type: " << rtc_type;
