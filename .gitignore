@@ -47,6 +47,7 @@ webrtc_logs_0
 /__pycache__
 *.db
 *.ddb
+*.wal
 *.pyc
 
 CLAUDE.local.md

@@ -8,6 +8,7 @@ class ZakuroVersion {
   static std::string GetClientName();
   static std::string GetLibwebrtcName();
   static std::string GetEnvironmentName();
+  static std::string GetVersion();
 };
 
 #endif  // ZAKURO_VERSION_H_

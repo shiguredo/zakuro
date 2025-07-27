@@ -46,3 +46,7 @@ std::string ZakuroVersion::GetLibwebrtcName() {
 std::string ZakuroVersion::GetEnvironmentName() {
   return sora::Version::GetEnvironmentName();
 }
+
+std::string ZakuroVersion::GetVersion() {
+  return ZAKURO_VERSION;
+}

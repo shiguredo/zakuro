@@ -6,8 +6,10 @@
 #include <boost/asio/strand.hpp>
 #include <boost/json.hpp>
 #include <boost/url/url.hpp>
+#include <boost/version.hpp>
 #include <duckdb.hpp>
 #include <rtc_base/logging.h>
+#include <sora/version.h>
 
 #include "duckdb_stats_writer.h"
 #include "zakuro_version.h"
@@ -116,10 +118,21 @@ http::response<http::string_body> HttpSession::GetVersionResponse(
   boost::json::object json_response;
   
   // Zakuro のバージョン情報
-  json_response["zakuro_version"] = ZakuroVersion::GetClientName();
+  json_response["zakuro_version"] = ZakuroVersion::GetVersion();
   
   // DuckDB のバージョン情報
   json_response["duckdb_version"] = duckdb::DuckDB::LibraryVersion();
+  
+  // Sora C++ SDK のバージョン情報
+  json_response["sora_sdk_version"] = sora::Version::GetClientName();
+  
+  // libwebrtc のバージョン情報
+  json_response["libwebrtc_version"] = ZakuroVersion::GetLibwebrtcName();
+  
+  // Boost のバージョン情報
+  json_response["boost_version"] = std::to_string(BOOST_VERSION / 100000) + "." +
+                                   std::to_string((BOOST_VERSION / 100) % 1000) + "." +
+                                   std::to_string(BOOST_VERSION % 100);
   
   // レスポンスを作成
   http::response<http::string_body> res{http::status::ok, req.version()};
