@@ -131,6 +131,21 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
   // リクエストボディからSQL文を取得
   std::string sql = req.body();
   
+  // Content-Typeをチェック
+  auto content_type = req[http::field::content_type];
+  if (!content_type.empty() && content_type != "application/sql") {
+    http::response<http::string_body> res{http::status::bad_request, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::content_type, "application/json");
+    res.keep_alive(req.keep_alive());
+    
+    boost::json::object error;
+    error["error"] = "Content-Type must be application/sql";
+    res.body() = boost::json::serialize(error);
+    res.prepare_payload();
+    return res;
+  }
+  
   // SQL文が空の場合
   if (sql.empty()) {
     http::response<http::string_body> res{http::status::bad_request, req.version()};
