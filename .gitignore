@@ -37,6 +37,7 @@ core
 webrtc_logs_0
 .DS_Store
 *.swp
+*.log
 
 *.yaml
 
@@ -45,9 +46,14 @@ webrtc_logs_0
 /_build
 /_install
 /__pycache__
+*.pyc
+
+# DuckDB
+
 *.db
 *.ddb
 *.wal
-*.pyc
+
+# Claude
 
 CLAUDE.local.md

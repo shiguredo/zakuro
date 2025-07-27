@@ -827,48 +827,53 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
     }
     
     // 各行のデータを取得
-    while (result->Fetch()) {
-      boost::json::object row;
-      
-      for (size_t i = 0; i < column_count; i++) {
-        auto value = result->GetValue(i, 0);
+    idx_t row_idx = 0;
+    while (auto chunk = result->Fetch()) {
+      // チャンク内の各行を処理
+      for (idx_t chunk_row = 0; chunk_row < chunk->size(); chunk_row++) {
+        boost::json::object row;
         
-        if (value.IsNull()) {
-          row[result->ColumnName(i)] = nullptr;
-        } else {
-          switch (value.type().id()) {
-            case duckdb::LogicalTypeId::BOOLEAN:
-              row[result->ColumnName(i)] = value.GetValue<bool>();
-              break;
-            case duckdb::LogicalTypeId::TINYINT:
-            case duckdb::LogicalTypeId::SMALLINT:
-            case duckdb::LogicalTypeId::INTEGER:
-            case duckdb::LogicalTypeId::BIGINT:
-              row[result->ColumnName(i)] = value.GetValue<int64_t>();
-              break;
-            case duckdb::LogicalTypeId::FLOAT:
-            case duckdb::LogicalTypeId::DOUBLE:
-              row[result->ColumnName(i)] = value.GetValue<double>();
-              break;
-            case duckdb::LogicalTypeId::VARCHAR:
-            case duckdb::LogicalTypeId::CHAR:
-              row[result->ColumnName(i)] = value.GetValue<std::string>();
-              break;
-            case duckdb::LogicalTypeId::TIMESTAMP:
-            case duckdb::LogicalTypeId::TIMESTAMP_TZ:
-            case duckdb::LogicalTypeId::TIMESTAMP_MS:
-            case duckdb::LogicalTypeId::TIMESTAMP_NS:
-            case duckdb::LogicalTypeId::TIMESTAMP_SEC:
-              row[result->ColumnName(i)] = value.ToString();
-              break;
-            default:
-              row[result->ColumnName(i)] = value.ToString();
-              break;
+        for (size_t i = 0; i < column_count; i++) {
+          auto value = chunk->GetValue(i, chunk_row);
+          
+          if (value.IsNull()) {
+            row[result->ColumnName(i)] = nullptr;
+          } else {
+            switch (value.type().id()) {
+              case duckdb::LogicalTypeId::BOOLEAN:
+                row[result->ColumnName(i)] = value.GetValue<bool>();
+                break;
+              case duckdb::LogicalTypeId::TINYINT:
+              case duckdb::LogicalTypeId::SMALLINT:
+              case duckdb::LogicalTypeId::INTEGER:
+              case duckdb::LogicalTypeId::BIGINT:
+                row[result->ColumnName(i)] = value.GetValue<int64_t>();
+                break;
+              case duckdb::LogicalTypeId::FLOAT:
+              case duckdb::LogicalTypeId::DOUBLE:
+                row[result->ColumnName(i)] = value.GetValue<double>();
+                break;
+              case duckdb::LogicalTypeId::VARCHAR:
+              case duckdb::LogicalTypeId::CHAR:
+                row[result->ColumnName(i)] = value.GetValue<std::string>();
+                break;
+              case duckdb::LogicalTypeId::TIMESTAMP:
+              case duckdb::LogicalTypeId::TIMESTAMP_TZ:
+              case duckdb::LogicalTypeId::TIMESTAMP_MS:
+              case duckdb::LogicalTypeId::TIMESTAMP_NS:
+              case duckdb::LogicalTypeId::TIMESTAMP_SEC:
+                row[result->ColumnName(i)] = value.ToString();
+                break;
+              default:
+                row[result->ColumnName(i)] = value.ToString();
+                break;
+            }
           }
         }
+        
+        rows.push_back(row);
+        row_idx++;
       }
-      
-      rows.push_back(row);
     }
     
     response["columns"] = column_names;
