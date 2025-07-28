@@ -53,6 +53,7 @@ target_sources(zakuro
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
     src/http_server.cpp
+    src/json_rpc.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
     src/util.cpp

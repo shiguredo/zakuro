@@ -72,9 +72,7 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   
   http::response<http::string_body> HandleRequest(
       http::request<http::string_body>&& req);
-  http::response<http::string_body> GetVersionResponse(
-      const http::request<http::string_body>& req);
-  http::response<http::string_body> GetQueryResponse(
+  http::response<http::string_body> HandleJsonRpcRequest(
       const http::request<http::string_body>& req);
   
   http::response<http::string_body> SimpleProxyRequest(

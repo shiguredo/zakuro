@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
       common_args.push_back(zakuro_node["log-level"].as<std::string>());
     }
     if (zakuro_node["port"]) {
-      common_args.push_back("--port");
+      common_args.push_back("--rpc-port");
       common_args.push_back(zakuro_node["port"].as<std::string>());
     }
     if (zakuro_node["output-file-connection-id"]) {

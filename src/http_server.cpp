@@ -14,6 +14,7 @@
 #include <sora/version.h>
 
 #include "duckdb_stats_writer.h"
+#include "json_rpc.h"
 #include "zakuro_version.h"
 
 HttpServer::HttpServer(int port) : port_(port) {}
@@ -77,116 +78,15 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
 http::response<http::string_body> HttpSession::HandleRequest(
     http::request<http::string_body>&& req) {
   
-  
-  if (req.target() == "/version") {
-    return GetVersionResponse(req);
-  } else if (req.target() == "/query" && req.method() == http::verb::post) {
-    return GetQueryResponse(req);
+  // JSON-RPC エンドポイント
+  if (req.target() == "/rpc" && req.method() == http::verb::post) {
+    return HandleJsonRpcRequest(req);
   } else {
     // その他のパスはすべてUIへのリバースプロキシ
     return SimpleProxyRequest(req);
   }
 }
 
-http::response<http::string_body> HttpSession::GetVersionResponse(
-    const http::request<http::string_body>& req) {
-  
-  boost::json::object json_response;
-  
-  // Zakuro のバージョン情報
-  json_response["zakuro"] = ZakuroVersion::GetVersion();
-  
-  // DuckDB のバージョン情報
-  json_response["duckdb"] = duckdb_library_version();
-  
-  // Sora C++ SDK のバージョン情報
-  json_response["sora_cpp_sdk"] = ZakuroVersion::GetSoraCppSdkVersion();
-  
-  // libwebrtc のバージョン情報
-  json_response["libwebrtc"] = ZakuroVersion::GetWebRTCVersion();
-  
-  // Boost のバージョン情報
-  // BOOST_VERSION は 108800 のような整数値で、これは 1.88.0 を表す：
-  // - 1 = BOOST_VERSION / 100000 (メジャーバージョン)
-  // - 88 = (BOOST_VERSION / 100) % 1000 (マイナーバージョン)
-  // - 0 = BOOST_VERSION % 100 (パッチバージョン)
-  json_response["boost"] = std::to_string(BOOST_VERSION / 100000) + "." +
-                          std::to_string((BOOST_VERSION / 100) % 1000) + "." +
-                          std::to_string(BOOST_VERSION % 100);
-  
-  // レスポンスを作成
-  http::response<http::string_body> res{http::status::ok, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "application/json");
-  res.keep_alive(req.keep_alive());
-  res.body() = boost::json::serialize(json_response);
-  res.prepare_payload();
-  
-  return res;
-}
-
-http::response<http::string_body> HttpSession::GetQueryResponse(
-    const http::request<http::string_body>& req) {
-  
-  // DuckDBWriterが設定されていない場合
-  if (!duckdb_writer_) {
-    http::response<http::string_body> res{http::status::service_unavailable, req.version()};
-    res.set(http::field::server, "Zakuro");
-    res.set(http::field::content_type, "application/json");
-    res.keep_alive(req.keep_alive());
-    
-    boost::json::object error;
-    error["error"] = "Database not available";
-    res.body() = boost::json::serialize(error);
-    res.prepare_payload();
-    return res;
-  }
-  
-  // リクエストボディからSQL文を取得
-  std::string sql = req.body();
-  
-  // Content-Typeをチェック
-  auto content_type = req[http::field::content_type];
-  if (!content_type.empty() && content_type != "application/sql") {
-    http::response<http::string_body> res{http::status::bad_request, req.version()};
-    res.set(http::field::server, "Zakuro");
-    res.set(http::field::content_type, "application/json");
-    res.keep_alive(req.keep_alive());
-    
-    boost::json::object error;
-    error["error"] = "Content-Type must be application/sql";
-    res.body() = boost::json::serialize(error);
-    res.prepare_payload();
-    return res;
-  }
-  
-  // SQL文が空の場合
-  if (sql.empty()) {
-    http::response<http::string_body> res{http::status::bad_request, req.version()};
-    res.set(http::field::server, "Zakuro");
-    res.set(http::field::content_type, "application/json");
-    res.keep_alive(req.keep_alive());
-    
-    boost::json::object error;
-    error["error"] = "SQL query is required";
-    res.body() = boost::json::serialize(error);
-    res.prepare_payload();
-    return res;
-  }
-  
-  // クエリを実行
-  std::string result_json = duckdb_writer_->ExecuteQuery(sql);
-  
-  // レスポンスを作成
-  http::response<http::string_body> res{http::status::ok, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "application/json");
-  res.keep_alive(req.keep_alive());
-  res.body() = result_json;
-  res.prepare_payload();
-  
-  return res;
-}
 
 http::response<http::string_body> HttpSession::SimpleProxyRequest(
     const http::request<http::string_body>& req) {
@@ -393,4 +293,67 @@ void HttpSession::OnWrite(bool keep_alive,
 void HttpSession::DoClose() {
   beast::error_code ec;
   stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+}
+
+http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
+    const http::request<http::string_body>& req) {
+  
+  // Content-Typeをチェック
+  auto content_type = req[http::field::content_type];
+  if (content_type.empty() || content_type.find("application/json") == std::string::npos) {
+    http::response<http::string_body> res{http::status::bad_request, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::content_type, "application/json");
+    res.keep_alive(req.keep_alive());
+    
+    boost::json::object error_response;
+    error_response["jsonrpc"] = "2.0";
+    boost::json::object error;
+    error["code"] = -32700;
+    error["message"] = "Parse error";
+    error["data"] = "Content-Type must be application/json";
+    error_response["error"] = error;
+    error_response["id"] = nullptr;
+    
+    res.body() = boost::json::serialize(error_response);
+    res.prepare_payload();
+    return res;
+  }
+  
+  // リクエストボディをパース
+  boost::system::error_code ec;
+  auto jv = boost::json::parse(req.body(), ec);
+  if (ec) {
+    http::response<http::string_body> res{http::status::bad_request, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::content_type, "application/json");
+    res.keep_alive(req.keep_alive());
+    
+    boost::json::object error_response;
+    error_response["jsonrpc"] = "2.0";
+    boost::json::object error;
+    error["code"] = -32700;
+    error["message"] = "Parse error";
+    error["data"] = ec.message();
+    error_response["error"] = error;
+    error_response["id"] = nullptr;
+    
+    res.body() = boost::json::serialize(error_response);
+    res.prepare_payload();
+    return res;
+  }
+  
+  // JsonRpcHandler を使って処理
+  JsonRpcHandler handler(duckdb_writer_);
+  auto response = handler.Process(jv);
+  
+  // レスポンスを作成
+  http::response<http::string_body> res{http::status::ok, req.version()};
+  res.set(http::field::server, "Zakuro");
+  res.set(http::field::content_type, "application/json");
+  res.keep_alive(req.keep_alive());
+  res.body() = boost::json::serialize(response);
+  res.prepare_payload();
+  
+  return res;
 }
