@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
   std::vector<ZakuroConfig> configs;
 
   std::string config_file;
-  int log_level = rtc::LS_NONE;
+  int log_level = webrtc::LS_NONE;
   int port = -1;
   std::string ui_remote_url = "http://localhost:5173";
   std::string connection_id_stats_file;
@@ -186,19 +186,19 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  rtc::LogMessage::LogToDebug((rtc::LoggingSeverity)log_level);
-  rtc::LogMessage::LogTimestamps();
-  rtc::LogMessage::LogThreads();
+  webrtc::LogMessage::LogToDebug((webrtc::LoggingSeverity)log_level);
+  webrtc::LogMessage::LogTimestamps();
+  webrtc::LogMessage::LogThreads();
 
-  std::unique_ptr<rtc::FileRotatingLogSink> log_sink(
-      new rtc::FileRotatingLogSink("./", "webrtc_logs", kDefaultMaxLogFileSize,
+  std::unique_ptr<webrtc::FileRotatingLogSink> log_sink(
+      new webrtc::FileRotatingLogSink("./", "webrtc_logs", kDefaultMaxLogFileSize,
                                    10));
   if (!log_sink->Init()) {
     RTC_LOG(LS_ERROR) << __FUNCTION__ << "Failed to open log file";
     log_sink.reset();
     return 1;
   }
-  rtc::LogMessage::AddLogToStream(log_sink.get(), rtc::LS_INFO);
+  webrtc::LogMessage::AddLogToStream(log_sink.get(), webrtc::LS_INFO);
 
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();

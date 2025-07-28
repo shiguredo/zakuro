@@ -11,9 +11,26 @@
 
 ## develop
 
+## 2025.2.0
+
+**リリース日**: 2025-07-18
+
+- [UPDATE] Sora C++ SDK を `2025.4.0` に上げる
+  - それに伴って以下のライブラリのバージョンも上げる
+  - libwebrtc のバージョンを `m138.7204.0.1` に上げる
+    - `rtc::` を `webrtc::` に変更する
+    - `cricket::` を `webrtc::` に変更する
+    - `ZakuroAudioDeviceModuleConfig` のメンバー `TaskQueueFactory` を削除し、都度 webrtc::CreateEnvironment() で webrtc::Environment を生成するようにする
+    - `webrtc::AudioDeviceModule::Create` から `webrtc::CreateAudioDeviceModule` に変更する
+  - CMake のバージョンを `4.0.3` に上げる
+  - @miosakuma
 - [UPDATE] Blend2D を公式サイトからダウンロードするように変更する
   - 今までは現時点の master のコミットハッシュを使っていたが、asmjit と一緒にバージョンを管理しないといけなかった
   - 公式サイトからのダウンロードだと asmjit を内包してるのでこっちの方が管理が楽そうという判断
+  - @melpon
+- [UPDATE] `--sora-video-codec-type` H264 指定時の `--openh264` 必須チェックを削除する
+  - `--h264-encoder` の追加により `--openh264` 指定が必須ではなくなったため
+  - @miosakuma
 - [ADD] signaling URL のバリデーションを追加
   - signaling URL が ws:// または wss:// で始まらない場合はエラーを出力
   - @voluntas

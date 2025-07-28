@@ -435,12 +435,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::exit(1);
   }
 
-  // H264 は --openh264 が指定されてる場合のみ動作する
-  if (config.sora_video_codec_type == "H264" && config.openh264.empty()) {
-    std::cerr << "Specify --openh264=/path/to/libopenh264.so for H.264 codec"
-              << std::endl;
-    std::exit(1);
-  }
   // --openh264 のパスは絶対パスである必要がある
   if (!config.openh264.empty() && config.openh264[0] != '/') {
     std::cerr << "--openh264 file path must be absolute path" << std::endl;
@@ -756,7 +750,7 @@ std::string Util::GenerateRandomChars() {
 
 std::string Util::GenerateRandomChars(size_t length) {
   std::string result;
-  rtc::CreateRandomString(length, &result);
+  webrtc::CreateRandomString(length, &result);
   return result;
 }
 

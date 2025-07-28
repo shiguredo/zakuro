@@ -11,6 +11,7 @@
 
 // webrtc
 #include "api/make_ref_counted.h"
+#include "api/environment/environment_factory.h"
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "rtc_base/ref_counted_object.h"
@@ -31,7 +32,7 @@ struct ZakuroAudioDeviceModuleConfig {
   };
   Type type;
   // ADM
-  rtc::scoped_refptr<webrtc::AudioDeviceModule> adm;
+  webrtc::scoped_refptr<webrtc::AudioDeviceModule> adm;
   // FakeAudio
   std::shared_ptr<FakeAudioData> fake_audio;
   // External
@@ -39,7 +40,6 @@ struct ZakuroAudioDeviceModuleConfig {
   int sample_rate;
   int channels;
 
-  webrtc::TaskQueueFactory* task_queue_factory;
 };
 
 class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
@@ -51,9 +51,9 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
   // adm == nullptr && fake_audio != nullptr の場合 -> 指定されたダミーデータを使って録音する
   // adm == nullptr && fake_audio == nullptr の場合 -> 特定のダミーデータを作って録音する
   // （録音を無効にしたい場合は webrtc::AudioDeviceModule::kDummyAudio で ADM を作って渡せば良い）
-  static rtc::scoped_refptr<ZakuroAudioDeviceModule> Create(
+  static webrtc::scoped_refptr<ZakuroAudioDeviceModule> Create(
       ZakuroAudioDeviceModuleConfig config) {
-    return rtc::make_ref_counted<ZakuroAudioDeviceModule>(std::move(config));
+    return webrtc::make_ref_counted<ZakuroAudioDeviceModule>(std::move(config));
   }
 
   void StartAudioThread();
@@ -83,7 +83,7 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
   // Main initialization and termination
   virtual int32_t Init() override {
     device_buffer_ =
-        std::make_unique<webrtc::AudioDeviceBuffer>(config_.task_queue_factory);
+        std::make_unique<webrtc::AudioDeviceBuffer>(&env_.task_queue_factory());
     initialized_ = true;
     if (adm_) {
       return adm_->Init();
@@ -323,8 +323,9 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 #endif  // WEBRTC_IOS
 
  private:
+  webrtc::Environment env_;
   ZakuroAudioDeviceModuleConfig config_;
-  rtc::scoped_refptr<webrtc::AudioDeviceModule> adm_;
+  webrtc::scoped_refptr<webrtc::AudioDeviceModule> adm_;
   std::unique_ptr<std::thread> audio_thread_;
   std::atomic_bool audio_thread_stopped_ = {false};
   std::unique_ptr<webrtc::AudioDeviceBuffer> device_buffer_;

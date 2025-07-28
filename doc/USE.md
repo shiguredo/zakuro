@@ -86,23 +86,40 @@ Zakuro では 1 秒間に起動する仮想クライアント数を指定でき�
 
 `--openh264 /path/to/libopenh264-2.1.1-linux64.6.so`
 
-Zakuro ではソフトウェアエンコーダを OpenH264 のライブラリを Dynamic Link することで利用可能です。
+Zakuro ではソフトウェアエンコーダを OpenH264 のライブラリを Dynamic Link することで利用できます。
 
-OpenH264 のバイナリの最新版は以下からダウンロード可能です。
+OpenH264 のバイナリの最新版は以下からダウンロードできます。
 
 <https://github.com/cisco/openh264/releases/tag/v2.1.1>
+
+### 利用可能なエンコーダーとデコーダーの確認
+
+`--show-video-codec-capability`
+
+Zakuro では利用可能なエンコーダーとデコーダーの一覧を表示することができます。
+
+### 利用するエンコーダーの指定
+
+- `--vp8-encoder`
+- `--vp9-encoder`
+- `--av1-encoder`
+- `--h264-encoder`
+- `--h265-encoder`
+
+Zakuro では映像送信時に利用するエンコーダーの指定ができます。設定できる内容は以下の通りです。
+`internal`, `cisco_openh264`, `intel_vpl`, `nvidia_video_codec_sdk`, `amd_amf`
 
 ### 音声ファイル指定
 
 `--fake-audio-capture /path/to/sample.wav`
 
-Zakuro ではマイクからの音声入力の代わりに wav ファイルを指定することが可能です。
+Zakuro ではマイクからの音声入力の代わりに wav ファイルを指定することができます。
 
 ### 映像ファイル指定
 
 `--fake-video-capture /path/to/sample.y4m`
 
-Zakuro ではカメラからの映像入力の代わりに y4m ファイルを指定することが可能です。
+Zakuro ではカメラからの映像入力の代わりに y4m ファイルを指定することができます。
 
 ### YAML 設定
 
