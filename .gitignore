@@ -56,4 +56,5 @@ webrtc_logs_*
 
 # Claude
 
+/.claude
 CLAUDE.local.md

@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.23)
 
 # Only interpret if() arguments as variables or keywords when unquoted.
 cmake_policy(SET CMP0054 NEW)
-# MSVC runtime library flags are selected by an abstraction.
-cmake_policy(SET CMP0091 NEW)
 
 project(zakuro C CXX)
 
@@ -13,7 +11,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${SORA_DIR}/shar
 set(Boost_USE_STATIC_LIBS ON)
 
 set(WEBRTC_LIBRARY_NAME webrtc)
-find_package(Boost REQUIRED COMPONENTS json filesystem url)
+find_package(Boost REQUIRED COMPONENTS json filesystem)
 find_package(WebRTC REQUIRED)
 find_package(Sora REQUIRED)
 find_package(Threads REQUIRED)
@@ -88,7 +86,6 @@ target_link_libraries(zakuro
   PRIVATE
     Sora::sora
     Boost::filesystem
-    Boost::url
     CLI11::CLI11
     Blend2D::Blend2D
     yaml-cpp::yaml-cpp

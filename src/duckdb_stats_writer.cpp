@@ -779,11 +779,7 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
       now.time_since_epoch()) % 1000;
   
   std::tm tm;
-#ifdef _WIN32
-  localtime_s(&tm, &time_t);
-#else
   localtime_r(&time_t, &tm);
-#endif
   
   std::ostringstream oss;
   oss << base_path << "/zakuro_stats_"

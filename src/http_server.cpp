@@ -6,7 +6,8 @@
 
 #include <boost/asio/strand.hpp>
 #include <boost/json.hpp>
-#include <boost/url.hpp>
+// TODO: 将来的にboost::urlを使用する予定
+// #include <boost/url.hpp>
 #include <boost/version.hpp>
 #include <duckdb.hpp>
 #include <rtc_base/logging.h>
@@ -190,12 +191,44 @@ http::response<http::string_body> HttpSession::GetQueryResponse(
 http::response<http::string_body> HttpSession::SimpleProxyRequest(
     const http::request<http::string_body>& req) {
   try {
-    // URLをパース
-    boost::url url(ui_remote_url_);
-    std::string host = std::string(url.host());
-    std::string scheme = url.scheme();
-    std::string port = url.has_port() ? std::string(url.port()) : 
-                      (scheme == "https" ? "443" : "80");
+    // TODO: 将来的にboost::urlを使用してURLをパースする
+    // boost::url url(ui_remote_url_);
+    // std::string host = std::string(url.host());
+    // std::string scheme = url.scheme();
+    // std::string port = url.has_port() ? std::string(url.port()) : 
+    //                   (scheme == "https" ? "443" : "80");
+    
+    // 一時的な簡易URLパース実装
+    std::string url_str = ui_remote_url_;
+    std::string scheme = "http";
+    std::string host;
+    std::string port = "80";
+    
+    // スキームの判定
+    if (url_str.find("https://") == 0) {
+      scheme = "https";
+      port = "443";
+      url_str = url_str.substr(8);
+    } else if (url_str.find("http://") == 0) {
+      url_str = url_str.substr(7);
+    }
+    
+    // ホストとポートの分離
+    size_t port_pos = url_str.find(':');
+    size_t path_pos = url_str.find('/');
+    
+    if (port_pos != std::string::npos && (path_pos == std::string::npos || port_pos < path_pos)) {
+      host = url_str.substr(0, port_pos);
+      if (path_pos != std::string::npos) {
+        port = url_str.substr(port_pos + 1, path_pos - port_pos - 1);
+      } else {
+        port = url_str.substr(port_pos + 1);
+      }
+    } else if (path_pos != std::string::npos) {
+      host = url_str.substr(0, path_pos);
+    } else {
+      host = url_str;
+    }
     
     // HTTPSの場合はまだサポートしていない
     if (scheme == "https") {
