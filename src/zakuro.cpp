@@ -274,7 +274,7 @@ int Zakuro::Run() {
   vc_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
     vc_config.audio_type = VirtualClientConfig::AudioType::NoAudio;
-  } else if (!config_.game.empty() || fake_audio_key_trigger) {
+  } else if (fake_audio_key_trigger) {
     vc_config.audio_type = VirtualClientConfig::AudioType::External;
     vc_config.render_audio = gam->AddGameAudio(16000);
     vc_config.sample_rate = 16000;

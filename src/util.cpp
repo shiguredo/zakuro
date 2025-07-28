@@ -572,7 +572,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "priority");
     DEF_FLAG(inst, "", "insecure");
     DEF_STRING(inst, "", "openh264");
-    DEF_STRING(inst, "", "game");
     DEF_STRING(inst, "", "scenario");
     DEF_STRING(inst, "", "client-cert");
     DEF_STRING(inst, "", "client-key");
