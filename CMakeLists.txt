@@ -202,6 +202,7 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
   # DuckDBダイナミックライブラリのRPATH設定
   set_target_properties(zakuro PROPERTIES
+    BUILD_RPATH_USE_ORIGIN ON
     INSTALL_RPATH "@executable_path"
     BUILD_WITH_INSTALL_RPATH TRUE
   )
@@ -209,6 +210,7 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
   # LinuxでのRPATH設定
   set_target_properties(zakuro PROPERTIES
+    BUILD_RPATH_USE_ORIGIN ON
     INSTALL_RPATH "$ORIGIN"
     BUILD_WITH_INSTALL_RPATH TRUE
   )

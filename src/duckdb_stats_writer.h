@@ -9,7 +9,7 @@
 #include <thread>
 #include <vector>
 
-#include <duckdb.hpp>
+#include <duckdb.h>
 
 #include "virtual_client.h"
 
@@ -40,8 +40,8 @@ class DuckDBStatsWriter {
   std::string ExecuteQuery(const std::string& sql);
 
  private:
-  std::unique_ptr<duckdb::DuckDB> db_;
-  std::unique_ptr<duckdb::Connection> conn_;
+  duckdb_database db_{nullptr};
+  duckdb_connection conn_{nullptr};
   std::mutex mutex_;
   bool initialized_{false};
   

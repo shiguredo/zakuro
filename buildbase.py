@@ -2025,10 +2025,9 @@ def install_duckdb(version, source_dir, install_dir, platform):
     include_dir = os.path.join(duckdb_install_dir, "include")
     mkdir_p(include_dir)
     
-    # ヘッダーファイルを移動
-    for header in ["duckdb.h", "duckdb.hpp"]:
-        if os.path.exists(os.path.join(duckdb_install_dir, header)):
-            shutil.move(os.path.join(duckdb_install_dir, header), include_dir)
+    # ヘッダーファイルを移動（C APIのヘッダーのみ）
+    if os.path.exists(os.path.join(duckdb_install_dir, "duckdb.h")):
+        shutil.move(os.path.join(duckdb_install_dir, "duckdb.h"), include_dir)
     
     # lib ディレクトリを作成してライブラリファイルを移動
     lib_dir = os.path.join(duckdb_install_dir, "lib")

@@ -9,7 +9,7 @@
 // TODO: 将来的にboost::urlを使用する予定
 // #include <boost/url.hpp>
 #include <boost/version.hpp>
-#include <duckdb.hpp>
+#include <duckdb.h>
 #include <rtc_base/logging.h>
 #include <sora/version.h>
 
@@ -97,7 +97,7 @@ http::response<http::string_body> HttpSession::GetVersionResponse(
   json_response["zakuro"] = ZakuroVersion::GetVersion();
   
   // DuckDB のバージョン情報
-  json_response["duckdb"] = duckdb::DuckDB::LibraryVersion();
+  json_response["duckdb"] = duckdb_library_version();
   
   // Sora C++ SDK のバージョン情報
   json_response["sora_cpp_sdk"] = ZakuroVersion::GetSoraCppSdkVersion();
