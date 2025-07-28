@@ -12,6 +12,7 @@
 #include <duckdb.h>
 
 #include "virtual_client.h"
+#include "duckdb_utils.h"
 
 class DuckDBStatsWriter {
  public:
