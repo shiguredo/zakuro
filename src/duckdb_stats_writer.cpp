@@ -17,40 +17,61 @@ DuckDBStatsWriter::~DuckDBStatsWriter() {
 bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
   std::lock_guard<std::mutex> lock(mutex_);
   
+  RTC_LOG(LS_INFO) << "DuckDBStatsWriter::Initialize called with base_path: " << base_path;
+  
   if (initialized_) {
+    RTC_LOG(LS_INFO) << "DuckDBStatsWriter already initialized";
     return true;
   }
+  
+  // DuckDB library version を確認
+  const char* lib_version = duckdb_library_version();
+  RTC_LOG(LS_INFO) << "DuckDB library version: " << lib_version;
   
   std::string filename = GenerateFileName(base_path);
   RTC_LOG(LS_INFO) << "Creating DuckDB file: " << filename;
   
   // DuckDB インスタンスを作成
-  if (duckdb_open(filename.c_str(), &db_) == DuckDBError) {
-    RTC_LOG(LS_ERROR) << "Failed to open DuckDB";
+  char* error_message = nullptr;
+  auto open_result = duckdb_open_ext(filename.c_str(), &db_, nullptr, &error_message);
+  if (open_result == DuckDBError) {
+    RTC_LOG(LS_ERROR) << "Failed to open DuckDB file: " << filename;
+    if (error_message) {
+      RTC_LOG(LS_ERROR) << "DuckDB error: " << error_message;
+      duckdb_free(error_message);
+    }
     return false;
   }
+  RTC_LOG(LS_INFO) << "DuckDB opened successfully: " << filename;
   
   if (duckdb_connect(db_, &conn_) == DuckDBError) {
     RTC_LOG(LS_ERROR) << "Failed to create connection";
     duckdb_close(&db_);
+    db_ = nullptr;
     return false;
   }
+  RTC_LOG(LS_INFO) << "DuckDB connection created successfully";
   
-  // WAL モードを有効化
-  duckdb_result result;
-  if (duckdb_query(conn_, "PRAGMA journal_mode=WAL", &result) == DuckDBError) {
-    RTC_LOG(LS_ERROR) << "Failed to set WAL mode: " << duckdb_result_error(&result);
-    duckdb_destroy_result(&result);
+  // WAL モードを有効化 - DuckDB C APIでは設定方法が異なる
+  // DuckDBでは journal_mode ではなく wal_mode を使用する
+  // ただし、デフォルトでWALモードが有効なので、明示的な設定は不要
+  RTC_LOG(LS_INFO) << "DuckDB uses WAL mode by default";
+  
+  try {
+    // テーブルを作成
+    CreateTable();
+    RTC_LOG(LS_INFO) << "Tables created successfully";
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_ERROR) << "Failed to create tables: " << e.what();
     duckdb_disconnect(&conn_);
+    conn_ = nullptr;
     duckdb_close(&db_);
+    db_ = nullptr;
     return false;
   }
-  duckdb_destroy_result(&result);
-  
-  // テーブルを作成
-  CreateTable();
   
   initialized_ = true;
+  RTC_LOG(LS_INFO) << "DuckDBStatsWriter initialization completed successfully, initialized_ = " << initialized_;
   return true;
 }
 
@@ -494,10 +515,213 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       }
       duckdb_destroy_result(&result);
       
-    } else if (rtc_type == "inbound-rtp" || rtc_type == "outbound-rtp" || rtc_type == "media-source") {
-      // その他の統計情報も同様に処理
-      // ここでは簡略化のため、詳細な実装は省略
-      RTC_LOG(LS_WARNING) << "RTC stats type " << rtc_type << " not yet implemented in C API version";
+    } else if (rtc_type == "inbound-rtp") {
+      // inbound-rtp統計情報の挿入処理
+      std::ostringstream sql;
+      sql << "INSERT INTO inbound_rtp_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
+          << "type, id, ssrc, kind, transport_id, codec_id, "
+          << "packets_received, packets_lost, bytes_received, jitter, "
+          << "last_packet_received_timestamp, header_bytes_received, packets_discarded, "
+          << "fec_bytes_received, fec_packets_received, fec_packets_discarded, "
+          << "nack_count, pli_count, fir_count, track_identifier, mid, remote_id, "
+          << "frames_decoded, key_frames_decoded, frames_rendered, frames_dropped, "
+          << "frame_width, frame_height, frames_per_second, qp_sum, "
+          << "total_decode_time, total_inter_frame_delay, total_squared_inter_frame_delay, "
+          << "pause_count, total_pauses_duration, freeze_count, total_freezes_duration, "
+          << "total_processing_delay, estimated_playout_timestamp, jitter_buffer_delay, "
+          << "jitter_buffer_target_delay, jitter_buffer_emitted_count, jitter_buffer_minimum_delay, "
+          << "total_samples_received, concealed_samples, silent_concealed_samples, concealment_events, "
+          << "inserted_samples_for_deceleration, removed_samples_for_acceleration, "
+          << "audio_level, total_audio_energy, total_samples_duration, frames_received, "
+          << "decoder_implementation, playout_id, power_efficient_decoder, "
+          << "frames_assembled_from_multiple_packets, total_assembly_time, "
+          << "retransmitted_packets_received, retransmitted_bytes_received, "
+          << "rtx_ssrc, fec_ssrc) "
+          << "VALUES (TO_TIMESTAMP(" << timestamp << "), "
+          << "'" << channel_id << "', "
+          << "'" << session_id << "', "
+          << "'" << connection_id << "', "
+          << rtc_timestamp << ", "
+          << "'" << get_string("type") << "', "
+          << "'" << get_string("id") << "', "
+          << get_int64("ssrc") << ", "
+          << "'" << get_string("kind") << "', "
+          << "'" << get_string("transportId") << "', "
+          << "'" << get_string("codecId") << "', "
+          << get_int64("packetsReceived") << ", "
+          << get_int64("packetsLost") << ", "
+          << get_int64("bytesReceived") << ", "
+          << get_double("jitter") << ", "
+          << get_double("lastPacketReceivedTimestamp") << ", "
+          << get_int64("headerBytesReceived") << ", "
+          << get_int64("packetsDiscarded") << ", "
+          << get_int64("fecBytesReceived") << ", "
+          << get_int64("fecPacketsReceived") << ", "
+          << get_int64("fecPacketsDiscarded") << ", "
+          << get_int64("nackCount") << ", "
+          << get_int64("pliCount") << ", "
+          << get_int64("firCount") << ", "
+          << "'" << get_string("trackIdentifier") << "', "
+          << "'" << get_string("mid") << "', "
+          << "'" << get_string("remoteId") << "', "
+          << get_int64("framesDecoded") << ", "
+          << get_int64("keyFramesDecoded") << ", "
+          << get_int64("framesRendered") << ", "
+          << get_int64("framesDropped") << ", "
+          << get_int64("frameWidth") << ", "
+          << get_int64("frameHeight") << ", "
+          << get_double("framesPerSecond") << ", "
+          << get_int64("qpSum") << ", "
+          << get_double("totalDecodeTime") << ", "
+          << get_double("totalInterFrameDelay") << ", "
+          << get_double("totalSquaredInterFrameDelay") << ", "
+          << get_int64("pauseCount") << ", "
+          << get_double("totalPausesDuration") << ", "
+          << get_int64("freezeCount") << ", "
+          << get_double("totalFreezesDuration") << ", "
+          << get_double("totalProcessingDelay") << ", "
+          << get_double("estimatedPlayoutTimestamp") << ", "
+          << get_double("jitterBufferDelay") << ", "
+          << get_double("jitterBufferTargetDelay") << ", "
+          << get_int64("jitterBufferEmittedCount") << ", "
+          << get_double("jitterBufferMinimumDelay") << ", "
+          << get_int64("totalSamplesReceived") << ", "
+          << get_int64("concealedSamples") << ", "
+          << get_int64("silentConcealedSamples") << ", "
+          << get_int64("concealmentEvents") << ", "
+          << get_int64("insertedSamplesForDeceleration") << ", "
+          << get_int64("removedSamplesForAcceleration") << ", "
+          << get_double("audioLevel") << ", "
+          << get_double("totalAudioEnergy") << ", "
+          << get_double("totalSamplesDuration") << ", "
+          << get_int64("framesReceived") << ", "
+          << "'" << get_string("decoderImplementation") << "', "
+          << "'" << get_string("playoutId") << "', "
+          << (get_bool("powerEfficientDecoder") ? "true" : "false") << ", "
+          << get_int64("framesAssembledFromMultiplePackets") << ", "
+          << get_double("totalAssemblyTime") << ", "
+          << get_int64("retransmittedPacketsReceived") << ", "
+          << get_int64("retransmittedBytesReceived") << ", "
+          << get_int64("rtxSsrc") << ", "
+          << get_int64("fecSsrc") << ")";
+      
+      duckdb_result result;
+      if (duckdb_query(conn_, sql.str().c_str(), &result) == DuckDBError) {
+        RTC_LOG(LS_ERROR) << "Failed to insert inbound-rtp stats: " << duckdb_result_error(&result);
+      } else {
+        RTC_LOG(LS_INFO) << "Successfully inserted inbound-rtp stats for connection: " << connection_id;
+      }
+      duckdb_destroy_result(&result);
+      
+    } else if (rtc_type == "outbound-rtp") {
+      // outbound-rtp統計情報の挿入処理
+      std::ostringstream sql;
+      sql << "INSERT INTO outbound_rtp_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
+          << "type, id, ssrc, kind, transport_id, codec_id, "
+          << "packets_sent, bytes_sent, packets_sent_with_ect1, "
+          << "mid, media_source_id, remote_id, rid, encoding_index, "
+          << "header_bytes_sent, retransmitted_packets_sent, retransmitted_bytes_sent, "
+          << "rtx_ssrc, target_bitrate, total_encoded_bytes_target, "
+          << "frame_width, frame_height, frames_per_second, frames_sent, "
+          << "huge_frames_sent, frames_encoded, key_frames_encoded, qp_sum, "
+          << "total_encode_time, total_packet_send_delay, "
+          << "quality_limitation_reason, quality_limitation_duration_none, "
+          << "quality_limitation_duration_cpu, quality_limitation_duration_bandwidth, "
+          << "quality_limitation_duration_other, quality_limitation_resolution_changes, "
+          << "nack_count, pli_count, fir_count, encoder_implementation, "
+          << "power_efficient_encoder, active, scalability_mode) "
+          << "VALUES (TO_TIMESTAMP(" << timestamp << "), "
+          << "'" << channel_id << "', "
+          << "'" << session_id << "', "
+          << "'" << connection_id << "', "
+          << rtc_timestamp << ", "
+          << "'" << get_string("type") << "', "
+          << "'" << get_string("id") << "', "
+          << get_int64("ssrc") << ", "
+          << "'" << get_string("kind") << "', "
+          << "'" << get_string("transportId") << "', "
+          << "'" << get_string("codecId") << "', "
+          << get_int64("packetsSent") << ", "
+          << get_int64("bytesSent") << ", "
+          << get_int64("packetsSentWithEct1") << ", "
+          << "'" << get_string("mid") << "', "
+          << "'" << get_string("mediaSourceId") << "', "
+          << "'" << get_string("remoteId") << "', "
+          << "'" << get_string("rid") << "', "
+          << get_int64("encodingIndex") << ", "
+          << get_int64("headerBytesSent") << ", "
+          << get_int64("retransmittedPacketsSent") << ", "
+          << get_int64("retransmittedBytesSent") << ", "
+          << get_int64("rtxSsrc") << ", "
+          << get_double("targetBitrate") << ", "
+          << get_int64("totalEncodedBytesTarget") << ", "
+          << get_int64("frameWidth") << ", "
+          << get_int64("frameHeight") << ", "
+          << get_double("framesPerSecond") << ", "
+          << get_int64("framesSent") << ", "
+          << get_int64("hugeFramesSent") << ", "
+          << get_int64("framesEncoded") << ", "
+          << get_int64("keyFramesEncoded") << ", "
+          << get_int64("qpSum") << ", "
+          << get_double("totalEncodeTime") << ", "
+          << get_double("totalPacketSendDelay") << ", "
+          << "'" << get_string("qualityLimitationReason") << "', "
+          << get_double("qualityLimitationDurationNone") << ", "
+          << get_double("qualityLimitationDurationCpu") << ", "
+          << get_double("qualityLimitationDurationBandwidth") << ", "
+          << get_double("qualityLimitationDurationOther") << ", "
+          << get_int64("qualityLimitationResolutionChanges") << ", "
+          << get_int64("nackCount") << ", "
+          << get_int64("pliCount") << ", "
+          << get_int64("firCount") << ", "
+          << "'" << get_string("encoderImplementation") << "', "
+          << (get_bool("powerEfficientEncoder") ? "true" : "false") << ", "
+          << (get_bool("active") ? "true" : "false") << ", "
+          << "'" << get_string("scalabilityMode") << "')";
+      
+      duckdb_result result;
+      if (duckdb_query(conn_, sql.str().c_str(), &result) == DuckDBError) {
+        RTC_LOG(LS_ERROR) << "Failed to insert outbound-rtp stats: " << duckdb_result_error(&result);
+      } else {
+        RTC_LOG(LS_INFO) << "Successfully inserted outbound-rtp stats for connection: " << connection_id;
+      }
+      duckdb_destroy_result(&result);
+      
+    } else if (rtc_type == "media-source") {
+      // media-source統計情報の挿入処理
+      std::ostringstream sql;
+      sql << "INSERT INTO media_source_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
+          << "type, id, track_identifier, kind, "
+          << "audio_level, total_audio_energy, total_samples_duration, "
+          << "echo_return_loss, echo_return_loss_enhancement, "
+          << "width, height, frames, frames_per_second) "
+          << "VALUES (TO_TIMESTAMP(" << timestamp << "), "
+          << "'" << channel_id << "', "
+          << "'" << session_id << "', "
+          << "'" << connection_id << "', "
+          << rtc_timestamp << ", "
+          << "'" << get_string("type") << "', "
+          << "'" << get_string("id") << "', "
+          << "'" << get_string("trackIdentifier") << "', "
+          << "'" << get_string("kind") << "', "
+          << get_double("audioLevel") << ", "
+          << get_double("totalAudioEnergy") << ", "
+          << get_double("totalSamplesDuration") << ", "
+          << get_double("echoReturnLoss") << ", "
+          << get_double("echoReturnLossEnhancement") << ", "
+          << get_int64("width") << ", "
+          << get_int64("height") << ", "
+          << get_int64("frames") << ", "
+          << get_double("framesPerSecond") << ")";
+      
+      duckdb_result result;
+      if (duckdb_query(conn_, sql.str().c_str(), &result) == DuckDBError) {
+        RTC_LOG(LS_ERROR) << "Failed to insert media-source stats: " << duckdb_result_error(&result);
+      } else {
+        RTC_LOG(LS_INFO) << "Successfully inserted media-source stats for connection: " << connection_id;
+      }
+      duckdb_destroy_result(&result);
+      
     } else {
       RTC_LOG(LS_WARNING) << "Unsupported rtc_type: " << rtc_type;
     }
@@ -546,7 +770,11 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
 }
 
 std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
+  RTC_LOG(LS_INFO) << "DuckDBStatsWriter::ExecuteQuery called, initialized_ = " << initialized_;
+  RTC_LOG(LS_INFO) << "SQL query: " << sql;
+  
   if (!initialized_) {
+    RTC_LOG(LS_ERROR) << "Database not initialized in ExecuteQuery";
     boost::json::object error;
     error["error"] = "Database not initialized";
     return boost::json::serialize(error);

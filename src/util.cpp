@@ -63,7 +63,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
-  app.add_option("--rpc-port", port, "RPC port number for JSON-RPC requests (default: -1)")
+  app.add_option("--http-port", port, "HTTP port number for JSON-RPC and reverse proxy (default: -1)")
       ->check(CLI::Range(-1, 65535));
   app.add_option("--ui-remote-url", ui_remote_url, 
                  "Remote URL for UI reverse proxy (default: http://localhost:5173)");

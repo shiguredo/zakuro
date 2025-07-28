@@ -38,6 +38,9 @@ add_executable(zakuro)
 set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
 set_target_properties(zakuro PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+# RPATH設定
+set_target_properties(zakuro PROPERTIES BUILD_RPATH_USE_ORIGIN ON)
+
 string(SUBSTRING "${ZAKURO_COMMIT}" 0 8 ZAKURO_COMMIT_SHORT)
 string(SUBSTRING "${WEBRTC_COMMIT}" 0 8 WEBRTC_COMMIT_SHORT)
 configure_file(src/zakuro_version.gen.h.template ${CMAKE_CURRENT_BINARY_DIR}/zakuro_version.gen.h)
@@ -76,6 +79,7 @@ target_link_libraries(zakuro
     yaml-cpp::yaml-cpp
     ${DuckDB_LIBRARIES}
 )
+
 
 # Ubuntu 24.04 での追加のリンクオプション
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
