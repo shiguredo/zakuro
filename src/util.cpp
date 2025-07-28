@@ -158,8 +158,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "OpenH264 dynamic library path. \"OpenH264 Video Codec "
                  "provided by Cisco Systems, Inc.\"")
       ->check(CLI::ExistingFile);
-  app.add_option("--game", config.game, "Play game")
-      ->check(CLI::IsMember({"kuzushi"}));
   app.add_option("--scenario", config.scenario, "Scenario type")
       ->check(CLI::IsMember({"", "reconnect"}));
   app.add_option("--client-cert", config.client_cert,
