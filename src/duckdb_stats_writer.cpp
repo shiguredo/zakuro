@@ -29,6 +29,7 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
   RTC_LOG(LS_INFO) << "DuckDB library version: " << lib_version;
   
   std::string filename = GenerateFileName(base_path);
+  db_filename_ = filename;  // ファイル名を保存
   RTC_LOG(LS_INFO) << "Creating DuckDB file: " << filename;
   
   // DuckDB インスタンスを作成
@@ -52,10 +53,8 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
   }
   RTC_LOG(LS_INFO) << "DuckDB connection created successfully";
   
-  // WAL モードを有効化 - DuckDB C APIでは設定方法が異なる
-  // DuckDBでは journal_mode ではなく wal_mode を使用する
-  // ただし、デフォルトでWALモードが有効なので、明示的な設定は不要
-  RTC_LOG(LS_INFO) << "DuckDB uses WAL mode by default";
+  // WALモードはデフォルトで有効
+  RTC_LOG(LS_INFO) << "DuckDB WAL mode enabled (default)";
   
   try {
     // テーブルを作成
@@ -442,6 +441,15 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
   
   std::lock_guard<std::mutex> lock(mutex_);
   
+  // トランザクション開始
+  duckdb_result trans_result;
+  if (duckdb_query(conn_, "BEGIN TRANSACTION", &trans_result) == DuckDBError) {
+    RTC_LOG(LS_ERROR) << "Failed to begin transaction: " << duckdb_result_error(&trans_result);
+    duckdb_destroy_result(&trans_result);
+    return;
+  }
+  duckdb_destroy_result(&trans_result);
+  
   try {
     // JSON文字列をパース
     auto json = boost::json::parse(rtc_data_json);
@@ -608,8 +616,19 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       duckdb_result result;
       if (duckdb_query(conn_, sql.str().c_str(), &result) == DuckDBError) {
         RTC_LOG(LS_ERROR) << "Failed to insert inbound-rtp stats: " << duckdb_result_error(&result);
+        RTC_LOG(LS_ERROR) << "SQL: " << sql.str();
       } else {
         RTC_LOG(LS_INFO) << "Successfully inserted inbound-rtp stats for connection: " << connection_id;
+        
+        // デバッグ：挿入直後にカウントを確認
+        duckdb_result count_result;
+        if (duckdb_query(conn_, "SELECT COUNT(*) FROM inbound_rtp_stats", &count_result) == DuckDBSuccess) {
+          if (duckdb_row_count(&count_result) > 0) {
+            int64_t count = duckdb_value_int64(&count_result, 0, 0);
+            RTC_LOG(LS_INFO) << "After insert, inbound_rtp_stats has " << count << " rows";
+          }
+          duckdb_destroy_result(&count_result);
+        }
       }
       duckdb_destroy_result(&result);
       
@@ -725,8 +744,39 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     } else {
       RTC_LOG(LS_WARNING) << "Unsupported rtc_type: " << rtc_type;
     }
+    
+    // トランザクションをコミット
+    duckdb_result commit_result;
+    if (duckdb_query(conn_, "COMMIT", &commit_result) == DuckDBError) {
+      RTC_LOG(LS_ERROR) << "Failed to commit transaction: " << duckdb_result_error(&commit_result);
+      duckdb_destroy_result(&commit_result);
+      
+      // ロールバック
+      duckdb_result rollback_result;
+      duckdb_query(conn_, "ROLLBACK", &rollback_result);
+      duckdb_destroy_result(&rollback_result);
+    } else {
+      duckdb_destroy_result(&commit_result);
+      RTC_LOG(LS_INFO) << "Transaction committed successfully for rtc_type: " << rtc_type;
+      
+      // DEBUG!!! コミット直後にテーブルの総件数を確認
+      duckdb_result count_result;
+      std::string count_sql = "SELECT COUNT(*) FROM " + std::string(rtc_type == "media-source" ? "media_source_stats" : 
+                              rtc_type == "codec" ? "codec_stats" : 
+                              rtc_type == "inbound-rtp" ? "inbound_rtp_stats" : "outbound_rtp_stats");
+      if (duckdb_query(conn_, count_sql.c_str(), &count_result) == DuckDBSuccess) {
+        int64_t count = duckdb_value_int64(&count_result, 0, 0);
+        RTC_LOG(LS_INFO) << "DEBUG!!! After commit: " << count_sql << " = " << count;
+        duckdb_destroy_result(&count_result);
+      }
+    }
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error writing RTC stats: " << e.what();
+    
+    // エラー時はロールバック
+    duckdb_result rollback_result;
+    duckdb_query(conn_, "ROLLBACK", &rollback_result);
+    duckdb_destroy_result(&rollback_result);
   }
 }
 
@@ -770,11 +820,12 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
 }
 
 std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
-  RTC_LOG(LS_INFO) << "DuckDBStatsWriter::ExecuteQuery called, initialized_ = " << initialized_;
-  RTC_LOG(LS_INFO) << "SQL query: " << sql;
+  RTC_LOG(LS_INFO) << "DEBUG!!! DuckDBStatsWriter::ExecuteQuery called, initialized_ = " << initialized_;
+  RTC_LOG(LS_INFO) << "DEBUG!!! SQL query: " << sql;
   
-  if (!initialized_) {
+  if (!initialized_ || !conn_) {
     RTC_LOG(LS_ERROR) << "Database not initialized in ExecuteQuery";
+    RTC_LOG(LS_ERROR) << "initialized_: " << initialized_ << ", conn_: " << conn_;
     boost::json::object error;
     error["error"] = "Database not initialized";
     return boost::json::serialize(error);
@@ -782,7 +833,51 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   
   std::lock_guard<std::mutex> lock(mutex_);
   
+  // DEBUG!!! 現在のデータベースファイルを確認
+  RTC_LOG(LS_INFO) << "DEBUG!!! Using database file: " << db_filename_;
+  RTC_LOG(LS_INFO) << "DEBUG!!! Connection pointer: " << conn_;
+  
+  // テーブルの存在確認
+  duckdb_result table_check;
+  if (duckdb_query(conn_, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'inbound_rtp_stats'", &table_check) == DuckDBSuccess) {
+    if (duckdb_row_count(&table_check) > 0) {
+      int64_t count = duckdb_value_int64(&table_check, 0, 0);
+      RTC_LOG(LS_INFO) << "inbound_rtp_stats table exists: " << (count > 0 ? "yes" : "no");
+    }
+    duckdb_destroy_result(&table_check);
+  }
+  
+  // WALのデータを確実に読み取るため、チェックポイントを実行
+  duckdb_result checkpoint_result;
+  if (duckdb_query(conn_, "CHECKPOINT", &checkpoint_result) == DuckDBError) {
+    RTC_LOG(LS_WARNING) << "Failed to execute checkpoint: " << duckdb_result_error(&checkpoint_result);
+  } else {
+    RTC_LOG(LS_INFO) << "Checkpoint executed successfully";
+  }
+  duckdb_destroy_result(&checkpoint_result);
+  
+  // WALのフラッシュを強制
+  duckdb_result pragma_result;
+  if (duckdb_query(conn_, "PRAGMA wal_checkpoint(TRUNCATE)", &pragma_result) == DuckDBError) {
+    RTC_LOG(LS_WARNING) << "Failed to execute wal_checkpoint: " << duckdb_result_error(&pragma_result);
+  } else {
+    RTC_LOG(LS_INFO) << "WAL checkpoint TRUNCATE executed successfully";
+  }
+  duckdb_destroy_result(&pragma_result);
+  
+  // テスト：connectionsテーブルの件数を確認
+  duckdb_result test_result;
+  if (duckdb_query(conn_, "SELECT COUNT(*) FROM connections", &test_result) == DuckDBSuccess) {
+    if (duckdb_row_count(&test_result) > 0) {
+      int64_t count = duckdb_value_int64(&test_result, 0, 0);
+      RTC_LOG(LS_INFO) << "connections table has " << count << " rows";
+    }
+    duckdb_destroy_result(&test_result);
+  }
+  
   duckdb_result result;
+  memset(&result, 0, sizeof(duckdb_result));  // 結果を初期化
+  
   if (duckdb_query(conn_, sql.c_str(), &result) == DuckDBError) {
     boost::json::object error;
     error["error"] = duckdb_result_error(&result);
@@ -845,6 +940,9 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   
   // 各行のデータを取得
   idx_t row_count = duckdb_row_count(&result);
+  RTC_LOG(LS_INFO) << "DEBUG!!! Query returned " << row_count << " rows";
+  RTC_LOG(LS_INFO) << "DEBUG!!! Column count: " << column_count;
+  
   for (idx_t row = 0; row < row_count; row++) {
     boost::json::object row_obj;
     
@@ -913,5 +1011,7 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   
   duckdb_destroy_result(&result);
   
-  return boost::json::serialize(response);
+  std::string json_result = boost::json::serialize(response);
+  RTC_LOG(LS_INFO) << "DEBUG!!! JSON response: " << json_result;
+  return json_result;
 }

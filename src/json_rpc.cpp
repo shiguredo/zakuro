@@ -132,23 +132,33 @@ json::value JsonRpcHandler::HandleQueryMethod(const json::value& params) {
   
   // SQL文を取得して実行
   std::string sql(params_obj.at("sql").as_string());
+  RTC_LOG(LS_INFO) << "DEBUG!!! JsonRpcHandler executing query: " << sql;
+  RTC_LOG(LS_INFO) << "DEBUG!!! DuckDBWriter pointer: " << duckdb_writer_.get();
   std::string result_json = duckdb_writer_->ExecuteQuery(sql);
+  RTC_LOG(LS_INFO) << "DEBUG!!! Query result: " << result_json;
+  RTC_LOG(LS_INFO) << "DEBUG!!! Query result length: " << result_json.length();
   
   // ExecuteQueryの結果をパースして返す
   boost::system::error_code ec;
   auto result_jv = json::parse(result_json, ec);
   if (ec) {
+    RTC_LOG(LS_ERROR) << "DEBUG!!! Failed to parse JSON: " << ec.message();
+    RTC_LOG(LS_ERROR) << "DEBUG!!! JSON string was: " << result_json;
     throw JsonRpcError{-32603, "Internal error", "Failed to parse query result"};
   }
+  RTC_LOG(LS_INFO) << "DEBUG!!! Parsed JSON successfully";
   
   // エラーチェック
   if (result_jv.is_object()) {
     const auto& result_obj = result_jv.as_object();
     if (result_obj.contains("error")) {
+      RTC_LOG(LS_ERROR) << "DEBUG!!! Query execution error found";
       throw JsonRpcError{-32603, "Query execution error", 
                         json::serialize(result_obj.at("error"))};
     }
+    RTC_LOG(LS_INFO) << "DEBUG!!! No error in result object";
   }
   
+  RTC_LOG(LS_INFO) << "DEBUG!!! Returning result_jv";
   return result_jv;
 }

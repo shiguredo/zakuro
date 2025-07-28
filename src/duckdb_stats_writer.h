@@ -44,6 +44,7 @@ class DuckDBStatsWriter {
   duckdb_connection conn_{nullptr};
   std::mutex mutex_;
   bool initialized_{false};
+  std::string db_filename_;  // 現在のデータベースファイル名
   
   // テーブルを作成
   void CreateTable();
