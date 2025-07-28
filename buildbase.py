@@ -2006,11 +2006,12 @@ def install_duckdb(version, source_dir, install_dir, platform):
     rm_rf(duckdb_install_dir)
     mkdir_p(duckdb_install_dir)
     
-    # プラットフォーム別のダウンロードURL
+    # プラットフォーム別のダウンロードURL（ダイナミックライブラリ）
     if platform == "macos_arm64":
-        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/static-libs-osx-arm64.zip"
+        # macOS用のuniversalバイナリを使用
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-osx-universal.zip"
     elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
-        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/static-libs-linux-amd64.zip"
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-linux-amd64.zip"
     else:
         raise Exception(f"Unsupported platform for DuckDB: {platform}")
     
@@ -2023,33 +2024,25 @@ def install_duckdb(version, source_dir, install_dir, platform):
     # include ディレクトリを作成してヘッダーファイルを移動
     include_dir = os.path.join(duckdb_install_dir, "include")
     mkdir_p(include_dir)
-    if os.path.exists(os.path.join(duckdb_install_dir, "duckdb.h")):
-        shutil.move(os.path.join(duckdb_install_dir, "duckdb.h"), include_dir)
+    
+    # ヘッダーファイルを移動
+    for header in ["duckdb.h", "duckdb.hpp"]:
+        if os.path.exists(os.path.join(duckdb_install_dir, header)):
+            shutil.move(os.path.join(duckdb_install_dir, header), include_dir)
     
     # lib ディレクトリを作成してライブラリファイルを移動
     lib_dir = os.path.join(duckdb_install_dir, "lib")
     mkdir_p(lib_dir)
-    for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.a")):
-        shutil.move(lib_file, lib_dir)
     
-    # C++ ヘッダーファイル (duckdb.hpp) をダウンロード
-    # libduckdb-src.zip から取得する必要がある
-    header_url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-src.zip"
-    header_path = download(header_url, source_dir)
-    
-    # 一時ディレクトリに展開して duckdb.hpp を取得
-    temp_extract_dir = os.path.join(source_dir, "duckdb_temp")
-    rm_rf(temp_extract_dir)
-    mkdir_p(temp_extract_dir)
-    with cd(temp_extract_dir):
-        cmd(["unzip", "-q", header_path])
-        # duckdb.hpp を探してコピー
-        hpp_file = os.path.join(temp_extract_dir, "duckdb.hpp")
-        if os.path.exists(hpp_file):
-            shutil.copy(hpp_file, include_dir)
-    
-    # 一時ディレクトリを削除
-    rm_rf(temp_extract_dir)
+    # ダイナミックライブラリファイルを移動
+    if platform == "macos_arm64":
+        # macOSの場合は .dylib ファイル
+        for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.dylib")):
+            shutil.move(lib_file, lib_dir)
+    elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        # Linuxの場合は .so ファイル
+        for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.so")):
+            shutil.move(lib_file, lib_dir)
 
 
 class PlatformTarget(object):

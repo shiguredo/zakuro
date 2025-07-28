@@ -21,32 +21,16 @@ find_package(yaml-cpp REQUIRED)
 
 # DuckDB を手動で設定（システムのライブラリを使わないため）
 set(DuckDB_INCLUDE_DIRS ${DUCKDB_ROOT_DIR}/include)
-set(DuckDB_LIBRARIES 
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_static.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_fmt.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_re2.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_miniz.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_utf8proc.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_hyperloglog.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_fastpforlib.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_mbedtls.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_fsst.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_pg_query.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_skiplistlib.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_yyjson.a
-    ${DUCKDB_ROOT_DIR}/lib/libduckdb_zstd.a
-    ${DUCKDB_ROOT_DIR}/lib/libcore_functions_extension.a
-    ${DUCKDB_ROOT_DIR}/lib/libautocomplete_extension.a
-    ${DUCKDB_ROOT_DIR}/lib/libparquet_extension.a
-    ${DUCKDB_ROOT_DIR}/lib/libjson_extension.a
-    ${DUCKDB_ROOT_DIR}/lib/libicu_extension.a
-    ${DUCKDB_ROOT_DIR}/lib/libtpch_extension.a
-    ${DUCKDB_ROOT_DIR}/lib/libtpcds_extension.a
-)
 
-# DuckDB の jemalloc 拡張を確認して追加
-if(EXISTS ${DUCKDB_ROOT_DIR}/lib/libjemalloc_extension.a)
-    list(APPEND DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libjemalloc_extension.a)
+# プラットフォーム別のダイナミックライブラリ設定
+if(ZAKURO_PLATFORM STREQUAL "macos_arm64")
+    # macOSの場合は .dylib
+    set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb.dylib)
+elseif(ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+    # Linuxの場合は .so
+    set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb.so)
+else()
+    message(FATAL_ERROR "Unsupported platform for DuckDB: ${ZAKURO_PLATFORM}")
 endif()
 
 add_executable(zakuro)
@@ -216,6 +200,16 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
+  # DuckDBダイナミックライブラリのRPATH設定
+  set_target_properties(zakuro PROPERTIES
+    INSTALL_RPATH "@executable_path"
+    BUILD_WITH_INSTALL_RPATH TRUE
+  )
 
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+  # LinuxでのRPATH設定
+  set_target_properties(zakuro PROPERTIES
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_WITH_INSTALL_RPATH TRUE
+  )
 endif()

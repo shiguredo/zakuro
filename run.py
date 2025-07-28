@@ -311,6 +311,18 @@ def main():
         cmd(
             ["cmake", "--build", ".", f"-j{multiprocessing.cpu_count()}", "--config", configuration]
         )
+        
+        # DuckDBのダイナミックライブラリをビルドディレクトリにコピー
+        if platform == "macos_arm64":
+            shutil.copyfile(
+                os.path.join(install_dir, "duckdb", "lib", "libduckdb.dylib"),
+                os.path.join(build_dir, "zakuro", "libduckdb.dylib")
+            )
+        elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+            shutil.copyfile(
+                os.path.join(install_dir, "duckdb", "lib", "libduckdb.so"),
+                os.path.join(build_dir, "zakuro", "libduckdb.so")
+            )
 
     if args.package:
         mkdir_p(package_dir)
@@ -325,6 +337,13 @@ def main():
         with cd(zakuro_package_dir):
             shutil.copyfile(os.path.join(build_dir, "zakuro", "zakuro"), "zakuro")
             shutil.copyfile(os.path.join(BASE_DIR, "LICENSE"), "LICENSE")
+            
+            # DuckDBのダイナミックライブラリをコピー
+            if platform == "macos_arm64":
+                shutil.copyfile(os.path.join(install_dir, "duckdb", "lib", "libduckdb.dylib"), "libduckdb.dylib")
+            elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+                shutil.copyfile(os.path.join(install_dir, "duckdb", "lib", "libduckdb.so"), "libduckdb.so")
+            
             with open("NOTICE", "w") as f:
                 f.write(open(os.path.join(BASE_DIR, "NOTICE")).read())
                 f.write(open(os.path.join(install_dir, "webrtc", "NOTICE")).read())
