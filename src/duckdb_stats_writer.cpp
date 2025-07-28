@@ -891,52 +891,6 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   
   // カラム情報を取得
   idx_t column_count = duckdb_column_count(&result);
-  boost::json::array column_names;
-  boost::json::array column_types;
-  
-  // 型を文字列に変換するヘルパー関数
-  auto type_to_string = [](duckdb_type type) -> const char* {
-    switch (type) {
-      case DUCKDB_TYPE_INVALID: return "INVALID";
-      case DUCKDB_TYPE_BOOLEAN: return "BOOLEAN";
-      case DUCKDB_TYPE_TINYINT: return "TINYINT";
-      case DUCKDB_TYPE_SMALLINT: return "SMALLINT";
-      case DUCKDB_TYPE_INTEGER: return "INTEGER";
-      case DUCKDB_TYPE_BIGINT: return "BIGINT";
-      case DUCKDB_TYPE_UTINYINT: return "UTINYINT";
-      case DUCKDB_TYPE_USMALLINT: return "USMALLINT";
-      case DUCKDB_TYPE_UINTEGER: return "UINTEGER";
-      case DUCKDB_TYPE_UBIGINT: return "UBIGINT";
-      case DUCKDB_TYPE_FLOAT: return "FLOAT";
-      case DUCKDB_TYPE_DOUBLE: return "DOUBLE";
-      case DUCKDB_TYPE_TIMESTAMP: return "TIMESTAMP";
-      case DUCKDB_TYPE_DATE: return "DATE";
-      case DUCKDB_TYPE_TIME: return "TIME";
-      case DUCKDB_TYPE_INTERVAL: return "INTERVAL";
-      case DUCKDB_TYPE_HUGEINT: return "HUGEINT";
-      case DUCKDB_TYPE_VARCHAR: return "VARCHAR";
-      case DUCKDB_TYPE_BLOB: return "BLOB";
-      case DUCKDB_TYPE_DECIMAL: return "DECIMAL";
-      case DUCKDB_TYPE_TIMESTAMP_S: return "TIMESTAMP_S";
-      case DUCKDB_TYPE_TIMESTAMP_MS: return "TIMESTAMP_MS";
-      case DUCKDB_TYPE_TIMESTAMP_NS: return "TIMESTAMP_NS";
-      case DUCKDB_TYPE_ENUM: return "ENUM";
-      case DUCKDB_TYPE_LIST: return "LIST";
-      case DUCKDB_TYPE_STRUCT: return "STRUCT";
-      case DUCKDB_TYPE_MAP: return "MAP";
-      case DUCKDB_TYPE_UUID: return "UUID";
-      case DUCKDB_TYPE_UNION: return "UNION";
-      case DUCKDB_TYPE_BIT: return "BIT";
-      case DUCKDB_TYPE_TIME_TZ: return "TIME_TZ";
-      case DUCKDB_TYPE_TIMESTAMP_TZ: return "TIMESTAMP_TZ";
-      default: return "UNKNOWN";
-    }
-  };
-  
-  for (idx_t i = 0; i < column_count; i++) {
-    column_names.push_back(boost::json::string(duckdb_column_name(&result, i)));
-    column_types.push_back(boost::json::string(type_to_string(duckdb_column_type(&result, i))));
-  }
   
   // 各行のデータを取得
   idx_t row_count = duckdb_row_count(&result);
@@ -1004,8 +958,6 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
     rows.push_back(row_obj);
   }
   
-  response["columns"] = column_names;
-  response["column_types"] = column_types;
   response["rows"] = rows;
   response["row_count"] = row_count;
   
