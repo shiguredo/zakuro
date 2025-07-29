@@ -50,7 +50,7 @@ void HttpServer::Run() {
     acceptor_.reset(new tcp::acceptor(ioc_, tcp::endpoint(tcp::v4(), port_)));
     DoAccept();
     
-    RTC_LOG(LS_INFO) << "HTTP server started on port " << port_;
+    RTC_LOG(LS_INFO) << "HTTP server started on port " << port_ << " - http://localhost:" << port_ << "/";
     ioc_.run();
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "HTTP server error: " << e.what();

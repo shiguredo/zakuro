@@ -243,7 +243,7 @@ int main(int argc, char* argv[]) {
     http_server->SetDuckDBWriter(duckdb_writer);
     http_server->SetUIRemoteURL(ui_remote_url);
     http_server->Start();
-    std::cout << "HTTP server started on port " << port << std::endl;
+    std::cout << "HTTP server started on port " << port << " - http://localhost:" << port << "/" << std::endl;
     RTC_LOG(LS_INFO) << "HTTP server started with DuckDBWriter: " << (duckdb_writer ? "set" : "null");
   } else {
     RTC_LOG(LS_INFO) << "HTTP server not started (port <= 0)";
