@@ -592,8 +592,6 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       if (duckdb_query(conn_, sql.str().c_str(), &result) == DuckDBError) {
         RTC_LOG(LS_ERROR) << "Failed to insert inbound-rtp stats: " << duckdb_result_error(&result);
         RTC_LOG(LS_ERROR) << "SQL: " << sql.str();
-      } else {
-        RTC_LOG(LS_INFO) << "Successfully inserted inbound-rtp stats for connection: " << connection_id;
       }
       duckdb_destroy_result(&result);
       
@@ -666,8 +664,6 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       duckdb_result result;
       if (duckdb_query(conn_, sql.str().c_str(), &result) == DuckDBError) {
         RTC_LOG(LS_ERROR) << "Failed to insert outbound-rtp stats: " << duckdb_result_error(&result);
-      } else {
-        RTC_LOG(LS_INFO) << "Successfully inserted outbound-rtp stats for connection: " << connection_id;
       }
       duckdb_destroy_result(&result);
       
@@ -701,8 +697,6 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       duckdb_result result;
       if (duckdb_query(conn_, sql.str().c_str(), &result) == DuckDBError) {
         RTC_LOG(LS_ERROR) << "Failed to insert media-source stats: " << duckdb_result_error(&result);
-      } else {
-        RTC_LOG(LS_INFO) << "Successfully inserted media-source stats for connection: " << connection_id;
       }
       duckdb_destroy_result(&result);
       
@@ -712,7 +706,6 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     
     // トランザクションをコミット
     transaction.Commit();
-    RTC_LOG(LS_INFO) << "Transaction committed successfully for rtc_type: " << rtc_type;
     
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error writing RTC stats: " << e.what();
