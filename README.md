@@ -93,7 +93,6 @@ Options:
                               (Experimental) Preference in video degradation (default: BALANCE)
   --insecure                  Allow insecure server connections when using SSL (default: false)
   --openh264 TEXT:FILE        OpenH264 dynamic library path. "OpenH264 Video Codec provided by Cisco Systems, Inc."
-  --game TEXT:{kuzushi}       Play game
   --scenario TEXT:{reconnect} Scenario type
   --client-cert TEXT:FILE     Cert file path for client certification (PEM format)
   --client-key TEXT:FILE      Private key file path for client certification (PEM format)

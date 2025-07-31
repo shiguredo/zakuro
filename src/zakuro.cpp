@@ -21,7 +21,6 @@
 
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
-#include "game/game_kuzushi.h"
 #include "nop_video_decoder.h"
 #include "scenario_player.h"
 #include "util.h"
@@ -208,16 +207,8 @@ static bool ParseDataChannels(boost::json::value data_channels,
 
 int Zakuro::Run() {
   std::unique_ptr<GameAudioManager> gam;
-  std::unique_ptr<GameKuzushi> kuzushi;
-  if (config_.game == "kuzushi") {
-    auto size = config_.GetSize();
-    gam.reset(new GameAudioManager());
-    kuzushi.reset(
-        new GameKuzushi(size.width, size.height, gam.get(), config_.key_core));
-  }
 
-  bool fake_audio_key_trigger =
-      config_.game != "kuzushi" && config_.fake_audio_capture.empty();
+  bool fake_audio_key_trigger = config_.fake_audio_capture.empty();
   std::unique_ptr<FakeAudioKeyTrigger> trigger;
   if (fake_audio_key_trigger) {
     gam.reset(new GameAudioManager());
@@ -235,14 +226,7 @@ int Zakuro::Run() {
           config.width = size.width;
           config.height = size.height;
           config.fps = config_.framerate;
-          if (!config_.game.empty()) {
-            config.type = FakeVideoCapturerConfig::Type::External;
-            config.render =
-                [&kuzushi](BLContext& ctx,
-                           std::chrono::high_resolution_clock::time_point now) {
-                  kuzushi->Render(ctx, now);
-                };
-          } else if (config_.fake_video_capture.empty()) {
+          if (config_.fake_video_capture.empty()) {
             config.type = config_.sandstorm
                               ? FakeVideoCapturerConfig::Type::Sandstorm
                               : FakeVideoCapturerConfig::Type::Safari;
@@ -290,7 +274,7 @@ int Zakuro::Run() {
   vc_config.initial_mute_audio = config_.initial_mute_audio;
   if (config_.no_audio_device) {
     vc_config.audio_type = VirtualClientConfig::AudioType::NoAudio;
-  } else if (!config_.game.empty() || fake_audio_key_trigger) {
+  } else if (fake_audio_key_trigger) {
     vc_config.audio_type = VirtualClientConfig::AudioType::External;
     vc_config.render_audio = gam->AddGameAudio(16000);
     vc_config.sample_rate = 16000;

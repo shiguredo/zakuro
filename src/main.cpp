@@ -19,7 +19,6 @@
 
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
-#include "game/game_kuzushi.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"

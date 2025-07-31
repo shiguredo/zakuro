@@ -158,8 +158,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "OpenH264 dynamic library path. \"OpenH264 Video Codec "
                  "provided by Cisco Systems, Inc.\"")
       ->check(CLI::ExistingFile);
-  app.add_option("--game", config.game, "Play game")
-      ->check(CLI::IsMember({"kuzushi"}));
   app.add_option("--scenario", config.scenario, "Scenario type")
       ->check(CLI::IsMember({"", "reconnect"}));
   app.add_option("--client-cert", config.client_cert,
@@ -574,7 +572,6 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_STRING(inst, "", "priority");
     DEF_FLAG(inst, "", "insecure");
     DEF_STRING(inst, "", "openh264");
-    DEF_STRING(inst, "", "game");
     DEF_STRING(inst, "", "scenario");
     DEF_STRING(inst, "", "client-cert");
     DEF_STRING(inst, "", "client-key");
