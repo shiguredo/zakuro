@@ -443,7 +443,7 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     // rtc_typeに応じて適切なテーブルに挿入
     if (rtc_type == "codec") {
       // codec統計情報の挿入処理
-      duckdb_prepared_statement stmt = nullptr;
+      duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql = "INSERT INTO codec_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
                                "type, id, mime_type, payload_type, clock_rate, channels, sdp_fmtp_line) "
                                "SELECT TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 "
@@ -458,38 +458,37 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                                "  AND sdp_fmtp_line = $12"
                                ")";
       
-      if (duckdb_prepare(conn_, prepare_sql, &stmt) == DuckDBError) {
-        const char* error = duckdb_prepare_error(stmt);
-        RTC_LOG(LS_ERROR) << "Failed to prepare codec stats statement: " << error;
-        duckdb_destroy_prepare(&stmt);
-        throw std::runtime_error(std::string("Failed to prepare codec stats statement: ") + error);
+      if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare codec stats statement: " << stmt.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to prepare codec stats statement: " + stmt.error());
       }
       
       // パラメータをバインド
-      duckdb_bind_double(stmt, 1, timestamp);
-      duckdb_bind_varchar(stmt, 2, channel_id.c_str());
-      duckdb_bind_varchar(stmt, 3, session_id.c_str());
-      duckdb_bind_varchar(stmt, 4, connection_id.c_str());
-      duckdb_bind_double(stmt, 5, rtc_timestamp);
-      duckdb_bind_varchar(stmt, 6, get_string("type").c_str());
-      duckdb_bind_varchar(stmt, 7, get_string("id").c_str());
-      duckdb_bind_varchar(stmt, 8, get_string("mimeType").c_str());
-      duckdb_bind_int64(stmt, 9, get_int64("payloadType"));
-      duckdb_bind_int64(stmt, 10, get_int64("clockRate"));
-      duckdb_bind_int64(stmt, 11, get_int64("channels"));
-      duckdb_bind_varchar(stmt, 12, get_string("sdpFmtpLine").c_str());
+      duckdb_bind_double(stmt.get_raw(), 1, timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), 2, channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 3, session_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 4, connection_id.c_str());
+      duckdb_bind_double(stmt.get_raw(), 5, rtc_timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), 6, get_string("type").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 7, get_string("id").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 8, get_string("mimeType").c_str());
+      duckdb_bind_int64(stmt.get_raw(), 9, get_int64("payloadType"));
+      duckdb_bind_int64(stmt.get_raw(), 10, get_int64("clockRate"));
+      duckdb_bind_int64(stmt.get_raw(), 11, get_int64("channels"));
+      duckdb_bind_varchar(stmt.get_raw(), 12, get_string("sdpFmtpLine").c_str());
       
       // 実行
-      duckdb_result exec_result;
-      if (duckdb_execute_prepared(stmt, &exec_result) == DuckDBError) {
-        RTC_LOG(LS_ERROR) << "Failed to insert codec stats: " << duckdb_result_error(&exec_result);
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert codec stats: " << exec_result.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to insert codec stats: " + exec_result.error());
       }
-      duckdb_destroy_result(&exec_result);
-      duckdb_destroy_prepare(&stmt);
       
     } else if (rtc_type == "inbound-rtp") {
       // inbound-rtp統計情報の挿入処理
-      duckdb_prepared_statement stmt = nullptr;
+      duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql = "INSERT INTO inbound_rtp_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
                                "type, id, ssrc, kind, transport_id, codec_id, "
                                "packets_received, packets_lost, bytes_received, jitter, "
@@ -517,93 +516,92 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                                "$51, $52, $53, $54, $55, $56, $57, $58, $59, $60, "
                                "$61, $62, $63)";
       
-      if (duckdb_prepare(conn_, prepare_sql, &stmt) == DuckDBError) {
-        const char* error = duckdb_prepare_error(stmt);
-        RTC_LOG(LS_ERROR) << "Failed to prepare inbound-rtp stats statement: " << error;
-        duckdb_destroy_prepare(&stmt);
-        throw std::runtime_error(std::string("Failed to prepare inbound-rtp stats statement: ") + error);
+      if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare inbound-rtp stats statement: " << stmt.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to prepare inbound-rtp stats statement: " + stmt.error());
       }
       
       // パラメータをバインド
       int idx = 1;
-      duckdb_bind_varchar(stmt, idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt, idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt, idx++, connection_id.c_str());
-      duckdb_bind_double(stmt, idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt, idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("id").c_str());
-      duckdb_bind_int64(stmt, idx++, get_int64("ssrc"));
-      duckdb_bind_varchar(stmt, idx++, get_string("kind").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("transportId").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("codecId").c_str());
-      duckdb_bind_int64(stmt, idx++, get_int64("packetsReceived"));
-      duckdb_bind_int64(stmt, idx++, get_int64("packetsLost"));
-      duckdb_bind_int64(stmt, idx++, get_int64("bytesReceived"));
-      duckdb_bind_double(stmt, idx++, get_double("jitter"));
-      duckdb_bind_double(stmt, idx++, get_double("lastPacketReceivedTimestamp"));
-      duckdb_bind_int64(stmt, idx++, get_int64("headerBytesReceived"));
-      duckdb_bind_int64(stmt, idx++, get_int64("packetsDiscarded"));
-      duckdb_bind_int64(stmt, idx++, get_int64("fecBytesReceived"));
-      duckdb_bind_int64(stmt, idx++, get_int64("fecPacketsReceived"));
-      duckdb_bind_int64(stmt, idx++, get_int64("fecPacketsDiscarded"));
-      duckdb_bind_int64(stmt, idx++, get_int64("nackCount"));
-      duckdb_bind_int64(stmt, idx++, get_int64("pliCount"));
-      duckdb_bind_int64(stmt, idx++, get_int64("firCount"));
-      duckdb_bind_varchar(stmt, idx++, get_string("trackIdentifier").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("mid").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("remoteId").c_str());
-      duckdb_bind_int64(stmt, idx++, get_int64("framesDecoded"));
-      duckdb_bind_int64(stmt, idx++, get_int64("keyFramesDecoded"));
-      duckdb_bind_int64(stmt, idx++, get_int64("framesRendered"));
-      duckdb_bind_int64(stmt, idx++, get_int64("framesDropped"));
-      duckdb_bind_int64(stmt, idx++, get_int64("frameWidth"));
-      duckdb_bind_int64(stmt, idx++, get_int64("frameHeight"));
-      duckdb_bind_double(stmt, idx++, get_double("framesPerSecond"));
-      duckdb_bind_int64(stmt, idx++, get_int64("qpSum"));
-      duckdb_bind_double(stmt, idx++, get_double("totalDecodeTime"));
-      duckdb_bind_double(stmt, idx++, get_double("totalInterFrameDelay"));
-      duckdb_bind_double(stmt, idx++, get_double("totalSquaredInterFrameDelay"));
-      duckdb_bind_int64(stmt, idx++, get_int64("pauseCount"));
-      duckdb_bind_double(stmt, idx++, get_double("totalPausesDuration"));
-      duckdb_bind_int64(stmt, idx++, get_int64("freezeCount"));
-      duckdb_bind_double(stmt, idx++, get_double("totalFreezesDuration"));
-      duckdb_bind_double(stmt, idx++, get_double("totalProcessingDelay"));
-      duckdb_bind_double(stmt, idx++, get_double("estimatedPlayoutTimestamp"));
-      duckdb_bind_double(stmt, idx++, get_double("jitterBufferDelay"));
-      duckdb_bind_double(stmt, idx++, get_double("jitterBufferTargetDelay"));
-      duckdb_bind_int64(stmt, idx++, get_int64("jitterBufferEmittedCount"));
-      duckdb_bind_double(stmt, idx++, get_double("jitterBufferMinimumDelay"));
-      duckdb_bind_int64(stmt, idx++, get_int64("totalSamplesReceived"));
-      duckdb_bind_int64(stmt, idx++, get_int64("concealedSamples"));
-      duckdb_bind_int64(stmt, idx++, get_int64("silentConcealedSamples"));
-      duckdb_bind_int64(stmt, idx++, get_int64("concealmentEvents"));
-      duckdb_bind_int64(stmt, idx++, get_int64("insertedSamplesForDeceleration"));
-      duckdb_bind_int64(stmt, idx++, get_int64("removedSamplesForAcceleration"));
-      duckdb_bind_double(stmt, idx++, get_double("audioLevel"));
-      duckdb_bind_double(stmt, idx++, get_double("totalAudioEnergy"));
-      duckdb_bind_double(stmt, idx++, get_double("totalSamplesDuration"));
-      duckdb_bind_int64(stmt, idx++, get_int64("framesReceived"));
-      duckdb_bind_varchar(stmt, idx++, get_string("decoderImplementation").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("playoutId").c_str());
-      duckdb_bind_boolean(stmt, idx++, get_bool("powerEfficientDecoder"));
-      duckdb_bind_int64(stmt, idx++, get_int64("framesAssembledFromMultiplePackets"));
-      duckdb_bind_double(stmt, idx++, get_double("totalAssemblyTime"));
-      duckdb_bind_int64(stmt, idx++, get_int64("retransmittedPacketsReceived"));
-      duckdb_bind_int64(stmt, idx++, get_int64("retransmittedBytesReceived"));
-      duckdb_bind_int64(stmt, idx++, get_int64("rtxSsrc"));
-      duckdb_bind_int64(stmt, idx++, get_int64("fecSsrc"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("transportId").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsLost"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesReceived"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("jitter"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("lastPacketReceivedTimestamp"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("headerBytesReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsDiscarded"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("fecBytesReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("fecPacketsReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("fecPacketsDiscarded"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("nackCount"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("pliCount"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("firCount"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("trackIdentifier").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("mid").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("remoteId").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesDecoded"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("keyFramesDecoded"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesRendered"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesDropped"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameWidth"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameHeight"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("framesPerSecond"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("qpSum"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalDecodeTime"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalInterFrameDelay"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalSquaredInterFrameDelay"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("pauseCount"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalPausesDuration"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("freezeCount"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalFreezesDuration"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalProcessingDelay"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("estimatedPlayoutTimestamp"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("jitterBufferDelay"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("jitterBufferTargetDelay"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("jitterBufferEmittedCount"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("jitterBufferMinimumDelay"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("totalSamplesReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("concealedSamples"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("silentConcealedSamples"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("concealmentEvents"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("insertedSamplesForDeceleration"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("removedSamplesForAcceleration"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("audioLevel"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalAudioEnergy"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalSamplesDuration"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesReceived"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("decoderImplementation").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("playoutId").c_str());
+      duckdb_bind_boolean(stmt.get_raw(), idx++, get_bool("powerEfficientDecoder"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesAssembledFromMultiplePackets"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalAssemblyTime"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("retransmittedPacketsReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("retransmittedBytesReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("rtxSsrc"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("fecSsrc"));
       
       // 実行
-      duckdb_result exec_result;
-      if (duckdb_execute_prepared(stmt, &exec_result) == DuckDBError) {
-        RTC_LOG(LS_ERROR) << "Failed to insert inbound-rtp stats: " << duckdb_result_error(&exec_result);
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert inbound-rtp stats: " << exec_result.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to insert inbound-rtp stats: " + exec_result.error());
       }
-      duckdb_destroy_result(&exec_result);
-      duckdb_destroy_prepare(&stmt);
       
     } else if (rtc_type == "outbound-rtp") {
       // outbound-rtp統計情報の挿入処理
-      duckdb_prepared_statement stmt = nullptr;
+      duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql = "INSERT INTO outbound_rtp_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
                                "type, id, ssrc, kind, transport_id, codec_id, "
                                "packets_sent, bytes_sent, packets_sent_with_ect1, "
@@ -624,74 +622,73 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                                "$33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, "
                                "$44, $45, $46, $47)";
       
-      if (duckdb_prepare(conn_, prepare_sql, &stmt) == DuckDBError) {
-        const char* error = duckdb_prepare_error(stmt);
-        RTC_LOG(LS_ERROR) << "Failed to prepare outbound-rtp stats statement: " << error;
-        duckdb_destroy_prepare(&stmt);
-        throw std::runtime_error(std::string("Failed to prepare outbound-rtp stats statement: ") + error);
+      if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare outbound-rtp stats statement: " << stmt.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to prepare outbound-rtp stats statement: " + stmt.error());
       }
       
       // パラメータをバインド
       int idx = 1;
-      duckdb_bind_varchar(stmt, idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt, idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt, idx++, connection_id.c_str());
-      duckdb_bind_double(stmt, idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt, idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("id").c_str());
-      duckdb_bind_int64(stmt, idx++, get_int64("ssrc"));
-      duckdb_bind_varchar(stmt, idx++, get_string("kind").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("transportId").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("codecId").c_str());
-      duckdb_bind_int64(stmt, idx++, get_int64("packetsSent"));
-      duckdb_bind_int64(stmt, idx++, get_int64("bytesSent"));
-      duckdb_bind_int64(stmt, idx++, get_int64("packetsSentWithEct1"));
-      duckdb_bind_varchar(stmt, idx++, get_string("mid").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("mediaSourceId").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("remoteId").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("rid").c_str());
-      duckdb_bind_int64(stmt, idx++, get_int64("encodingIndex"));
-      duckdb_bind_int64(stmt, idx++, get_int64("headerBytesSent"));
-      duckdb_bind_int64(stmt, idx++, get_int64("retransmittedPacketsSent"));
-      duckdb_bind_int64(stmt, idx++, get_int64("retransmittedBytesSent"));
-      duckdb_bind_int64(stmt, idx++, get_int64("rtxSsrc"));
-      duckdb_bind_double(stmt, idx++, get_double("targetBitrate"));
-      duckdb_bind_int64(stmt, idx++, get_int64("totalEncodedBytesTarget"));
-      duckdb_bind_int64(stmt, idx++, get_int64("frameWidth"));
-      duckdb_bind_int64(stmt, idx++, get_int64("frameHeight"));
-      duckdb_bind_double(stmt, idx++, get_double("framesPerSecond"));
-      duckdb_bind_int64(stmt, idx++, get_int64("framesSent"));
-      duckdb_bind_int64(stmt, idx++, get_int64("hugeFramesSent"));
-      duckdb_bind_int64(stmt, idx++, get_int64("framesEncoded"));
-      duckdb_bind_int64(stmt, idx++, get_int64("keyFramesEncoded"));
-      duckdb_bind_int64(stmt, idx++, get_int64("qpSum"));
-      duckdb_bind_double(stmt, idx++, get_double("totalEncodeTime"));
-      duckdb_bind_double(stmt, idx++, get_double("totalPacketSendDelay"));
-      duckdb_bind_varchar(stmt, idx++, get_string("qualityLimitationReason").c_str());
-      duckdb_bind_double(stmt, idx++, get_double("qualityLimitationDurationNone"));
-      duckdb_bind_double(stmt, idx++, get_double("qualityLimitationDurationCpu"));
-      duckdb_bind_double(stmt, idx++, get_double("qualityLimitationDurationBandwidth"));
-      duckdb_bind_double(stmt, idx++, get_double("qualityLimitationDurationOther"));
-      duckdb_bind_int64(stmt, idx++, get_int64("qualityLimitationResolutionChanges"));
-      duckdb_bind_int64(stmt, idx++, get_int64("nackCount"));
-      duckdb_bind_int64(stmt, idx++, get_int64("pliCount"));
-      duckdb_bind_int64(stmt, idx++, get_int64("firCount"));
-      duckdb_bind_varchar(stmt, idx++, get_string("encoderImplementation").c_str());
-      duckdb_bind_boolean(stmt, idx++, get_bool("powerEfficientEncoder"));
-      duckdb_bind_boolean(stmt, idx++, get_bool("active"));
-      duckdb_bind_varchar(stmt, idx++, get_string("scalabilityMode").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("transportId").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsSentWithEct1"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("mid").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("mediaSourceId").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("remoteId").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("rid").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("encodingIndex"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("headerBytesSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("retransmittedPacketsSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("retransmittedBytesSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("rtxSsrc"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("targetBitrate"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("totalEncodedBytesTarget"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameWidth"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameHeight"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("framesPerSecond"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("hugeFramesSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesEncoded"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("keyFramesEncoded"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("qpSum"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalEncodeTime"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalPacketSendDelay"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("qualityLimitationReason").c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("qualityLimitationDurationNone"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("qualityLimitationDurationCpu"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("qualityLimitationDurationBandwidth"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("qualityLimitationDurationOther"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("qualityLimitationResolutionChanges"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("nackCount"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("pliCount"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("firCount"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("encoderImplementation").c_str());
+      duckdb_bind_boolean(stmt.get_raw(), idx++, get_bool("powerEfficientEncoder"));
+      duckdb_bind_boolean(stmt.get_raw(), idx++, get_bool("active"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("scalabilityMode").c_str());
       
       // 実行
-      duckdb_result exec_result;
-      if (duckdb_execute_prepared(stmt, &exec_result) == DuckDBError) {
-        RTC_LOG(LS_ERROR) << "Failed to insert outbound-rtp stats: " << duckdb_result_error(&exec_result);
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert outbound-rtp stats: " << exec_result.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to insert outbound-rtp stats: " + exec_result.error());
       }
-      duckdb_destroy_result(&exec_result);
-      duckdb_destroy_prepare(&stmt);
       
     } else if (rtc_type == "media-source") {
       // media-source統計情報の挿入処理
-      duckdb_prepared_statement stmt = nullptr;
+      duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql = "INSERT INTO media_source_stats (timestamp, channel_id, session_id, connection_id, rtc_timestamp, "
                                "type, id, track_identifier, kind, "
                                "audio_level, total_audio_energy, total_samples_duration, "
@@ -700,40 +697,39 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                                "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, "
                                "$9, $10, $11, $12, $13, $14, $15, $16, $17)";
       
-      if (duckdb_prepare(conn_, prepare_sql, &stmt) == DuckDBError) {
-        const char* error = duckdb_prepare_error(stmt);
-        RTC_LOG(LS_ERROR) << "Failed to prepare media-source stats statement: " << error;
-        duckdb_destroy_prepare(&stmt);
-        throw std::runtime_error(std::string("Failed to prepare media-source stats statement: ") + error);
+      if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare media-source stats statement: " << stmt.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to prepare media-source stats statement: " + stmt.error());
       }
       
       // パラメータをバインド
       int idx = 1;
-      duckdb_bind_varchar(stmt, idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt, idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt, idx++, connection_id.c_str());
-      duckdb_bind_double(stmt, idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt, idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("id").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("trackIdentifier").c_str());
-      duckdb_bind_varchar(stmt, idx++, get_string("kind").c_str());
-      duckdb_bind_double(stmt, idx++, get_double("audioLevel"));
-      duckdb_bind_double(stmt, idx++, get_double("totalAudioEnergy"));
-      duckdb_bind_double(stmt, idx++, get_double("totalSamplesDuration"));
-      duckdb_bind_double(stmt, idx++, get_double("echoReturnLoss"));
-      duckdb_bind_double(stmt, idx++, get_double("echoReturnLossEnhancement"));
-      duckdb_bind_int64(stmt, idx++, get_int64("width"));
-      duckdb_bind_int64(stmt, idx++, get_int64("height"));
-      duckdb_bind_int64(stmt, idx++, get_int64("frames"));
-      duckdb_bind_double(stmt, idx++, get_double("framesPerSecond"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("trackIdentifier").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("audioLevel"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalAudioEnergy"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalSamplesDuration"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("echoReturnLoss"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("echoReturnLossEnhancement"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("width"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("height"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frames"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("framesPerSecond"));
       
       // 実行
-      duckdb_result exec_result;
-      if (duckdb_execute_prepared(stmt, &exec_result) == DuckDBError) {
-        RTC_LOG(LS_ERROR) << "Failed to insert media-source stats: " << duckdb_result_error(&exec_result);
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert media-source stats: " << exec_result.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to insert media-source stats: " + exec_result.error());
       }
-      duckdb_destroy_result(&exec_result);
-      duckdb_destroy_prepare(&stmt);
       
     } else {
       RTC_LOG(LS_ERROR) << "Unsupported rtc_type: " << rtc_type
@@ -804,13 +800,10 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
     // チェックポイントが失敗してもクエリ実行を続行
   }
   
-  duckdb_result result;
-  memset(&result, 0, sizeof(duckdb_result));  // 結果を初期化
-  
-  if (duckdb_query(conn_, sql.c_str(), &result) == DuckDBError) {
+  duckdb_utils::Result result;
+  if (!duckdb_utils::ExecuteQuery(conn_, sql, result)) {
     boost::json::object error;
-    error["error"] = duckdb_result_error(&result);
-    duckdb_destroy_result(&result);
+    error["error"] = result.error();
     return boost::json::serialize(error);
   }
   
@@ -819,60 +812,60 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   boost::json::array rows;
   
   // カラム情報を取得
-  idx_t column_count = duckdb_column_count(&result);
+  idx_t column_count = result.column_count();
   
   // 各行のデータを取得
-  idx_t row_count = duckdb_row_count(&result);
+  idx_t row_count = result.row_count();
   
   for (idx_t row = 0; row < row_count; row++) {
     boost::json::object row_obj;
     
     for (idx_t col = 0; col < column_count; col++) {
-      const char* col_name = duckdb_column_name(&result, col);
+      const char* col_name = duckdb_column_name(result.get(), col);
       
       // NULL値のチェック
-      if (duckdb_value_is_null(&result, col, row)) {
+      if (duckdb_value_is_null(result.get(), col, row)) {
         row_obj[col_name] = nullptr;
         continue;
       }
       
       // 型に応じて値を取得
-      duckdb_type col_type = duckdb_column_type(&result, col);
+      duckdb_type col_type = duckdb_column_type(result.get(), col);
       switch (col_type) {
         case DUCKDB_TYPE_BOOLEAN:
-          row_obj[col_name] = duckdb_value_boolean(&result, col, row);
+          row_obj[col_name] = duckdb_value_boolean(result.get(), col, row);
           break;
         case DUCKDB_TYPE_TINYINT:
-          row_obj[col_name] = duckdb_value_int8(&result, col, row);
+          row_obj[col_name] = duckdb_value_int8(result.get(), col, row);
           break;
         case DUCKDB_TYPE_SMALLINT:
-          row_obj[col_name] = duckdb_value_int16(&result, col, row);
+          row_obj[col_name] = duckdb_value_int16(result.get(), col, row);
           break;
         case DUCKDB_TYPE_INTEGER:
-          row_obj[col_name] = duckdb_value_int32(&result, col, row);
+          row_obj[col_name] = duckdb_value_int32(result.get(), col, row);
           break;
         case DUCKDB_TYPE_BIGINT:
-          row_obj[col_name] = static_cast<int64_t>(duckdb_value_int64(&result, col, row));
+          row_obj[col_name] = static_cast<int64_t>(duckdb_value_int64(result.get(), col, row));
           break;
         case DUCKDB_TYPE_FLOAT:
-          row_obj[col_name] = duckdb_value_float(&result, col, row);
+          row_obj[col_name] = duckdb_value_float(result.get(), col, row);
           break;
         case DUCKDB_TYPE_DOUBLE:
-          row_obj[col_name] = duckdb_value_double(&result, col, row);
+          row_obj[col_name] = duckdb_value_double(result.get(), col, row);
           break;
         case DUCKDB_TYPE_VARCHAR: {
-          duckdb_utils::StringValue str_val(duckdb_value_varchar(&result, col, row));
+          duckdb_utils::StringValue str_val(duckdb_value_varchar(result.get(), col, row));
           row_obj[col_name] = str_val.get();
           break;
         }
         case DUCKDB_TYPE_TIMESTAMP: {
-          duckdb_utils::StringValue str_val(duckdb_value_varchar(&result, col, row));
+          duckdb_utils::StringValue str_val(duckdb_value_varchar(result.get(), col, row));
           row_obj[col_name] = str_val.get();
           break;
         }
         default: {
           // その他の型は文字列として取得
-          duckdb_utils::StringValue str_val(duckdb_value_varchar(&result, col, row));
+          duckdb_utils::StringValue str_val(duckdb_value_varchar(result.get(), col, row));
           row_obj[col_name] = str_val.get();
           break;
         }
@@ -884,8 +877,6 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   
   response["rows"] = rows;
   response["row_count"] = row_count;
-  
-  duckdb_destroy_result(&result);
   
   return boost::json::serialize(response);
 }

@@ -17,6 +17,7 @@
 
 ## ビルドについて
 
+- Ubuntu x86_64 / arm64 または macOS arm64 をターゲットとすること
 - ビルドは `python3 run.py <ubuntu-22.04_x86_64|ubuntu-24.04_x86_64|macos_arm64>` で行うこと
   - 利用しているアーキテクチャを指定すること
 - クリーンは `git clean -ffdx -e libopenh264-*-mac-arm64.dylib -e CLAUDE* -e .claude/*` で行うこと
