@@ -327,7 +327,7 @@ void DuckDBStatsWriter::CreateTable() {
 
 void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats) {
   if (!initialized_) {
-    RTC_LOG(LS_WARNING) << "DuckDBStatsWriter not initialized";
+    RTC_LOG(LS_WARNING) << "DuckDBStatsWriter::WriteStats - not initialized";
     return;
   }
   
@@ -338,16 +338,14 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
     duckdb_utils::Transaction transaction(conn_);
     
     // プリペアドステートメントを準備
-    duckdb_prepared_statement stmt = nullptr;
+    duckdb_utils::PreparedStatement stmt;
     const char* prepare_sql = "INSERT INTO connections (timestamp, channel_id, connection_id, session_id, audio, video, "
                              "websocket_connected, datachannel_connected) "
                              "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7)";
     
-    if (duckdb_prepare(conn_, prepare_sql, &stmt) == DuckDBError) {
-      const char* error = duckdb_prepare_error(stmt);
-      RTC_LOG(LS_ERROR) << "Failed to prepare statement: " << error;
-      duckdb_destroy_prepare(&stmt);
-      throw std::runtime_error(std::string("Failed to prepare statement: ") + error);
+    if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+      RTC_LOG(LS_ERROR) << "Failed to prepare statement: " << stmt.error();
+      throw std::runtime_error("Failed to prepare statement: " + stmt.error());
     }
     
     // 各統計情報を挿入
@@ -360,27 +358,26 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
       
       
       // パラメータをバインド
-      duckdb_bind_varchar(stmt, 1, stat.channel_id.c_str());
-      duckdb_bind_varchar(stmt, 2, stat.connection_id.c_str());
-      duckdb_bind_varchar(stmt, 3, stat.session_id.c_str());
-      duckdb_bind_boolean(stmt, 4, stat.has_audio_track);
-      duckdb_bind_boolean(stmt, 5, stat.has_video_track);
-      duckdb_bind_boolean(stmt, 6, stat.websocket_connected);
-      duckdb_bind_boolean(stmt, 7, stat.datachannel_connected);
+      duckdb_bind_varchar(stmt.get_raw(), 1, stat.channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 2, stat.connection_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 3, stat.session_id.c_str());
+      duckdb_bind_boolean(stmt.get_raw(), 4, stat.has_audio_track);
+      duckdb_bind_boolean(stmt.get_raw(), 5, stat.has_video_track);
+      duckdb_bind_boolean(stmt.get_raw(), 6, stat.websocket_connected);
+      duckdb_bind_boolean(stmt.get_raw(), 7, stat.datachannel_connected);
       
       // 実行
-      duckdb_result exec_result;
-      if (duckdb_execute_prepared(stmt, &exec_result) == DuckDBError) {
-        RTC_LOG(LS_ERROR) << "Failed to insert stats: " << duckdb_result_error(&exec_result);
-        duckdb_destroy_result(&exec_result);
-      } else {
-        inserted_count++;
-        duckdb_destroy_result(&exec_result);
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert stats for connection_id=" << stat.connection_id
+                          << ": " << exec_result.error();
+        // エラーが発生したら、トランザクション全体をロールバックするために例外をスロー
+        throw std::runtime_error("Failed to insert stats: " + exec_result.error());
       }
+      inserted_count++;
     }
     
-    duckdb_destroy_prepare(&stmt);
-    
+    // PreparedStatementのデストラクタが自動的にリソースを解放
     
     // コミット
     transaction.Commit();
@@ -398,7 +395,9 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                                      const std::string& rtc_data_json,
                                      double timestamp) {
   if (!initialized_) {
-    RTC_LOG(LS_WARNING) << "DuckDBStatsWriter not initialized";
+    RTC_LOG(LS_WARNING) << "DuckDBStatsWriter::WriteRTCStats - not initialized"
+                        << " rtc_type=" << rtc_type
+                        << " connection_id=" << connection_id;
     return;
   }
   
@@ -737,7 +736,8 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       duckdb_destroy_prepare(&stmt);
       
     } else {
-      RTC_LOG(LS_WARNING) << "Unsupported rtc_type: " << rtc_type;
+      RTC_LOG(LS_ERROR) << "Unsupported rtc_type: " << rtc_type
+                        << " for connection_id=" << connection_id;
     }
     
   } catch (const std::exception& e) {
@@ -750,9 +750,11 @@ void DuckDBStatsWriter::Close() {
   
   if (conn_) {
     // 最後のチェックポイントを実行
-    duckdb_result result;
-    duckdb_query(conn_, "PRAGMA wal_checkpoint(TRUNCATE)", &result);
-    duckdb_destroy_result(&result);
+    duckdb_utils::Result result;
+    if (!duckdb_utils::ExecuteQuery(conn_, "PRAGMA wal_checkpoint(TRUNCATE)", result)) {
+      RTC_LOG(LS_ERROR) << "Failed to execute WAL checkpoint on close: " << result.error();
+      // エラーが発生してもクローズ処理を続行
+    }
     
     duckdb_disconnect(&conn_);
     conn_ = nullptr;
@@ -786,7 +788,8 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
 
 std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   if (!initialized_ || !conn_) {
-    RTC_LOG(LS_ERROR) << "Database not initialized in ExecuteQuery";
+    RTC_LOG(LS_ERROR) << "DuckDBStatsWriter::ExecuteQuery - database not initialized"
+                      << " query_length=" << sql.length();
     boost::json::object error;
     error["error"] = "Database not initialized";
     return boost::json::serialize(error);
@@ -795,11 +798,11 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
   std::lock_guard<std::mutex> lock(mutex_);
   
   // WALのデータを確実に読み取るため、チェックポイントを実行
-  duckdb_result checkpoint_result;
-  if (duckdb_query(conn_, "CHECKPOINT", &checkpoint_result) == DuckDBError) {
-    RTC_LOG(LS_WARNING) << "Failed to execute checkpoint: " << duckdb_result_error(&checkpoint_result);
+  duckdb_utils::Result checkpoint_result;
+  if (!duckdb_utils::ExecuteQuery(conn_, "CHECKPOINT", checkpoint_result)) {
+    RTC_LOG(LS_WARNING) << "Failed to execute checkpoint before query: " << checkpoint_result.error();
+    // チェックポイントが失敗してもクエリ実行を続行
   }
-  duckdb_destroy_result(&checkpoint_result);
   
   duckdb_result result;
   memset(&result, 0, sizeof(duckdb_result));  // 結果を初期化
