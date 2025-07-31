@@ -50,9 +50,9 @@ class DuckDBStatsWriter {
   // PreparedStatementをキャッシュ
   std::unique_ptr<duckdb_utils::PreparedStatement> connections_stmt_;
   std::unique_ptr<duckdb_utils::PreparedStatement> codec_stats_stmt_;
-  std::unique_ptr<duckdb_utils::PreparedStatement> inbound_rtp_stats_stmt_;
-  std::unique_ptr<duckdb_utils::PreparedStatement> outbound_rtp_stats_stmt_;
-  std::unique_ptr<duckdb_utils::PreparedStatement> media_source_stats_stmt_;
+  std::unique_ptr<duckdb_utils::PreparedStatement> inbound_rtp_stmt_;
+  std::unique_ptr<duckdb_utils::PreparedStatement> outbound_rtp_stmt_;
+  std::unique_ptr<duckdb_utils::PreparedStatement> media_source_stmt_;
 
   // テーブルを作成
   void CreateTable();
