@@ -757,14 +757,34 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                          get_double("totalPacketSendDelay"));
       duckdb_bind_varchar(stmt.get_raw(), idx++,
                           get_string("qualityLimitationReason").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("qualityLimitationDurationNone"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("qualityLimitationDurationCpu"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("qualityLimitationDurationBandwidth"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("qualityLimitationDurationOther"));
+      // qualityLimitationDurations は map 型なので、その中から値を取得
+      double duration_none = 0.0;
+      double duration_cpu = 0.0;
+      double duration_bandwidth = 0.0;
+      double duration_other = 0.0;
+      
+      if (json_obj.contains("qualityLimitationDurations") && 
+          json_obj.at("qualityLimitationDurations").is_object()) {
+        auto durations = json_obj.at("qualityLimitationDurations").as_object();
+        
+        if (durations.contains("none") && durations.at("none").is_number()) {
+          duration_none = durations.at("none").to_number<double>();
+        }
+        if (durations.contains("cpu") && durations.at("cpu").is_number()) {
+          duration_cpu = durations.at("cpu").to_number<double>();
+        }
+        if (durations.contains("bandwidth") && durations.at("bandwidth").is_number()) {
+          duration_bandwidth = durations.at("bandwidth").to_number<double>();
+        }
+        if (durations.contains("other") && durations.at("other").is_number()) {
+          duration_other = durations.at("other").to_number<double>();
+        }
+      }
+      
+      duckdb_bind_double(stmt.get_raw(), idx++, duration_none);
+      duckdb_bind_double(stmt.get_raw(), idx++, duration_cpu);
+      duckdb_bind_double(stmt.get_raw(), idx++, duration_bandwidth);
+      duckdb_bind_double(stmt.get_raw(), idx++, duration_other);
       duckdb_bind_int64(stmt.get_raw(), idx++,
                         get_int64("qualityLimitationResolutionChanges"));
       duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("nackCount"));
