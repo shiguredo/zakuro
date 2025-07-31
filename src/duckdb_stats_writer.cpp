@@ -10,8 +10,10 @@
 
 namespace {
 // ファイル名生成時の定数
-constexpr int kMillisecondsPerSecond = 1000;
-constexpr int kMillisecondFieldWidth = 3;
+// 注: anonymous namespace 内の定数には k プレフィックスを付けない
+//     （Google C++ Style Guide では、グローバル定数のみ k プレフィックスを推奨）
+constexpr int MillisecondsPerSecond = 1000;
+constexpr int MillisecondFieldWidth = 3;
 }  // namespace
 
 DuckDBStatsWriter::DuckDBStatsWriter() = default;
@@ -26,9 +28,6 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
   if (initialized_) {
     return true;
   }
-
-  // DuckDB library version を確認
-  const char* lib_version = duckdb_library_version();
 
   std::string filename = GenerateFileName(base_path);
   db_filename_ = filename;  // ファイル名を保存
@@ -63,28 +62,12 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
     // PreparedStatementを準備
     if (!PrepareCachedStatements()) {
       RTC_LOG(LS_ERROR) << "Failed to prepare cached statements";
-      // リソースを確実に解放（順序が重要）
-      if (conn_) {
-        duckdb_disconnect(&conn_);
-        conn_ = nullptr;
-      }
-      if (db_) {
-        duckdb_close(&db_);
-        db_ = nullptr;
-      }
+      CleanupResources();
       return false;
     }
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Failed to create tables: " << e.what();
-    // リソースを確実に解放（順序が重要）
-    if (conn_) {
-      duckdb_disconnect(&conn_);
-      conn_ = nullptr;
-    }
-    if (db_) {
-      duckdb_close(&db_);
-      db_ = nullptr;
-    }
+    CleanupResources();
     return false;
   }
 
@@ -279,7 +262,7 @@ void DuckDBStatsWriter::CreateTable() {
       frames_encoded BIGINT,
       key_frames_encoded BIGINT,
       qp_sum BIGINT,
-      -- psnrSum と psnrMeasurements は record<DOMString, double> 型なので別途処理が必要
+      -- TODO: psnrSum と psnrMeasurements は record<DOMString, double> 型なので実装が必要
       total_encode_time DOUBLE,
       total_packet_send_delay DOUBLE,
       quality_limitation_reason VARCHAR,
@@ -329,76 +312,32 @@ void DuckDBStatsWriter::CreateTable() {
   )";
   execute_query(create_media_source_table_sql);
 
-  // インデックスを作成
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_channel_id ON connections(channel_id)");
+  // インデックスを作成（最小限のインデックスのみ）
+  // 主要な検索パターンに必要なインデックスのみを作成
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_connection_id ON "
       "connections(connection_id)");
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_timestamp ON connections(timestamp)");
+      "CREATE INDEX IF NOT EXISTS idx_connections_composite ON "
+      "connections(channel_id, timestamp)");
 
-  // 各統計情報テーブルのインデックスを作成
-  // 複合インデックスを追加
+  // 各統計情報テーブルの複合インデックスのみを作成
+  // 個別のカラムインデックスは削除してパフォーマンスを向上
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_codec_composite ON "
       "codec_stats(channel_id, connection_id, timestamp)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_codec_channel_id ON "
-      "codec_stats(channel_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_codec_connection_id ON "
-      "codec_stats(connection_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_codec_timestamp ON "
-      "codec_stats(timestamp)");
 
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_inbound_composite ON "
       "inbound_rtp_stats(channel_id, connection_id, timestamp)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_inbound_channel_id ON "
-      "inbound_rtp_stats(channel_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_inbound_connection_id ON "
-      "inbound_rtp_stats(connection_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_inbound_timestamp ON "
-      "inbound_rtp_stats(timestamp)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_inbound_kind ON inbound_rtp_stats(kind)");
 
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_outbound_composite ON "
       "outbound_rtp_stats(channel_id, connection_id, timestamp)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_outbound_channel_id ON "
-      "outbound_rtp_stats(channel_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_outbound_connection_id ON "
-      "outbound_rtp_stats(connection_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_outbound_timestamp ON "
-      "outbound_rtp_stats(timestamp)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_outbound_kind ON "
-      "outbound_rtp_stats(kind)");
 
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_media_source_composite ON "
       "media_source_stats(channel_id, connection_id, timestamp)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_media_source_channel_id ON "
-      "media_source_stats(channel_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_media_source_connection_id ON "
-      "media_source_stats(connection_id)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_media_source_timestamp ON "
-      "media_source_stats(timestamp)");
-  execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_media_source_kind ON "
-      "media_source_stats(kind)");
 }
 
 bool DuckDBStatsWriter::PrepareCachedStatements() {
@@ -433,8 +372,10 @@ bool DuckDBStatsWriter::PrepareCachedStatements() {
     return false;
   }
 
-  // 他のPreparedStatementも同様に準備できますが、
-  // 使用頻度が高いものから順に実装します
+  // 他のPreparedStatementも同様に初期化（現在は使用されていないが、将来の拡張のため）
+  inbound_rtp_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
+  outbound_rtp_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
+  media_source_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
 
   return true;
 }
@@ -521,7 +462,15 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
 
   try {
     // JSON文字列をパース
-    auto json = boost::json::parse(rtc_data_json);
+    boost::json::value json;
+    try {
+      json = boost::json::parse(rtc_data_json);
+    } catch (const std::exception& e) {
+      RTC_LOG(LS_ERROR) << "Failed to parse JSON: " << e.what()
+                        << " for connection_id=" << connection_id
+                        << " rtc_type=" << rtc_type;
+      return false;
+    }
     auto json_obj = json.as_object();
 
     // 値を取得するヘルパー関数
@@ -931,7 +880,7 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     } else {
       RTC_LOG(LS_ERROR) << "Unsupported rtc_type: " << rtc_type
                         << " for connection_id=" << connection_id;
-      return false;
+      throw std::runtime_error("Unsupported rtc_type: " + rtc_type);
     }
 
     return true;
@@ -973,19 +922,40 @@ void DuckDBStatsWriter::Close() {
   initialized_ = false;
 }
 
+void DuckDBStatsWriter::CleanupResources() {
+  // PreparedStatementを解放
+  connections_stmt_.reset();
+  codec_stats_stmt_.reset();
+  inbound_rtp_stmt_.reset();
+  outbound_rtp_stmt_.reset();
+  media_source_stmt_.reset();
+
+  // 接続を閉じる（順序が重要）
+  if (conn_) {
+    duckdb_disconnect(&conn_);
+    conn_ = nullptr;
+  }
+
+  // データベースを閉じる
+  if (db_) {
+    duckdb_close(&db_);
+    db_ = nullptr;
+  }
+}
+
 std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
   auto now = std::chrono::system_clock::now();
   auto time_t = std::chrono::system_clock::to_time_t(now);
   auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 now.time_since_epoch()) %
-            kMillisecondsPerSecond;
+            MillisecondsPerSecond;
 
   std::tm tm;
   localtime_r(&time_t, &tm);
 
   std::ostringstream oss;
   oss << base_path << "/zakuro_stats_" << std::put_time(&tm, "%Y%m%d_%H%M%S")
-      << "_" << std::setfill('0') << std::setw(kMillisecondFieldWidth)
+      << "_" << std::setfill('0') << std::setw(MillisecondFieldWidth)
       << ms.count() << ".ddb";
 
   return oss.str();

@@ -62,6 +62,9 @@ class DuckDBStatsWriter {
 
   // ファイル名を生成（例: zakuro_stats_20241226_123456.db）
   std::string GenerateFileName(const std::string& base_path);
+
+  // リソースのクリーンアップ（エラー時の共通処理）
+  void CleanupResources();
 };
 
 #endif  // DUCKDB_STATS_WRITER_H_

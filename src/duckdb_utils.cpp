@@ -8,7 +8,9 @@ Transaction::Transaction(duckdb_connection conn)
   Result result;
   result.set_valid();
   if (duckdb_query(conn_, "BEGIN TRANSACTION", result.get()) == DuckDBError) {
-    throw std::runtime_error("Failed to begin transaction: " + result.error());
+    std::string error_msg = result.error();
+    // resultは自動的に破棄される
+    throw std::runtime_error("Failed to begin transaction: " + error_msg);
   }
   active_ = true;
 }
@@ -27,7 +29,10 @@ void Transaction::Commit() {
   Result result;
   result.set_valid();
   if (duckdb_query(conn_, "COMMIT", result.get()) == DuckDBError) {
-    throw std::runtime_error("Failed to commit transaction: " + result.error());
+    std::string error_msg = result.error();
+    // resultは自動的に破棄される
+    active_ = false;  // トランザクションは無効になる
+    throw std::runtime_error("Failed to commit transaction: " + error_msg);
   }
   committed_ = true;
   active_ = false;
