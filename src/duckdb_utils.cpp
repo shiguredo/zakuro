@@ -23,7 +23,7 @@ void Transaction::Commit() {
   if (!active_) {
     throw std::runtime_error("Transaction is not active");
   }
-  
+
   Result result;
   result.set_valid();
   if (duckdb_query(conn_, "COMMIT", result.get()) == DuckDBError) {
@@ -37,7 +37,7 @@ void Transaction::Rollback() {
   if (!active_) {
     return;
   }
-  
+
   Result result;
   result.set_valid();
   duckdb_query(conn_, "ROLLBACK", result.get());

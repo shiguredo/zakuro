@@ -17,11 +17,11 @@
 #include <blend2d.h>
 #include <yaml-cpp/yaml.h>
 
+#include "duckdb_stats_writer.h"
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "game/game_kuzushi.h"
 #include "http_server.h"
-#include "duckdb_stats_writer.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -39,7 +39,7 @@ void SignalHandler(int signal) {
   if (signal == SIGINT || signal == SIGTERM) {
     RTC_LOG(LS_INFO) << "Shutdown signal received: " << signal;
     g_shutdown_requested = true;
-    
+
     // DuckDB をクローズ
     if (g_duckdb_writer) {
       g_duckdb_writer->Close();
@@ -100,8 +100,8 @@ int main(int argc, char* argv[]) {
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, ui_remote_url, connection_id_stats_file,
-                  instance_hatch_rate, config, false);
+  Util::ParseArgs(args, config_file, log_level, port, ui_remote_url,
+                  connection_id_stats_file, instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -191,8 +191,8 @@ int main(int argc, char* argv[]) {
   webrtc::LogMessage::LogThreads();
 
   std::unique_ptr<webrtc::FileRotatingLogSink> log_sink(
-      new webrtc::FileRotatingLogSink("./", "webrtc_logs", kDefaultMaxLogFileSize,
-                                   10));
+      new webrtc::FileRotatingLogSink("./", "webrtc_logs",
+                                      kDefaultMaxLogFileSize, 10));
   if (!log_sink->Init()) {
     RTC_LOG(LS_ERROR) << __FUNCTION__ << "Failed to open log file";
     log_sink.reset();
@@ -212,7 +212,7 @@ int main(int argc, char* argv[]) {
   for (auto& config : configs) {
     config.stats = stats;
   }
-  
+
   // DuckDB 統計ライターを初期化
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer(new DuckDBStatsWriter());
   RTC_LOG(LS_INFO) << "Initializing DuckDB stats writer...";
@@ -222,8 +222,9 @@ int main(int argc, char* argv[]) {
   } else {
     RTC_LOG(LS_INFO) << "DuckDB stats writer initialized successfully";
   }
-  g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
-  
+  g_duckdb_writer =
+      duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
+
   // 各 config に duckdb_writer を設定
   for (auto& config : configs) {
     config.duckdb_writer = duckdb_writer;
@@ -243,8 +244,10 @@ int main(int argc, char* argv[]) {
     http_server->SetDuckDBWriter(duckdb_writer);
     http_server->SetUIRemoteURL(ui_remote_url);
     http_server->Start();
-    std::cout << "HTTP server started on port " << port << " - http://localhost:" << port << "/" << std::endl;
-    RTC_LOG(LS_INFO) << "HTTP server started with DuckDBWriter: " << (duckdb_writer ? "set" : "null");
+    std::cout << "HTTP server started on port " << port
+              << " - http://localhost:" << port << "/" << std::endl;
+    RTC_LOG(LS_INFO) << "HTTP server started with DuckDBWriter: "
+                     << (duckdb_writer ? "set" : "null");
   } else {
     RTC_LOG(LS_INFO) << "HTTP server not started (port <= 0)";
   }
@@ -339,7 +342,7 @@ int main(int argc, char* argv[]) {
   if (stats_th) {
     stats_th->join();
   }
-  
+
   // DuckDB をクローズ
   if (duckdb_writer) {
     duckdb_writer->Close();

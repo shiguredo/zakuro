@@ -7,8 +7,8 @@
 #include <sora/sora_client_context.h>
 
 // Boost
-#include <boost/asio/io_context.hpp>
 #include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/io_context.hpp>
 
 // WebRTC
 #include <api/media_stream_interface.h>
@@ -68,7 +68,7 @@ struct VirtualClientConfig {
 
   std::shared_ptr<sora::SoraClientContext> context;
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
-  
+
   // WebRTC 統計情報の取得間隔（秒）
   int rtc_stats_interval = 1;
 };
@@ -92,8 +92,8 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   void OnPush(std::string text) override {}
   void OnMessage(std::string label, std::string data) override {}
 
-  void OnTrack(webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)
-      override {}
+  void OnTrack(webrtc::scoped_refptr<webrtc::RtpTransceiverInterface>
+                   transceiver) override {}
   void OnRemoveTrack(
       webrtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override {}
 
@@ -111,7 +111,7 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   std::shared_ptr<sora::SoraSignaling> signaling_;
   webrtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   webrtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
-  
+
   // OnSetOffer で取得した情報を保存
   mutable std::mutex stats_mutex_;
   std::string channel_id_;
@@ -119,12 +119,12 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   std::string connection_id_;
   bool has_audio_ = false;
   bool has_video_ = false;
-  
+
   // WebRTC 統計情報取得用のタイマー
   std::unique_ptr<boost::asio::deadline_timer> rtc_stats_timer_;
   void StartRTCStatsTimer();
   void OnRTCStatsTimer(const boost::system::error_code& ec);
-  
+
   friend class StatsCollectorCallback;
 };
 
@@ -135,7 +135,8 @@ class StatsCollectorCallback : public webrtc::RTCStatsCollectorCallback {
       : client_(client) {}
 
   void OnStatsDelivered(
-      const webrtc::scoped_refptr<const webrtc::RTCStatsReport>& report) override;
+      const webrtc::scoped_refptr<const webrtc::RTCStatsReport>& report)
+      override;
 
  private:
   std::weak_ptr<VirtualClient> client_;

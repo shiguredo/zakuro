@@ -63,10 +63,13 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
-  app.add_option("--http-port", port, "HTTP port number for JSON-RPC and reverse proxy (default: -1)")
+  app.add_option(
+         "--http-port", port,
+         "HTTP port number for JSON-RPC and reverse proxy (default: -1)")
       ->check(CLI::Range(-1, 65535));
-  app.add_option("--ui-remote-url", ui_remote_url, 
-                 "Remote URL for UI reverse proxy (default: http://localhost:5173)");
+  app.add_option(
+      "--ui-remote-url", ui_remote_url,
+      "Remote URL for UI reverse proxy (default: http://localhost:5173)");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,
@@ -165,10 +168,11 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::IsMember({"kuzushi"}));
   app.add_option("--scenario", config.scenario, "Scenario type")
       ->check(CLI::IsMember({"", "reconnect"}));
-  
+
   // WebRTC 統計情報の取得間隔
   app.add_option("--rtc-stats-interval", config.rtc_stats_interval,
-                "WebRTC stats collection interval in seconds (default: 1, min: 1, max: 300)")
+                 "WebRTC stats collection interval in seconds (default: 1, "
+                 "min: 1, max: 300)")
       ->check(CLI::Range(1, 300));
   app.add_option("--client-cert", config.client_cert,
                  "Cert file path for client certification (PEM format)")

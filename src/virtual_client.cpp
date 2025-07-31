@@ -27,9 +27,10 @@ std::shared_ptr<VirtualClient> VirtualClient::Create(
   return std::shared_ptr<VirtualClient>(new VirtualClient(config));
 }
 VirtualClient::VirtualClient(const VirtualClientConfig& config)
-    : config_(config), 
+    : config_(config),
       retry_timer_(*config.sora_config.io_context),
-      rtc_stats_timer_(new boost::asio::deadline_timer(*config.sora_config.io_context)) {}
+      rtc_stats_timer_(
+          new boost::asio::deadline_timer(*config.sora_config.io_context)) {}
 
 void VirtualClient::Connect() {
   if (closing_) {
@@ -128,7 +129,7 @@ VirtualClientStats VirtualClient::GetStats() const {
     return VirtualClientStats();
   }
   VirtualClientStats st;
-  
+
   // OnSetOffer で保存した情報を使用
   {
     std::lock_guard<std::mutex> lock(stats_mutex_);
@@ -138,24 +139,24 @@ VirtualClientStats VirtualClient::GetStats() const {
     st.has_audio_track = has_audio_;
     st.has_video_track = has_video_;
   }
-  
+
   st.connected_url = signaling_->GetConnectedSignalingURL();
   st.datachannel_connected = signaling_->IsConnectedDataChannel();
   st.websocket_connected = signaling_->IsConnectedWebsocket();
-  
+
   RTC_LOG(LS_INFO) << "GetStats returning:"
                    << " channel_id=" << st.channel_id
                    << " connection_id=" << st.connection_id
                    << " session_id=" << st.session_id
                    << " audio=" << st.has_audio_track
                    << " video=" << st.has_video_track;
-  
+
   return st;
 }
 
 void VirtualClient::OnSetOffer(std::string offer) {
   RTC_LOG(LS_INFO) << "OnSetOffer called with offer: " << offer;
-  
+
   // offer メッセージから channel_id, connection_id, session_id, audio, video を取得
   auto json = boost::json::parse(offer);
   {
@@ -181,18 +182,18 @@ void VirtualClient::OnSetOffer(std::string offer) {
       RTC_LOG(LS_INFO) << "Got video: " << has_video_;
     }
   }
-  
+
   // type:offer 時点で DuckDB に書き込む
   if (config_.duckdb_writer && !connection_id_.empty()) {
     std::vector<VirtualClientStats> stats;
     stats.push_back(GetStats());
     config_.duckdb_writer->WriteStats(stats);
     RTC_LOG(LS_INFO) << "Wrote connection info to DuckDB on type:offer";
-    
+
     // WebRTC統計情報の定期取得を開始
     StartRTCStatsTimer();
   }
-  
+
   std::string stream_id = webrtc::CreateRandomString(16);
   if (audio_track_ != nullptr) {
     if (config_.initial_mute_audio) {
@@ -266,7 +267,7 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
 }
 void VirtualClient::OnNotify(std::string text) {
   RTC_LOG(LS_INFO) << "OnNotify received: " << text;
-  
+
   auto json = boost::json::parse(text);
   if (json.at("event_type").as_string() == "connection.created") {
     // 接続できたらリトライ数をリセットする
@@ -280,26 +281,26 @@ void VirtualClient::StartRTCStatsTimer() {
   if (!signaling_ || !rtc_stats_timer_ || !config_.duckdb_writer) {
     return;
   }
-  
-  rtc_stats_timer_->expires_from_now(boost::posix_time::seconds(config_.rtc_stats_interval));
+
+  rtc_stats_timer_->expires_from_now(
+      boost::posix_time::seconds(config_.rtc_stats_interval));
   rtc_stats_timer_->async_wait(
-      [this](const boost::system::error_code& ec) {
-        OnRTCStatsTimer(ec);
-      });
+      [this](const boost::system::error_code& ec) { OnRTCStatsTimer(ec); });
 }
 
 void VirtualClient::OnRTCStatsTimer(const boost::system::error_code& ec) {
   if (ec || closing_ || !signaling_) {
     return;
   }
-  
+
   // WebRTC統計情報を取得
   auto pc = signaling_->GetPeerConnection();
   if (pc) {
-    auto callback = webrtc::make_ref_counted<StatsCollectorCallback>(shared_from_this());
+    auto callback =
+        webrtc::make_ref_counted<StatsCollectorCallback>(shared_from_this());
     pc->GetStats(callback.get());
   }
-  
+
   // 次回のタイマーを設定
   StartRTCStatsTimer();
 }
@@ -311,47 +312,42 @@ void StatsCollectorCallback::OnStatsDelivered(
   if (!client || !client->config_.duckdb_writer) {
     return;
   }
-  
+
   // GetStats() から情報を取得
   VirtualClientStats client_stats = client->GetStats();
   std::string channel_id = client_stats.channel_id;
   std::string session_id = client_stats.session_id;
   std::string connection_id = client_stats.connection_id;
-  
+
   if (connection_id.empty()) {
     return;
   }
-  
+
   // 現在時刻を取得（すべてのレコードで共通のtimestampを使用）
   auto now = std::chrono::system_clock::now();
   auto duration = now.time_since_epoch();
-  double timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() / 1000.0;
-  
+  double timestamp =
+      std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() /
+      1000.0;
+
   // レポートから必要な統計情報を抽出
   for (const auto& stats : *report) {
     const std::string type = stats.type();
-    
+
     // フィルタリング: inbound-rtp, outbound-rtp, codec, media-source のみ
-    if (type != "inbound-rtp" &&
-        type != "outbound-rtp" &&
-        type != "codec" &&
+    if (type != "inbound-rtp" && type != "outbound-rtp" && type != "codec" &&
         type != "media-source") {
       continue;
     }
-    
+
     // RTCStats を JSON 文字列として取得
     std::string json_str = stats.ToJson();
-    double rtc_timestamp = stats.timestamp().us() / 1000000.0;  // rtc_timestampは別カラムで保存
-    
+    double rtc_timestamp =
+        stats.timestamp().us() / 1000000.0;  // rtc_timestampは別カラムで保存
+
     // DuckDBにJSON文字列を保存（共通のtimestampを使用）
     client->config_.duckdb_writer->WriteRTCStats(
-        channel_id,
-        session_id,
-        connection_id,
-        type,
-        rtc_timestamp,
-        json_str,
-        timestamp
-    );
+        channel_id, session_id, connection_id, type, rtc_timestamp, json_str,
+        timestamp);
   }
 }
