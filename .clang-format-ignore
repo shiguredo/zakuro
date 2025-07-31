@@ -1,0 +1,3 @@
+# CMake template files - do not format
+src/embedded_binary.generated.template.h
+src/embedded_binary.generated.priv.template.h
