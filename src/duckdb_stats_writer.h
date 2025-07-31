@@ -47,8 +47,18 @@ class DuckDBStatsWriter {
   bool initialized_{false};
   std::string db_filename_;  // 現在のデータベースファイル名
 
+  // PreparedStatementをキャッシュ
+  std::unique_ptr<duckdb_utils::PreparedStatement> connections_stmt_;
+  std::unique_ptr<duckdb_utils::PreparedStatement> codec_stats_stmt_;
+  std::unique_ptr<duckdb_utils::PreparedStatement> inbound_rtp_stmt_;
+  std::unique_ptr<duckdb_utils::PreparedStatement> outbound_rtp_stmt_;
+  std::unique_ptr<duckdb_utils::PreparedStatement> media_source_stmt_;
+
   // テーブルを作成
   void CreateTable();
+
+  // PreparedStatementを準備
+  bool PrepareCachedStatements();
 
   // ファイル名を生成（例: zakuro_stats_20241226_123456.db）
   std::string GenerateFileName(const std::string& base_path);
