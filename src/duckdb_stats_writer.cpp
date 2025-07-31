@@ -17,20 +17,17 @@ DuckDBStatsWriter::~DuckDBStatsWriter() {
 bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
   std::lock_guard<std::mutex> lock(mutex_);
   
-  RTC_LOG(LS_INFO) << "DuckDBStatsWriter::Initialize called with base_path: " << base_path;
   
   if (initialized_) {
-    RTC_LOG(LS_INFO) << "DuckDBStatsWriter already initialized";
     return true;
   }
   
   // DuckDB library version を確認
   const char* lib_version = duckdb_library_version();
-  RTC_LOG(LS_INFO) << "DuckDB library version: " << lib_version;
   
   std::string filename = GenerateFileName(base_path);
   db_filename_ = filename;  // ファイル名を保存
-  RTC_LOG(LS_INFO) << "Creating DuckDB file: " << filename;
+  RTC_LOG(LS_INFO) << "DuckDB file: " << filename;
   
   // DuckDB インスタンスを作成
   char* error_message = nullptr;
@@ -43,7 +40,6 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
     }
     return false;
   }
-  RTC_LOG(LS_INFO) << "DuckDB opened successfully: " << filename;
   
   if (duckdb_connect(db_, &conn_) == DuckDBError) {
     RTC_LOG(LS_ERROR) << "Failed to create connection";
@@ -51,15 +47,12 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
     db_ = nullptr;
     return false;
   }
-  RTC_LOG(LS_INFO) << "DuckDB connection created successfully";
   
   // WALモードはデフォルトで有効
-  RTC_LOG(LS_INFO) << "DuckDB WAL mode enabled (default)";
   
   try {
     // テーブルを作成
     CreateTable();
-    RTC_LOG(LS_INFO) << "Tables created successfully";
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Failed to create tables: " << e.what();
     duckdb_disconnect(&conn_);
@@ -70,7 +63,6 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
   }
   
   initialized_ = true;
-  RTC_LOG(LS_INFO) << "DuckDBStatsWriter initialization completed successfully, initialized_ = " << initialized_;
   return true;
 }
 
@@ -339,7 +331,6 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
     return;
   }
   
-  RTC_LOG(LS_INFO) << "Writing " << stats.size() << " stats to DuckDB";
   
   std::lock_guard<std::mutex> lock(mutex_);
   
@@ -364,18 +355,9 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
     for (const auto& stat : stats) {
       // connection_id が空の場合はスキップ（まだ接続されていない）
       if (stat.connection_id.empty()) {
-        RTC_LOG(LS_INFO) << "Skipping stats with empty connection_id"
-                          << " channel_id=" << stat.channel_id
-                          << " session_id=" << stat.session_id;
         continue;
       }
       
-      RTC_LOG(LS_INFO) << "Inserting stats:"
-                        << " channel_id=" << stat.channel_id
-                        << " connection_id=" << stat.connection_id
-                        << " session_id=" << stat.session_id
-                        << " audio=" << stat.has_audio_track
-                        << " video=" << stat.has_video_track;
       
       // パラメータをバインド
       duckdb_bind_varchar(stmt, 1, stat.channel_id.c_str());
@@ -399,7 +381,6 @@ void DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
     
     duckdb_destroy_prepare(&stmt);
     
-    RTC_LOG(LS_INFO) << "Inserted " << inserted_count << " records to DuckDB";
     
     // コミット
     transaction.Commit();
