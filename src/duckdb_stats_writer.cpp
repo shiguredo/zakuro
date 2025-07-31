@@ -55,10 +55,15 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
     CreateTable();
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Failed to create tables: " << e.what();
-    duckdb_disconnect(&conn_);
-    conn_ = nullptr;
-    duckdb_close(&db_);
-    db_ = nullptr;
+    // リソースを確実に解放（順序が重要）
+    if (conn_) {
+      duckdb_disconnect(&conn_);
+      conn_ = nullptr;
+    }
+    if (db_) {
+      duckdb_close(&db_);
+      db_ = nullptr;
+    }
     return false;
   }
 
@@ -120,7 +125,8 @@ void DuckDBStatsWriter::CreateTable() {
       payload_type BIGINT,
       clock_rate BIGINT,
       channels BIGINT,
-      sdp_fmtp_line VARCHAR
+      sdp_fmtp_line VARCHAR,
+      UNIQUE(connection_id, id, mime_type, payload_type, clock_rate, channels, sdp_fmtp_line)
     )
   )";
   execute_query(create_codec_table_sql);
@@ -361,11 +367,11 @@ void DuckDBStatsWriter::CreateTable() {
       "media_source_stats(kind)");
 }
 
-void DuckDBStatsWriter::WriteStats(
+bool DuckDBStatsWriter::WriteStats(
     const std::vector<VirtualClientStats>& stats) {
   if (!initialized_) {
     RTC_LOG(LS_WARNING) << "DuckDBStatsWriter::WriteStats - not initialized";
-    return;
+    return false;
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
@@ -419,13 +425,16 @@ void DuckDBStatsWriter::WriteStats(
 
     // コミット
     transaction.Commit();
+
+    return true;
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error in WriteStats: " << e.what();
     // トランザクションは自動的にロールバックされる
+    return false;
   }
 }
 
-void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
+bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                                       const std::string& session_id,
                                       const std::string& connection_id,
                                       const std::string& rtc_type,
@@ -436,7 +445,7 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     RTC_LOG(LS_WARNING) << "DuckDBStatsWriter::WriteRTCStats - not initialized"
                         << " rtc_type=" << rtc_type
                         << " connection_id=" << connection_id;
-    return;
+    return false;
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
@@ -497,18 +506,11 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           "connection_id, rtc_timestamp, "
           "type, id, mime_type, payload_type, clock_rate, channels, "
           "sdp_fmtp_line) "
-          "SELECT TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, "
-          "$12 "
-          "WHERE NOT EXISTS ("
-          "  SELECT 1 FROM codec_stats "
-          "  WHERE connection_id = $4 "
-          "  AND id = $7 "
-          "  AND mime_type = $8 "
-          "  AND payload_type = $9 "
-          "  AND clock_rate = $10 "
-          "  AND channels = $11 "
-          "  AND sdp_fmtp_line = $12"
-          ")";
+          "VALUES (TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, "
+          "$12) "
+          "ON CONFLICT (connection_id, id, mime_type, payload_type, "
+          "clock_rate, channels, sdp_fmtp_line) "
+          "DO NOTHING";
 
       if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
         RTC_LOG(LS_ERROR) << "Failed to prepare codec stats statement: "
@@ -869,10 +871,13 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     } else {
       RTC_LOG(LS_ERROR) << "Unsupported rtc_type: " << rtc_type
                         << " for connection_id=" << connection_id;
+      return false;
     }
 
+    return true;
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error writing RTC stats: " << e.what();
+    return false;
   }
 }
 
