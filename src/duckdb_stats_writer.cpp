@@ -8,6 +8,12 @@
 #include <rtc_base/logging.h>
 #include <boost/json.hpp>
 
+namespace {
+// ファイル名生成時の定数
+constexpr int kMillisecondsPerSecond = 1000;
+constexpr int kMillisecondFieldWidth = 3;
+}  // namespace
+
 DuckDBStatsWriter::DuckDBStatsWriter() = default;
 
 DuckDBStatsWriter::~DuckDBStatsWriter() {
@@ -26,7 +32,7 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
 
   std::string filename = GenerateFileName(base_path);
   db_filename_ = filename;  // ファイル名を保存
-  RTC_LOG(LS_INFO) << "DuckDB file: " << filename;
+  RTC_LOG(LS_VERBOSE) << "DuckDB file: " << filename;
 
   // DuckDB インスタンスを作成
   char* error_message = nullptr;
@@ -972,14 +978,15 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
   auto time_t = std::chrono::system_clock::to_time_t(now);
   auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 now.time_since_epoch()) %
-            1000;
+            kMillisecondsPerSecond;
 
   std::tm tm;
   localtime_r(&time_t, &tm);
 
   std::ostringstream oss;
   oss << base_path << "/zakuro_stats_" << std::put_time(&tm, "%Y%m%d_%H%M%S")
-      << "_" << std::setfill('0') << std::setw(3) << ms.count() << ".ddb";
+      << "_" << std::setfill('0') << std::setw(kMillisecondFieldWidth)
+      << ms.count() << ".ddb";
 
   return oss.str();
 }
@@ -1023,6 +1030,7 @@ std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
       const char* col_name = duckdb_column_name(result.get(), col);
 
       // NULL値のチェック
+      // JSONではnullptrとして表現し、クライアント側で適切に処理される
       if (duckdb_value_is_null(result.get(), col, row)) {
         row_obj[col_name] = nullptr;
         continue;
