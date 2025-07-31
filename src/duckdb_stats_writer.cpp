@@ -405,8 +405,6 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
   std::lock_guard<std::mutex> lock(mutex_);
   
   try {
-    duckdb_utils::Transaction transaction(conn_);
-    
     // JSON文字列をパース
     auto json = boost::json::parse(rtc_data_json);
     auto json_obj = json.as_object();
@@ -742,12 +740,8 @@ void DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       RTC_LOG(LS_WARNING) << "Unsupported rtc_type: " << rtc_type;
     }
     
-    // トランザクションをコミット
-    transaction.Commit();
-    
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error writing RTC stats: " << e.what();
-    // トランザクションは自動的にロールバックされる
   }
 }
 
