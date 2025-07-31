@@ -58,13 +58,6 @@ bool DuckDBStatsWriter::Initialize(const std::string& base_path) {
   try {
     // テーブルを作成
     CreateTable();
-
-    // PreparedStatementを準備
-    if (!PrepareCachedStatements()) {
-      RTC_LOG(LS_ERROR) << "Failed to prepare cached statements";
-      CleanupResources();
-      return false;
-    }
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Failed to create tables: " << e.what();
     CleanupResources();
@@ -340,45 +333,6 @@ void DuckDBStatsWriter::CreateTable() {
       "media_source_stats(channel_id, connection_id, timestamp)");
 }
 
-bool DuckDBStatsWriter::PrepareCachedStatements() {
-  // connections用のPreparedStatement
-  connections_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
-  const char* connections_sql =
-      "INSERT INTO connections (timestamp, channel_id, connection_id, "
-      "session_id, audio, video, "
-      "websocket_connected, datachannel_connected) "
-      "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7)";
-  if (!duckdb_utils::Prepare(conn_, connections_sql, *connections_stmt_)) {
-    RTC_LOG(LS_ERROR) << "Failed to prepare connections statement: "
-                      << connections_stmt_->error();
-    return false;
-  }
-
-  // codec_stats用のPreparedStatement
-  codec_stats_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
-  const char* codec_sql =
-      "INSERT INTO codec_stats (timestamp, channel_id, session_id, "
-      "connection_id, rtc_timestamp, "
-      "type, id, mime_type, payload_type, clock_rate, channels, "
-      "sdp_fmtp_line) "
-      "VALUES (TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, "
-      "$12) "
-      "ON CONFLICT (connection_id, id, mime_type, payload_type, "
-      "clock_rate, channels, sdp_fmtp_line) "
-      "DO NOTHING";
-  if (!duckdb_utils::Prepare(conn_, codec_sql, *codec_stats_stmt_)) {
-    RTC_LOG(LS_ERROR) << "Failed to prepare codec stats statement: "
-                      << codec_stats_stmt_->error();
-    return false;
-  }
-
-  // 他のPreparedStatementも同様に初期化（現在は使用されていないが、将来の拡張のため）
-  inbound_rtp_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
-  outbound_rtp_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
-  media_source_stmt_ = std::make_unique<duckdb_utils::PreparedStatement>();
-
-  return true;
-}
 
 bool DuckDBStatsWriter::WriteStats(
     const std::vector<VirtualClientStats>& stats) {
@@ -400,30 +354,32 @@ bool DuckDBStatsWriter::WriteStats(
         continue;
       }
 
-      // キャッシュされたPreparedStatementを使用
-      // 毎回clearしてから使用
-      duckdb_clear_bindings(connections_stmt_->get_raw());
+      // PreparedStatementを毎回作成
+      duckdb_utils::PreparedStatement stmt;
+      const char* connections_sql =
+          "INSERT INTO connections (timestamp, channel_id, connection_id, "
+          "session_id, audio, video, "
+          "websocket_connected, datachannel_connected) "
+          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7)";
+      if (!duckdb_utils::Prepare(conn_, connections_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare connections statement: "
+                          << stmt.error();
+        throw std::runtime_error("Failed to prepare statement: " +
+                                 stmt.error());
+      }
 
       // パラメータをバインド
-      duckdb_bind_varchar(connections_stmt_->get_raw(), 1,
-                          stat.channel_id.c_str());
-      duckdb_bind_varchar(connections_stmt_->get_raw(), 2,
-                          stat.connection_id.c_str());
-      duckdb_bind_varchar(connections_stmt_->get_raw(), 3,
-                          stat.session_id.c_str());
-      duckdb_bind_boolean(connections_stmt_->get_raw(), 4,
-                          stat.has_audio_track);
-      duckdb_bind_boolean(connections_stmt_->get_raw(), 5,
-                          stat.has_video_track);
-      duckdb_bind_boolean(connections_stmt_->get_raw(), 6,
-                          stat.websocket_connected);
-      duckdb_bind_boolean(connections_stmt_->get_raw(), 7,
-                          stat.datachannel_connected);
+      duckdb_bind_varchar(stmt.get_raw(), 1, stat.channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 2, stat.connection_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), 3, stat.session_id.c_str());
+      duckdb_bind_boolean(stmt.get_raw(), 4, stat.has_audio_track);
+      duckdb_bind_boolean(stmt.get_raw(), 5, stat.has_video_track);
+      duckdb_bind_boolean(stmt.get_raw(), 6, stat.websocket_connected);
+      duckdb_bind_boolean(stmt.get_raw(), 7, stat.datachannel_connected);
 
       // 実行
       duckdb_utils::Result exec_result;
-      if (!duckdb_utils::ExecutePrepared(connections_stmt_->get_raw(),
-                                         exec_result)) {
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
         RTC_LOG(LS_ERROR) << "Failed to insert stats for connection_id="
                           << stat.connection_id << ": " << exec_result.error();
         // エラーが発生したら、トランザクション全体をロールバックするために例外をスロー
@@ -518,35 +474,44 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     // rtc_typeに応じて適切なテーブルに挿入
     if (rtc_type == "codec") {
       // codec統計情報の挿入処理
-      // キャッシュされたPreparedStatementを使用
-      duckdb_clear_bindings(codec_stats_stmt_->get_raw());
+      // PreparedStatementを毎回作成
+      duckdb_utils::PreparedStatement codec_stmt;
+      const char* codec_sql =
+          "INSERT INTO codec_stats (timestamp, channel_id, session_id, "
+          "connection_id, rtc_timestamp, "
+          "type, id, mime_type, payload_type, clock_rate, channels, "
+          "sdp_fmtp_line) "
+          "VALUES (TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, "
+          "$12) "
+          "ON CONFLICT (connection_id, id, mime_type, payload_type, "
+          "clock_rate, channels, sdp_fmtp_line) "
+          "DO NOTHING";
+      if (!duckdb_utils::Prepare(conn_, codec_sql, codec_stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare codec stats statement: "
+                          << codec_stmt.error();
+        throw std::runtime_error("Failed to prepare statement: " +
+                                 codec_stmt.error());
+      }
 
       // パラメータをバインド
-      duckdb_bind_double(codec_stats_stmt_->get_raw(), 1, timestamp);
-      duckdb_bind_varchar(codec_stats_stmt_->get_raw(), 2, channel_id.c_str());
-      duckdb_bind_varchar(codec_stats_stmt_->get_raw(), 3, session_id.c_str());
-      duckdb_bind_varchar(codec_stats_stmt_->get_raw(), 4,
-                          connection_id.c_str());
-      duckdb_bind_double(codec_stats_stmt_->get_raw(), 5, rtc_timestamp);
-      duckdb_bind_varchar(codec_stats_stmt_->get_raw(), 6,
-                          get_string("type").c_str());
-      duckdb_bind_varchar(codec_stats_stmt_->get_raw(), 7,
-                          get_string("id").c_str());
-      duckdb_bind_varchar(codec_stats_stmt_->get_raw(), 8,
+      duckdb_bind_double(codec_stmt.get_raw(), 1, timestamp);
+      duckdb_bind_varchar(codec_stmt.get_raw(), 2, channel_id.c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 3, session_id.c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 4, connection_id.c_str());
+      duckdb_bind_double(codec_stmt.get_raw(), 5, rtc_timestamp);
+      duckdb_bind_varchar(codec_stmt.get_raw(), 6, get_string("type").c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 7, get_string("id").c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 8,
                           get_string("mimeType").c_str());
-      duckdb_bind_int64(codec_stats_stmt_->get_raw(), 9,
-                        get_int64("payloadType"));
-      duckdb_bind_int64(codec_stats_stmt_->get_raw(), 10,
-                        get_int64("clockRate"));
-      duckdb_bind_int64(codec_stats_stmt_->get_raw(), 11,
-                        get_int64("channels"));
-      duckdb_bind_varchar(codec_stats_stmt_->get_raw(), 12,
+      duckdb_bind_int64(codec_stmt.get_raw(), 9, get_int64("payloadType"));
+      duckdb_bind_int64(codec_stmt.get_raw(), 10, get_int64("clockRate"));
+      duckdb_bind_int64(codec_stmt.get_raw(), 11, get_int64("channels"));
+      duckdb_bind_varchar(codec_stmt.get_raw(), 12,
                           get_string("sdpFmtpLine").c_str());
 
       // 実行
       duckdb_utils::Result exec_result;
-      if (!duckdb_utils::ExecutePrepared(codec_stats_stmt_->get_raw(),
-                                         exec_result)) {
+      if (!duckdb_utils::ExecutePrepared(codec_stmt.get_raw(), exec_result)) {
         RTC_LOG(LS_ERROR) << "Failed to insert codec stats: "
                           << exec_result.error()
                           << " for connection_id=" << connection_id;
@@ -893,13 +858,6 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
 void DuckDBStatsWriter::Close() {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  // PreparedStatementを解放
-  connections_stmt_.reset();
-  codec_stats_stmt_.reset();
-  inbound_rtp_stmt_.reset();
-  outbound_rtp_stmt_.reset();
-  media_source_stmt_.reset();
-
   if (conn_) {
     // 最後のチェックポイントを実行
     duckdb_utils::Result result;
@@ -923,13 +881,6 @@ void DuckDBStatsWriter::Close() {
 }
 
 void DuckDBStatsWriter::CleanupResources() {
-  // PreparedStatementを解放
-  connections_stmt_.reset();
-  codec_stats_stmt_.reset();
-  inbound_rtp_stmt_.reset();
-  outbound_rtp_stmt_.reset();
-  media_source_stmt_.reset();
-
   // 接続を閉じる（順序が重要）
   if (conn_) {
     duckdb_disconnect(&conn_);
