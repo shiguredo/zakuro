@@ -58,3 +58,8 @@ webrtc_logs_*
 
 /.claude
 CLAUDE.local.md
+
+
+# yaml
+*.yaml
+*.yml
