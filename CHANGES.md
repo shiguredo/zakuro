@@ -13,6 +13,30 @@
 
 - [CHANGE] kuzushi 機能を削除する
   - @voluntas
+- [ADD] DuckDB を使用した WebRTC 統計情報の永続化機能を追加する
+  - 統計情報は `zakuro_stats_YYYYMMDD_HHMMSS_mmm.ddb` 形式のファイルに保存される
+  - 対応済み WebRTC 統計情報
+    - `codec`
+    - `outbound-rtp`
+    - `inbound-rtp`
+  - @voluntas
+- [ADD] ビルドシステムに DuckDB のダイナミックライブラリを追加する
+  - @voluntas
+- [ADD] HTTP サーバー機能を追加する
+  - `--http-port` オプションで HTTP サーバーを起動可能
+    - `none` を指定すると HTTP サーバーを起動しない
+    - デフォルトは `none`
+  - `--http-host` オプションで HTTP サーバーのバインドアドレスを指定可能
+    - デフォルトは `127.0.0.1`
+  - @voluntas
+- [ADD] JSON-RPC 2.0 over HTTP/1.1 対応の `/rpc` エンドポイントを追加する
+  - `version` メソッドで Zakuro および関連ライブラリのバージョン情報を取得可能
+  - `query` メソッドで DuckDB に対する SQL クエリを実行可能
+  - @voluntas
+- [ADD] 実験的に UI 機能を追加する
+  - `--ui-remote-url` オプションで UI の URL を設定可能
+  - デフォルトは <http://localhost:5173>
+  - @voluntas
 
 ## 2025.2.0
 
@@ -65,7 +89,6 @@
 
 - [ADD] .github ディレクトリに copilot-instructions.md を追加
   - @torikizi
-
 
 ## 2025.1.0
 
