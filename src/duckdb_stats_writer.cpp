@@ -481,8 +481,8 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           "connection_id, rtc_timestamp, "
           "type, id, mime_type, payload_type, clock_rate, channels, "
           "sdp_fmtp_line) "
-          "VALUES (TO_TIMESTAMP($1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, "
-          "$12) "
+          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
+          "$11) "
           "ON CONFLICT (connection_id, id, mime_type, payload_type, "
           "clock_rate, channels, sdp_fmtp_line) "
           "DO NOTHING";
@@ -494,19 +494,18 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       }
 
       // パラメータをバインド
-      duckdb_bind_double(codec_stmt.get_raw(), 1, timestamp);
-      duckdb_bind_varchar(codec_stmt.get_raw(), 2, channel_id.c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 3, session_id.c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 4, connection_id.c_str());
-      duckdb_bind_double(codec_stmt.get_raw(), 5, rtc_timestamp);
-      duckdb_bind_varchar(codec_stmt.get_raw(), 6, get_string("type").c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 7, get_string("id").c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 8,
+      duckdb_bind_varchar(codec_stmt.get_raw(), 1, channel_id.c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 2, session_id.c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 3, connection_id.c_str());
+      duckdb_bind_double(codec_stmt.get_raw(), 4, rtc_timestamp);
+      duckdb_bind_varchar(codec_stmt.get_raw(), 5, get_string("type").c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 6, get_string("id").c_str());
+      duckdb_bind_varchar(codec_stmt.get_raw(), 7,
                           get_string("mimeType").c_str());
-      duckdb_bind_int64(codec_stmt.get_raw(), 9, get_int64("payloadType"));
-      duckdb_bind_int64(codec_stmt.get_raw(), 10, get_int64("clockRate"));
-      duckdb_bind_int64(codec_stmt.get_raw(), 11, get_int64("channels"));
-      duckdb_bind_varchar(codec_stmt.get_raw(), 12,
+      duckdb_bind_int64(codec_stmt.get_raw(), 8, get_int64("payloadType"));
+      duckdb_bind_int64(codec_stmt.get_raw(), 9, get_int64("clockRate"));
+      duckdb_bind_int64(codec_stmt.get_raw(), 10, get_int64("channels"));
+      duckdb_bind_varchar(codec_stmt.get_raw(), 11,
                           get_string("sdpFmtpLine").c_str());
 
       // 実行
