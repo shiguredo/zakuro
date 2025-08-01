@@ -94,12 +94,13 @@ int main(int argc, char* argv[]) {
 
   std::string config_file;
   int log_level = webrtc::LS_NONE;
-  int port = -1;
+  std::string http_port = "none";
+  std::string http_host = "127.0.0.1";
   std::string ui_remote_url = "http://localhost:5173";
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, ui_remote_url,
+  Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui_remote_url,
                   connection_id_stats_file, instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
@@ -177,7 +178,7 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, port, ui_remote_url,
+        Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui_remote_url,
                         connection_id_stats_file, instance_hatch_rate, config,
                         true);
         configs.push_back(config);
@@ -235,20 +236,30 @@ int main(int argc, char* argv[]) {
   }
 
   // HTTP サーバーの起動
-  RTC_LOG(LS_INFO) << "HTTP port setting: " << port;
+  RTC_LOG(LS_INFO) << "HTTP port setting: " << http_port;
   std::unique_ptr<HttpServer> http_server;
-  if (port > 0) {
-    RTC_LOG(LS_INFO) << "Starting HTTP server on port " << port;
-    http_server.reset(new HttpServer(port));
-    http_server->SetDuckDBWriter(duckdb_writer);
-    http_server->SetUIRemoteURL(ui_remote_url);
-    http_server->Start();
-    std::cout << "HTTP server started on port " << port
-              << " - http://localhost:" << port << "/" << std::endl;
-    RTC_LOG(LS_INFO) << "HTTP server started with DuckDBWriter: "
-                     << (duckdb_writer ? "set" : "null");
+  if (http_port != "none") {
+    try {
+      int port = std::stoi(http_port);
+      if (port < 1 || port > 65535) {
+        RTC_LOG(LS_ERROR) << "Invalid HTTP port number: " << port;
+        return 1;
+      }
+      RTC_LOG(LS_INFO) << "Starting HTTP server on " << http_host << ":" << port;
+      http_server.reset(new HttpServer(port, http_host));
+      http_server->SetDuckDBWriter(duckdb_writer);
+      http_server->SetUIRemoteURL(ui_remote_url);
+      http_server->Start();
+      std::cout << "HTTP server started on " << http_host << ":" << port
+                << " - http://" << http_host << ":" << port << "/" << std::endl;
+      RTC_LOG(LS_INFO) << "HTTP server started with DuckDBWriter: "
+                       << (duckdb_writer ? "set" : "null");
+    } catch (const std::exception& e) {
+      RTC_LOG(LS_ERROR) << "Invalid HTTP port value: " << http_port;
+      return 1;
+    }
   } else {
-    RTC_LOG(LS_INFO) << "HTTP server not started (port <= 0)";
+    RTC_LOG(LS_INFO) << "HTTP server not started (http-port is none)";
   }
 
   // 集めた stats を定期的にファイルに出力する

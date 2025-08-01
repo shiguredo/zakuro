@@ -19,7 +19,7 @@ using tcp = net::ip::tcp;
 
 class HttpServer {
  public:
-  HttpServer(int port);
+  HttpServer(int port, const std::string& host = "127.0.0.1");
   ~HttpServer();
 
   void SetDuckDBWriter(std::shared_ptr<DuckDBStatsWriter> writer) {
@@ -45,6 +45,7 @@ class HttpServer {
   void OnAccept(beast::error_code ec, tcp::socket socket);
 
   int port_;
+  std::string host_;
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;

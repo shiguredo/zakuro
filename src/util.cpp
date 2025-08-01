@@ -36,7 +36,8 @@ std::string to_string(std::string str) {
 void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& config_file,
                      int& log_level,
-                     int& port,
+                     std::string& http_port,
+                     std::string& http_host,
                      std::string& ui_remote_url,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
@@ -64,9 +65,27 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
   app.add_option(
-         "--http-port", port,
-         "HTTP port number for JSON-RPC and reverse proxy (default: -1)")
-      ->check(CLI::Range(-1, 65535));
+         "--http-port", http_port,
+         "HTTP port number for JSON-RPC and reverse proxy (default: none)")
+      ->check(CLI::Validator(
+          [](std::string input) -> std::string {
+            if (input == "none") {
+              return std::string();
+            }
+            try {
+              int port = std::stoi(input);
+              if (port < 1 || port > 65535) {
+                return "Port must be between 1 and 65535";
+              }
+            } catch (const std::exception&) {
+              return "Must be 'none' or a valid port number";
+            }
+            return std::string();
+          },
+          "PORT_OR_NONE"));
+  app.add_option(
+      "--http-host", http_host,
+      "HTTP host address to bind (default: 127.0.0.1)");
   app.add_option(
       "--ui-remote-url", ui_remote_url,
       "Remote URL for UI reverse proxy (default: http://localhost:5173)");

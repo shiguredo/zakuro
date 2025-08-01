@@ -17,7 +17,7 @@
 #include "json_rpc.h"
 #include "zakuro_version.h"
 
-HttpServer::HttpServer(int port) : port_(port) {}
+HttpServer::HttpServer(int port, const std::string& host) : port_(port), host_(host) {}
 
 HttpServer::~HttpServer() {
   Stop();
@@ -47,11 +47,12 @@ void HttpServer::Stop() {
 
 void HttpServer::Run() {
   try {
-    acceptor_.reset(new tcp::acceptor(ioc_, tcp::endpoint(tcp::v4(), port_)));
+    auto const address = net::ip::make_address(host_);
+    acceptor_.reset(new tcp::acceptor(ioc_, tcp::endpoint(address, port_)));
     DoAccept();
 
-    RTC_LOG(LS_INFO) << "HTTP server started on port " << port_
-                     << " - http://localhost:" << port_ << "/";
+    RTC_LOG(LS_INFO) << "HTTP server started on " << host_ << ":" << port_
+                     << " - http://" << host_ << ":" << port_ << "/";
     ioc_.run();
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "HTTP server error: " << e.what();
