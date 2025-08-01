@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <mutex>
 
 #include <boost/json.hpp>
 
@@ -110,8 +111,11 @@ void VirtualClient::Close(std::function<void(std::string)> on_close) {
 
 void VirtualClient::Clear() {
   retry_timer_.cancel();
-  if (rtc_stats_timer_) {
-    rtc_stats_timer_->cancel();
+  {
+    std::lock_guard<std::mutex> lock(rtc_stats_timer_mutex_);
+    if (rtc_stats_timer_) {
+      rtc_stats_timer_->cancel();
+    }
   }
   signaling_.reset();
 }
@@ -263,6 +267,7 @@ void VirtualClient::OnNotify(std::string text) {
 }
 
 void VirtualClient::StartRTCStatsTimer() {
+  std::lock_guard<std::mutex> lock(rtc_stats_timer_mutex_);
   if (!signaling_ || !rtc_stats_timer_ || !config_.duckdb_writer) {
     return;
   }

@@ -122,6 +122,7 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
 
   // WebRTC 統計情報取得用のタイマー
   std::unique_ptr<boost::asio::deadline_timer> rtc_stats_timer_;
+  mutable std::mutex rtc_stats_timer_mutex_;
   void StartRTCStatsTimer();
   void OnRTCStatsTimer(const boost::system::error_code& ec);
 
