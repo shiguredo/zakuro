@@ -223,6 +223,14 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
                                  std::string message) {
   signaling_.reset();
   retry_timer_.cancel();
+  
+  // RTC統計情報タイマーをキャンセル
+  {
+    std::lock_guard<std::mutex> lock(rtc_stats_timer_mutex_);
+    if (rtc_stats_timer_) {
+      rtc_stats_timer_->cancel();
+    }
+  }
 
   if (!closing_) {
     // VirtualClient の外から明示的に呼び出されていない、つまり不意に接続が切れた場合にここに来る
