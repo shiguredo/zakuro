@@ -166,11 +166,11 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
 endforeach()
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/embedded_binary.generated.template.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/embedded_binary.generated.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/embedded_binary.generated.h
   @ONLY)
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/embedded_binary.generated.priv.template.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/embedded_binary.generated.priv.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/embedded_binary.generated.priv.h
   @ONLY)
 
