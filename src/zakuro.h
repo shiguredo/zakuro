@@ -98,6 +98,10 @@ struct ZakuroConfig {
   // WebRTC 統計情報の取得間隔（秒）
   int rtc_stats_interval = 1;  // デフォルト 1秒
 
+  // DuckDB 関連の設定
+  std::string duckdb_output_dir = "";  // DuckDB ファイルの出力先ディレクトリ
+  bool no_duckdb_output = false;  // DuckDB への統計情報出力を無効化
+
   struct Size {
     int width;
     int height;

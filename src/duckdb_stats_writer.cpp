@@ -880,9 +880,8 @@ void DuckDBStatsWriter::Close() {
   if (conn_) {
     // 最後のチェックポイントを実行
     duckdb_utils::Result result;
-    if (!duckdb_utils::ExecuteQuery(conn_, "PRAGMA wal_checkpoint(TRUNCATE)",
-                                    result)) {
-      RTC_LOG(LS_ERROR) << "Failed to execute WAL checkpoint on close: "
+    if (!duckdb_utils::ExecuteQuery(conn_, "CHECKPOINT", result)) {
+      RTC_LOG(LS_ERROR) << "Failed to execute checkpoint on close: "
                         << result.error();
       // エラーが発生してもクローズ処理を続行
     }

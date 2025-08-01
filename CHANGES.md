@@ -22,6 +22,11 @@
   - @voluntas
 - [ADD] ビルドシステムに DuckDB のダイナミックライブラリを追加する
   - @voluntas
+- [ADD] DuckDB ファイルの出力先ディレクトリを指定する `--duckdb-output-dir` オプションを追加する
+  - 指定しない場合はカレントディレクトリに出力される
+  - @voluntas
+- [ADD] DuckDB への統計情報出力を無効化する `--no-duckdb-output` オプションを追加する
+  - @voluntas
 - [ADD] HTTP サーバー機能を追加する
   - `--http-port` オプションで HTTP サーバーを起動可能
     - `none` を指定すると HTTP サーバーを起動しない

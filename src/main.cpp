@@ -140,6 +140,15 @@ int main(int argc, char* argv[]) {
       common_args.push_back(
           zakuro_node["rtc-stats-interval"].as<std::string>());
     }
+    if (zakuro_node["duckdb-output-dir"]) {
+      common_args.push_back("--duckdb-output-dir");
+      common_args.push_back(
+          zakuro_node["duckdb-output-dir"].as<std::string>());
+    }
+    if (zakuro_node["no-duckdb-output"] && 
+        zakuro_node["no-duckdb-output"].as<bool>()) {
+      common_args.push_back("--no-duckdb-output");
+    }
 
     std::vector<std::string> post_args;
     // args の --config を取り除きつつ post_args に追加
@@ -214,13 +223,27 @@ int main(int argc, char* argv[]) {
   }
 
   // DuckDB 統計ライターを初期化
-  std::shared_ptr<DuckDBStatsWriter> duckdb_writer(new DuckDBStatsWriter());
-  if (!duckdb_writer->Initialize(".")) {
-    RTC_LOG(LS_ERROR) << "Failed to initialize DuckDB stats writer";
-    // エラーでも続行（統計情報の記録は必須ではない）
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+  
+  // 最初の config から DuckDB 設定を取得
+  bool no_duckdb_output = !configs.empty() ? configs[0].no_duckdb_output : false;
+  std::string duckdb_output_dir = !configs.empty() && !configs[0].duckdb_output_dir.empty() 
+                                   ? configs[0].duckdb_output_dir : ".";
+  
+  if (!no_duckdb_output) {
+    duckdb_writer.reset(new DuckDBStatsWriter());
+    if (!duckdb_writer->Initialize(duckdb_output_dir)) {
+      RTC_LOG(LS_ERROR) << "Failed to initialize DuckDB stats writer in directory: " 
+                        << duckdb_output_dir;
+      // エラーでも続行（統計情報の記録は必須ではない）
+    } else {
+      RTC_LOG(LS_INFO) << "DuckDB stats writer initialized in directory: " 
+                       << duckdb_output_dir;
+    }
+    g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
+  } else {
+    RTC_LOG(LS_INFO) << "DuckDB stats output disabled by --no-duckdb-output";
   }
-  g_duckdb_writer =
-      duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
 
   // 各 config に duckdb_writer を設定
   for (auto& config : configs) {

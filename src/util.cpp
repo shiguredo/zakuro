@@ -191,6 +191,11 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                  "WebRTC stats collection interval in seconds (default: 1, "
                  "min: 1, max: 300)")
       ->check(CLI::Range(1, 300));
+  // DuckDB 関連オプション
+  app.add_option("--duckdb-output-dir", config.duckdb_output_dir,
+                 "DuckDB output directory path");
+  app.add_flag("--no-duckdb-output", config.no_duckdb_output,
+               "Disable DuckDB statistics output (default: false)");
   app.add_option("--client-cert", config.client_cert,
                  "Cert file path for client certification (PEM format)")
       ->check(CLI::ExistingFile);
@@ -609,6 +614,8 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     DEF_BOOLEAN(inst, "", "initial-mute-video");
     DEF_BOOLEAN(inst, "", "initial-mute-audio");
     DEF_STRING(inst, "", "degradation-preference");
+    DEF_STRING(inst, "", "duckdb-output-dir");
+    DEF_FLAG(inst, "", "no-duckdb-output");
 
     // コーデックプリファレンス
     DEF_STRING(inst, "", "vp8-encoder");
