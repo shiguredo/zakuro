@@ -11,6 +11,9 @@
 
 ## develop
 
+- [CHANGE] kuzushi 機能を削除する
+  - @voluntas
+
 ## 2025.2.0
 
 **リリース日**: 2025-07-18

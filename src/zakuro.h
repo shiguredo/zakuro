@@ -43,7 +43,6 @@ struct ZakuroConfig {
   std::string fake_video_capture = "";
   std::string fake_audio_capture = "";
   std::string openh264 = "";
-  std::string game;
   std::string scenario;
   std::string client_cert;
   std::string client_key;
