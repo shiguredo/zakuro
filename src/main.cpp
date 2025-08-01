@@ -215,12 +215,9 @@ int main(int argc, char* argv[]) {
 
   // DuckDB 統計ライターを初期化
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer(new DuckDBStatsWriter());
-  RTC_LOG(LS_INFO) << "Initializing DuckDB stats writer...";
   if (!duckdb_writer->Initialize(".")) {
     RTC_LOG(LS_ERROR) << "Failed to initialize DuckDB stats writer";
     // エラーでも続行（統計情報の記録は必須ではない）
-  } else {
-    RTC_LOG(LS_INFO) << "DuckDB stats writer initialized successfully";
   }
   g_duckdb_writer =
       duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
@@ -245,15 +242,12 @@ int main(int argc, char* argv[]) {
         RTC_LOG(LS_ERROR) << "Invalid HTTP port number: " << port;
         return 1;
       }
-      RTC_LOG(LS_INFO) << "Starting HTTP server on " << http_host << ":" << port;
       http_server.reset(new HttpServer(port, http_host));
       http_server->SetDuckDBWriter(duckdb_writer);
       http_server->SetUIRemoteURL(ui_remote_url);
       http_server->Start();
       std::cout << "HTTP server started on " << http_host << ":" << port
                 << " - http://" << http_host << ":" << port << "/" << std::endl;
-      RTC_LOG(LS_INFO) << "HTTP server started with DuckDBWriter: "
-                       << (duckdb_writer ? "set" : "null");
     } catch (const std::exception& e) {
       RTC_LOG(LS_ERROR) << "Invalid HTTP port value: " << http_port;
       return 1;
