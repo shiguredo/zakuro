@@ -17,6 +17,9 @@
 #include "json_rpc.h"
 #include "zakuro_version.h"
 
+// HTTPプロキシレスポンスボディの最大サイズ (10MB)
+static constexpr std::size_t MAX_PROXY_RESPONSE_SIZE = 10 * 1024 * 1024;
+
 HttpServer::HttpServer(int port, const std::string& host) : port_(port), host_(host) {}
 
 HttpServer::~HttpServer() {
@@ -193,6 +196,25 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
     // ストリームを閉じる
     beast::error_code ec;
     stream.socket().shutdown(tcp::socket::shutdown_both, ec);
+
+    // レスポンスボディのサイズチェック
+    std::size_t body_size = 0;
+    for (auto const& buf : proxy_res.body().data()) {
+      body_size += buf.size();
+    }
+
+    if (body_size > MAX_PROXY_RESPONSE_SIZE) {
+      RTC_LOG(LS_ERROR) << "Proxy response too large: " << body_size << " bytes";
+      http::response<http::string_body> res{http::status::payload_too_large,
+                                            req.version()};
+      res.set(http::field::server, "Zakuro");
+      res.set(http::field::content_type, "text/plain");
+      res.keep_alive(req.keep_alive());
+      res.body() = "Response too large: " + std::to_string(body_size) + " bytes (max: " + 
+                   std::to_string(MAX_PROXY_RESPONSE_SIZE) + " bytes)";
+      res.prepare_payload();
+      return res;
+    }
 
     std::string body_str = beast::buffers_to_string(proxy_res.body().data());
 
