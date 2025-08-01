@@ -15,6 +15,7 @@ class DuckDBStatsWriter;
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
+namespace ssl = boost::asio::ssl;
 using tcp = net::ip::tcp;
 
 class HttpServer {

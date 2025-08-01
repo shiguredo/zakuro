@@ -4,8 +4,10 @@
 #include <chrono>
 #include <iostream>
 
+#include <boost/asio/ssl.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/json.hpp>
+#include <openssl/ssl.h>
 // TODO: 将来的にboost::urlを使用する予定
 // #include <boost/url.hpp>
 #include <duckdb.h>
@@ -132,23 +134,12 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
       }
     } else if (path_pos != std::string::npos) {
       host = url_str.substr(0, path_pos);
+      // デフォルトポートを設定
+      port = (scheme == "https") ? "443" : "80";
     } else {
       host = url_str;
-    }
-
-    // HTTPSの場合はまだサポートしていない
-    if (scheme == "https") {
-      http::response<http::string_body> res{http::status::not_implemented,
-                                            req.version()};
-      res.set(http::field::server, "Zakuro");
-      res.set(http::field::content_type, "text/plain");
-      res.set(http::field::access_control_allow_origin, "*");
-      res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
-      res.set(http::field::access_control_allow_headers, "Content-Type");
-      res.body() = "HTTPS proxy not yet implemented";
-      res.keep_alive(req.keep_alive());
-      res.prepare_payload();
-      return res;
+      // デフォルトポートを設定
+      port = (scheme == "https") ? "443" : "80";
     }
 
     // 新しいio_contextを作成
@@ -176,6 +167,90 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
     proxy_req.body() = req.body();
     proxy_req.prepare_payload();
 
+    // HTTPSの場合はSSLを使用
+    if (scheme == "https") {
+      // SSLコンテキストを作成
+      ssl::context ctx{ssl::context::tlsv12_client};
+      
+      // デフォルトの証明書検証を設定
+      ctx.set_verify_mode(ssl::verify_peer);
+      ctx.set_default_verify_paths();
+      
+      // SSLストリームを作成（tcp::socketを使用）
+      ssl::stream<tcp::socket> stream(ioc, ctx);
+      
+      // SNI (Server Name Indication) を設定
+      // OpenSSL のネイティブハンドルを直接使用
+      if (!::SSL_set_tlsext_host_name(stream.native_handle(), host.c_str())) {
+        throw std::runtime_error("Failed to set SNI hostname");
+      }
+      
+      // 同期的にDNS解決と接続
+      tcp::resolver resolver(ioc);
+      auto const results = resolver.resolve(host, port);
+      boost::asio::connect(stream.lowest_layer(), results);
+      
+      // SSL ハンドシェイク
+      stream.handshake(ssl::stream_base::client);
+      
+      // リクエストを送信
+      http::write(stream, proxy_req);
+      
+      // レスポンスを受信
+      beast::flat_buffer buffer;
+      http::response<http::dynamic_body> proxy_res;
+      http::read(stream, buffer, proxy_res);
+      
+      // SSL シャットダウン
+      beast::error_code ec;
+      stream.shutdown(ec);
+      if (ec && ec != beast::errc::not_connected) {
+        RTC_LOG(LS_WARNING) << "SSL shutdown error: " << ec.message();
+      }
+      
+      // レスポンスボディのサイズチェック
+      std::size_t body_size = 0;
+      for (auto const& buf : proxy_res.body().data()) {
+        body_size += buf.size();
+      }
+      
+      if (body_size > MAX_PROXY_RESPONSE_SIZE) {
+        RTC_LOG(LS_ERROR) << "Proxy response too large: " << body_size << " bytes";
+        http::response<http::string_body> res{http::status::payload_too_large,
+                                              req.version()};
+        res.set(http::field::server, "Zakuro");
+        res.set(http::field::content_type, "text/plain");
+        res.keep_alive(req.keep_alive());
+        res.body() = "Response too large: " + std::to_string(body_size) + " bytes (max: " + 
+                     std::to_string(MAX_PROXY_RESPONSE_SIZE) + " bytes)";
+        res.prepare_payload();
+        return res;
+      }
+      
+      std::string body_str = beast::buffers_to_string(proxy_res.body().data());
+      
+      // レスポンスを変換
+      http::response<http::string_body> res{proxy_res.result(), req.version()};
+      res.set(http::field::server, "Zakuro");
+      
+      // ヘッダーをコピー
+      for (auto const& field : proxy_res) {
+        if (field.name() != http::field::connection &&
+            field.name() != http::field::transfer_encoding &&
+            field.name() != http::field::server) {
+          res.set(field.name(), field.value());
+        }
+      }
+      
+      // ボディを変換
+      res.body() = body_str;
+      res.keep_alive(req.keep_alive());
+      res.prepare_payload();
+      
+      return res;
+    }
+
+    // HTTPの場合の処理 (HTTPSでない場合)
     // TCPストリームを作成
     beast::tcp_stream stream(ioc);
     stream.expires_after(std::chrono::seconds(30));

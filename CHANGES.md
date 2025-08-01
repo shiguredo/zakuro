@@ -27,6 +27,11 @@
   - @voluntas
 - [ADD] DuckDB への統計情報出力を無効化する `--no-duckdb-output` オプションを追加する
   - @voluntas
+- [ADD] HTTP プロキシに HTTPS サポートを追加する
+  - SSL/TLS 接続、証明書検証、SNI をサポート
+  - @voluntas
+- [FIX] VirtualClient::OnDisconnect で rtc_stats_timer_ のキャンセル処理が欠落していた問題を修正する
+  - @voluntas
 - [ADD] HTTP サーバー機能を追加する
   - `--http-port` オプションで HTTP サーバーを起動可能
     - `none` を指定すると HTTP サーバーを起動しない
