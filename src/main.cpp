@@ -17,8 +17,10 @@
 #include <blend2d.h>
 #include <yaml-cpp/yaml.h>
 
+#include "duckdb_stats_writer.h"
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
+#include "http_server.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -27,6 +29,22 @@
 #include "zakuro_stats.h"
 
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
+
+// シグナルハンドラー用のグローバル変数
+static std::atomic<bool> g_shutdown_requested{false};
+static std::shared_ptr<DuckDBStatsWriter> g_duckdb_writer;
+
+void SignalHandler(int signal) {
+  if (signal == SIGINT || signal == SIGTERM) {
+    RTC_LOG(LS_INFO) << "Shutdown signal received: " << signal;
+    g_shutdown_requested = true;
+
+    // DuckDB をクローズ
+    if (g_duckdb_writer) {
+      g_duckdb_writer->Close();
+    }
+  }
+}
 
 // 雑なエスケープ処理
 // 文字列中に \ や " が含まれてたら全体をエスケープする
@@ -50,6 +68,9 @@ std::string escape_if_needed(std::string str) {
 }
 
 int main(int argc, char* argv[]) {
+  // シグナルハンドラーを設定
+  std::signal(SIGINT, SignalHandler);
+  std::signal(SIGTERM, SignalHandler);
   rlimit lim;
   if (::getrlimit(RLIMIT_NOFILE, &lim) != 0) {
     std::cerr << "getrlimit 失敗" << std::endl;
@@ -73,12 +94,14 @@ int main(int argc, char* argv[]) {
 
   std::string config_file;
   int log_level = webrtc::LS_NONE;
-  int port = -1;
+  std::string http_port = "none";
+  std::string http_host = "127.0.0.1";
+  std::string ui_remote_url = "http://localhost:5173";
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, connection_id_stats_file,
-                  instance_hatch_rate, config, false);
+  Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui_remote_url,
+                  connection_id_stats_file, instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -99,7 +122,7 @@ int main(int argc, char* argv[]) {
       common_args.push_back(zakuro_node["log-level"].as<std::string>());
     }
     if (zakuro_node["port"]) {
-      common_args.push_back("--port");
+      common_args.push_back("--http-port");
       common_args.push_back(zakuro_node["port"].as<std::string>());
     }
     if (zakuro_node["output-file-connection-id"]) {
@@ -111,6 +134,20 @@ int main(int argc, char* argv[]) {
       common_args.push_back("--instance-hatch-rate");
       common_args.push_back(
           zakuro_node["instance-hatch-rate"].as<std::string>());
+    }
+    if (zakuro_node["rtc-stats-interval"]) {
+      common_args.push_back("--rtc-stats-interval");
+      common_args.push_back(
+          zakuro_node["rtc-stats-interval"].as<std::string>());
+    }
+    if (zakuro_node["duckdb-output-dir"]) {
+      common_args.push_back("--duckdb-output-dir");
+      common_args.push_back(
+          zakuro_node["duckdb-output-dir"].as<std::string>());
+    }
+    if (zakuro_node["no-duckdb-output"] && 
+        zakuro_node["no-duckdb-output"].as<bool>()) {
+      common_args.push_back("--no-duckdb-output");
     }
 
     std::vector<std::string> post_args;
@@ -150,7 +187,7 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, port,
+        Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui_remote_url,
                         connection_id_stats_file, instance_hatch_rate, config,
                         true);
         configs.push_back(config);
@@ -163,24 +200,14 @@ int main(int argc, char* argv[]) {
   webrtc::LogMessage::LogThreads();
 
   std::unique_ptr<webrtc::FileRotatingLogSink> log_sink(
-      new webrtc::FileRotatingLogSink("./", "webrtc_logs", kDefaultMaxLogFileSize,
-                                   10));
+      new webrtc::FileRotatingLogSink("./", "webrtc_logs",
+                                      kDefaultMaxLogFileSize, 10));
   if (!log_sink->Init()) {
     RTC_LOG(LS_ERROR) << __FUNCTION__ << "Failed to open log file";
     log_sink.reset();
     return 1;
   }
   webrtc::LogMessage::AddLogToStream(log_sink.get(), webrtc::LS_INFO);
-
-  // TODO: サーバの起動については別途考える
-  //if (config_.sora_port >= 0) {
-  //  SoraServerConfig config;
-  //  const boost::asio::ip::tcp::endpoint endpoint{
-  //      boost::asio::ip::make_address("127.0.0.1"),
-  //      static_cast<unsigned short>(config_.sora_port)};
-  //  // TODO: vcs をスレッドセーフにする（VC 生成スレッドと競合するので）
-  //  SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
-  //}
 
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();
@@ -195,9 +222,61 @@ int main(int argc, char* argv[]) {
     config.stats = stats;
   }
 
+  // DuckDB 統計ライターを初期化
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+  
+  // 最初の config から DuckDB 設定を取得
+  bool no_duckdb_output = !configs.empty() ? configs[0].no_duckdb_output : false;
+  std::string duckdb_output_dir = !configs.empty() && !configs[0].duckdb_output_dir.empty() 
+                                   ? configs[0].duckdb_output_dir : ".";
+  
+  if (!no_duckdb_output) {
+    duckdb_writer.reset(new DuckDBStatsWriter());
+    if (!duckdb_writer->Initialize(duckdb_output_dir)) {
+      RTC_LOG(LS_ERROR) << "Failed to initialize DuckDB stats writer in directory: " 
+                        << duckdb_output_dir;
+      // エラーでも続行（統計情報の記録は必須ではない）
+    } else {
+      RTC_LOG(LS_INFO) << "DuckDB stats writer initialized in directory: " 
+                       << duckdb_output_dir;
+    }
+    g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
+  } else {
+    RTC_LOG(LS_INFO) << "DuckDB stats output disabled by --no-duckdb-output";
+  }
+
+  // 各 config に duckdb_writer を設定
+  for (auto& config : configs) {
+    config.duckdb_writer = duckdb_writer;
+  }
+
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
     configs[i].id = i;
+  }
+
+  // HTTP サーバーの起動
+  RTC_LOG(LS_INFO) << "HTTP port setting: " << http_port;
+  std::unique_ptr<HttpServer> http_server;
+  if (http_port != "none") {
+    try {
+      int port = std::stoi(http_port);
+      if (port < 1 || port > 65535) {
+        RTC_LOG(LS_ERROR) << "Invalid HTTP port number: " << port;
+        return 1;
+      }
+      http_server.reset(new HttpServer(port, http_host));
+      http_server->SetDuckDBWriter(duckdb_writer);
+      http_server->SetUIRemoteURL(ui_remote_url);
+      http_server->Start();
+      std::cout << "HTTP server started on " << http_host << ":" << port
+                << " - http://" << http_host << ":" << port << "/" << std::endl;
+    } catch (const std::exception& e) {
+      RTC_LOG(LS_ERROR) << "Invalid HTTP port value: " << http_port;
+      return 1;
+    }
+  } else {
+    RTC_LOG(LS_INFO) << "HTTP server not started (http-port is none)";
   }
 
   // 集めた stats を定期的にファイルに出力する
@@ -257,10 +336,13 @@ int main(int argc, char* argv[]) {
           }
           obj[p.first] = obj2;
         }
-        std::string jstr = boost::json::serialize(obj);
-        // ファイルに出力
-        std::ofstream ofs(connection_id_stats_file);
-        ofs << jstr;
+        // connection_id_stats_file が指定されている場合はJSONファイルに出力
+        if (!connection_id_stats_file.empty()) {
+          std::string jstr = boost::json::serialize(obj);
+          // ファイルに出力
+          std::ofstream ofs(connection_id_stats_file);
+          ofs << jstr;
+        }
       }
     }));
   }
@@ -286,6 +368,11 @@ int main(int argc, char* argv[]) {
   }
   if (stats_th) {
     stats_th->join();
+  }
+
+  // DuckDB をクローズ
+  if (duckdb_writer) {
+    duckdb_writer->Close();
   }
 
   return 0;
