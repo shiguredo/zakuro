@@ -34,6 +34,20 @@ class DuckDBStatsWriter {
                      const std::string& rtc_data_json,
                      double timestamp);
 
+  // zakuro 起動情報を書き込む
+  bool WriteZakuroInfo(const std::string& config_mode,
+                       const std::string& config_json);
+  
+  // zakuro シナリオ情報を書き込む
+  bool WriteZakuroScenario(int vcs,
+                           double duration,
+                           double repeat_interval,
+                           int max_retry,
+                           double retry_interval,
+                           const std::vector<std::string>& sora_signaling_urls,
+                           const std::string& sora_channel_id,
+                           const std::string& sora_role);
+
   // クリーンアップ処理
   void Close();
 

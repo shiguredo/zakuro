@@ -239,6 +239,70 @@ int main(int argc, char* argv[]) {
     } else {
       RTC_LOG(LS_INFO) << "DuckDB stats writer initialized in directory: " 
                        << duckdb_output_dir;
+      
+      // zakuro 起動情報を保存
+      std::string config_mode = config_file.empty() ? "ARGS" : "YAML";
+      boost::json::object config_json;
+      
+      if (config_file.empty()) {
+        // 引数モードの場合、主要な設定をJSONに保存
+        if (!configs.empty()) {
+          const auto& cfg = configs[0];
+          config_json["scenario"] = cfg.scenario;
+          config_json["vcs"] = cfg.vcs;
+          config_json["duration"] = cfg.duration;
+          config_json["repeat_interval"] = cfg.repeat_interval;
+          config_json["max_retry"] = cfg.max_retry;
+          config_json["retry_interval"] = cfg.retry_interval;
+          config_json["sora_channel_id"] = cfg.sora_channel_id;
+          config_json["sora_role"] = cfg.sora_role;
+          
+          // sora_signaling_urls を配列として保存
+          boost::json::array urls;
+          for (const auto& url : cfg.sora_signaling_urls) {
+            urls.push_back(boost::json::value(url));
+          }
+          config_json["sora_signaling_urls"] = urls;
+        }
+      } else {
+        // YAML モードの場合、YAML ファイルの内容を JSON として保存
+        try {
+          YAML::Node yaml_node = YAML::LoadFile(config_file);
+          boost::json::value yaml_json = Util::NodeToJson(yaml_node);
+          // boost::json::value を boost::json::object に変換
+          if (yaml_json.is_object()) {
+            config_json = yaml_json.as_object();
+          } else {
+            // YAML のルートがオブジェクトでない場合は、オブジェクトでラップ
+            config_json["data"] = yaml_json;
+          }
+        } catch (const std::exception& e) {
+          RTC_LOG(LS_WARNING) << "Failed to convert YAML to JSON: " << e.what();
+          config_json["error"] = "Failed to convert YAML to JSON";
+        }
+      }
+      
+      // zakuro 情報を DuckDB に書き込む
+      std::string config_json_str = boost::json::serialize(config_json);
+      if (!duckdb_writer->WriteZakuroInfo(config_mode, config_json_str)) {
+        RTC_LOG(LS_WARNING) << "Failed to write zakuro info to DuckDB";
+      }
+      
+      // シナリオ情報を書き込む
+      if (!configs.empty()) {
+        const auto& cfg = configs[0];
+        if (!duckdb_writer->WriteZakuroScenario(
+                cfg.vcs,
+                cfg.duration,
+                cfg.repeat_interval,
+                cfg.max_retry,
+                cfg.retry_interval,
+                cfg.sora_signaling_urls,
+                cfg.sora_channel_id,
+                cfg.sora_role)) {
+          RTC_LOG(LS_WARNING) << "Failed to write zakuro scenario to DuckDB";
+        }
+      }
     }
     g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
   } else {

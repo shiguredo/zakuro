@@ -2,11 +2,15 @@
 
 #include <chrono>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 
 #include <rtc_base/logging.h>
 #include <boost/json.hpp>
+
+#include "zakuro_version.h"
 
 namespace {
 // ファイル名生成時の定数
@@ -14,6 +18,35 @@ namespace {
 //     （Google C++ Style Guide では、グローバル定数のみ k プレフィックスを推奨）
 constexpr int MillisecondsPerSecond = 1000;
 constexpr int MillisecondFieldWidth = 3;
+
+// DEPS ファイルからバージョン情報を読み込む
+std::unordered_map<std::string, std::string> ReadDepsFile() {
+  std::unordered_map<std::string, std::string> versions;
+  std::ifstream file("DEPS");
+  
+  if (!file.is_open()) {
+    RTC_LOG(LS_WARNING) << "Failed to open DEPS file";
+    return versions;
+  }
+  
+  std::string line;
+  while (std::getline(file, line)) {
+    // 空行やコメント行をスキップ
+    if (line.empty() || line[0] == '#') {
+      continue;
+    }
+    
+    // KEY=VALUE 形式をパース
+    size_t pos = line.find('=');
+    if (pos != std::string::npos) {
+      std::string key = line.substr(0, pos);
+      std::string value = line.substr(pos + 1);
+      versions[key] = value;
+    }
+  }
+  
+  return versions;
+}
 }  // namespace
 
 DuckDBStatsWriter::DuckDBStatsWriter() = default;
@@ -90,6 +123,41 @@ void DuckDBStatsWriter::CreateTable() {
       "CREATE SEQUENCE IF NOT EXISTS outbound_rtp_stats_pk_seq START 1");
   execute_query(
       "CREATE SEQUENCE IF NOT EXISTS media_source_stats_pk_seq START 1");
+
+  // zakuro テーブルを作成
+  std::string create_zakuro_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS zakuro (
+      version VARCHAR,
+      environment VARCHAR,
+      webrtc_version VARCHAR,
+      sora_cpp_sdk_version VARCHAR,
+      boost_version VARCHAR,
+      cli11_version VARCHAR,
+      cmake_version VARCHAR,
+      blend2d_version VARCHAR,
+      openh264_version VARCHAR,
+      yaml_cpp_version VARCHAR,
+      duckdb_version VARCHAR,
+      config_mode VARCHAR,  -- 'ARGS' or 'YAML'
+      config_json JSON  -- 引数または YAML の設定を JSON として保存
+    )
+  )";
+  execute_query(create_zakuro_table_sql);
+
+  // zakuro_scenario テーブルを作成
+  std::string create_zakuro_scenario_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS zakuro_scenario (
+      vcs INTEGER,
+      duration DOUBLE,
+      repeat_interval DOUBLE,
+      max_retry INTEGER,
+      retry_interval DOUBLE,
+      sora_signaling_urls VARCHAR[],
+      sora_channel_id VARCHAR,
+      sora_role VARCHAR
+    )
+  )";
+  execute_query(create_zakuro_scenario_table_sql);
 
   // 接続情報テーブルを作成
   std::string create_table_sql = R"(
@@ -870,6 +938,197 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
     return true;
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Error writing RTC stats: " << e.what();
+    return false;
+  }
+}
+
+bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
+                                        const std::string& config_json) {
+  if (!initialized_) {
+    RTC_LOG(LS_ERROR) << "DuckDBStatsWriter not initialized";
+    return false;
+  }
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  try {
+    // トランザクションを開始
+    duckdb_utils::Transaction transaction(conn_);
+
+    // バージョン情報を取得
+    std::string version = ZakuroVersion::GetVersion();
+    std::string environment = ZakuroVersion::GetEnvironmentName();
+    std::string webrtc_version = ZakuroVersion::GetWebRTCVersion();
+    std::string sora_cpp_sdk_version = ZakuroVersion::GetSoraCppSdkVersion();
+    
+    // DEPS ファイルからバージョン情報を読み込む
+    auto deps_versions = ReadDepsFile();
+    
+    // バージョン情報を取得（見つからない場合は "unknown" を使用）
+    auto get_version = [&deps_versions](const std::string& key) {
+      auto it = deps_versions.find(key);
+      return it != deps_versions.end() ? it->second : "unknown";
+    };
+
+    // zakuro テーブルにレコードを挿入
+    std::string query = R"(
+      INSERT INTO zakuro (
+        version,
+        environment,
+        webrtc_version,
+        sora_cpp_sdk_version,
+        boost_version,
+        cli11_version,
+        cmake_version,
+        blend2d_version,
+        openh264_version,
+        yaml_cpp_version,
+        duckdb_version,
+        config_mode,
+        config_json
+      ) VALUES (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?::JSON
+      )
+    )";
+
+    // PreparedStatement を作成
+    duckdb_utils::PreparedStatement stmt;
+    if (!duckdb_utils::Prepare(conn_, query, stmt)) {
+      RTC_LOG(LS_ERROR) << "Failed to prepare: " << stmt.error();
+      throw std::runtime_error("Failed to prepare: " + stmt.error());
+    }
+
+    // パラメータをバインド
+    duckdb_bind_varchar(stmt.get_raw(), 1, version.c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 2, environment.c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 3, webrtc_version.c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 4, sora_cpp_sdk_version.c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 5, get_version("BOOST_VERSION").c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 6, get_version("CLI11_VERSION").c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 7, get_version("CMAKE_VERSION").c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 8, get_version("BLEND2D_VERSION").c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 9, get_version("OPENH264_VERSION").c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 10, get_version("YAML_CPP_VERSION").c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 11, get_version("DUCKDB_VERSION").c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 12, config_mode.c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 13, config_json.c_str());
+
+    // 実行
+    duckdb_utils::Result exec_result;
+    if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+      RTC_LOG(LS_ERROR) << "Failed to insert: " << exec_result.error();
+      throw std::runtime_error("Failed to insert: " + exec_result.error());
+    }
+
+    // トランザクションをコミット
+    transaction.Commit();
+
+    RTC_LOG(LS_INFO) << "zakuro info written successfully"
+                     << " version=" << version
+                     << " config_mode=" << config_mode;
+
+    return true;
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_ERROR) << "Failed to write zakuro info: " << e.what();
+    return false;
+  }
+}
+
+bool DuckDBStatsWriter::WriteZakuroScenario(
+    int vcs,
+    double duration,
+    double repeat_interval,
+    int max_retry,
+    double retry_interval,
+    const std::vector<std::string>& sora_signaling_urls,
+    const std::string& sora_channel_id,
+    const std::string& sora_role) {
+  if (!initialized_) {
+    RTC_LOG(LS_ERROR) << "DuckDBStatsWriter not initialized";
+    return false;
+  }
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  try {
+    // トランザクションを開始
+    duckdb_utils::Transaction transaction(conn_);
+
+    // sora_signaling_urls を DuckDB の配列形式に変換
+    std::string urls_array = "[";
+    for (size_t i = 0; i < sora_signaling_urls.size(); ++i) {
+      if (i > 0) urls_array += ", ";
+      urls_array += "'" + sora_signaling_urls[i] + "'";
+    }
+    urls_array += "]";
+
+    // zakuro_scenario テーブルにレコードを挿入
+    std::string query = R"(
+      INSERT INTO zakuro_scenario (
+        vcs,
+        duration,
+        repeat_interval,
+        max_retry,
+        retry_interval,
+        sora_signaling_urls,
+        sora_channel_id,
+        sora_role
+      ) VALUES (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?::VARCHAR[],
+        ?,
+        ?
+      )
+    )";
+
+    // PreparedStatement を作成
+    duckdb_utils::PreparedStatement stmt;
+    if (!duckdb_utils::Prepare(conn_, query, stmt)) {
+      RTC_LOG(LS_ERROR) << "Failed to prepare: " << stmt.error();
+      throw std::runtime_error("Failed to prepare: " + stmt.error());
+    }
+
+    // パラメータをバインド
+    duckdb_bind_int64(stmt.get_raw(), 1, vcs);
+    duckdb_bind_double(stmt.get_raw(), 2, duration);
+    duckdb_bind_double(stmt.get_raw(), 3, repeat_interval);
+    duckdb_bind_int64(stmt.get_raw(), 4, max_retry);
+    duckdb_bind_double(stmt.get_raw(), 5, retry_interval);
+    duckdb_bind_varchar(stmt.get_raw(), 6, urls_array.c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 7, sora_channel_id.c_str());
+    duckdb_bind_varchar(stmt.get_raw(), 8, sora_role.c_str());
+
+    // 実行
+    duckdb_utils::Result exec_result;
+    if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+      RTC_LOG(LS_ERROR) << "Failed to insert: " << exec_result.error();
+      throw std::runtime_error("Failed to insert: " + exec_result.error());
+    }
+
+    // トランザクションをコミット
+    transaction.Commit();
+
+    RTC_LOG(LS_INFO) << "zakuro scenario written successfully";
+
+    return true;
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_ERROR) << "Failed to write zakuro scenario: " << e.what();
     return false;
   }
 }
