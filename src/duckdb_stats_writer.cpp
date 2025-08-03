@@ -123,6 +123,12 @@ void DuckDBStatsWriter::CreateTable() {
       "CREATE SEQUENCE IF NOT EXISTS rtc_stats_outbound_rtp_pk_seq START 1");
   execute_query(
       "CREATE SEQUENCE IF NOT EXISTS rtc_stats_media_source_pk_seq START 1");
+  execute_query(
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_remote_inbound_rtp_pk_seq START 1");
+  execute_query(
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_remote_outbound_rtp_pk_seq START 1");
+  execute_query(
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_data_channel_pk_seq START 1");
 
   // zakuro テーブルを作成
   std::string create_zakuro_table_sql = R"(
@@ -399,6 +405,111 @@ void DuckDBStatsWriter::CreateTable() {
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_rtc_stats_media_source_composite ON "
       "rtc_stats_media_source(channel_id, connection_id, timestamp)");
+
+  // remote-inbound-rtp統計情報テーブルを作成
+  std::string create_remote_inbound_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS rtc_stats_remote_inbound_rtp (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_remote_inbound_rtp_pk_seq'),
+      timestamp TIMESTAMP,
+      channel_id VARCHAR,
+      session_id VARCHAR,
+      connection_id VARCHAR,
+      rtc_timestamp DOUBLE,
+      -- RTCStats
+      type VARCHAR,
+      id VARCHAR,
+      -- RTCRtpStreamStats
+      ssrc BIGINT,
+      kind VARCHAR,
+      transport_id VARCHAR,
+      codec_id VARCHAR,
+      -- RTCReceivedRtpStreamStats
+      packets_received BIGINT,
+      packets_received_with_ect1 BIGINT,
+      packets_received_with_ce BIGINT,
+      packets_reported_as_lost BIGINT,
+      packets_reported_as_lost_but_recovered BIGINT,
+      packets_lost BIGINT,
+      jitter DOUBLE,
+      -- RTCRemoteInboundRtpStreamStats
+      local_id VARCHAR,
+      round_trip_time DOUBLE,
+      total_round_trip_time DOUBLE,
+      fraction_lost DOUBLE,
+      round_trip_time_measurements BIGINT,
+      packets_with_bleached_ect1_marking BIGINT
+    )
+  )";
+  execute_query(create_remote_inbound_table_sql);
+
+  // remote-outbound-rtp統計情報テーブルを作成
+  std::string create_remote_outbound_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS rtc_stats_remote_outbound_rtp (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_remote_outbound_rtp_pk_seq'),
+      timestamp TIMESTAMP,
+      channel_id VARCHAR,
+      session_id VARCHAR,
+      connection_id VARCHAR,
+      rtc_timestamp DOUBLE,
+      -- RTCStats
+      type VARCHAR,
+      id VARCHAR,
+      -- RTCRtpStreamStats
+      ssrc BIGINT,
+      kind VARCHAR,
+      transport_id VARCHAR,
+      codec_id VARCHAR,
+      -- RTCSentRtpStreamStats
+      packets_sent BIGINT,
+      bytes_sent BIGINT,
+      -- RTCRemoteOutboundRtpStreamStats
+      local_id VARCHAR,
+      remote_timestamp DOUBLE,
+      reports_sent BIGINT,
+      round_trip_time DOUBLE,
+      total_round_trip_time DOUBLE,
+      round_trip_time_measurements BIGINT
+    )
+  )";
+  execute_query(create_remote_outbound_table_sql);
+
+  // data-channel統計情報テーブルを作成
+  std::string create_data_channel_table_sql = R"(
+    CREATE TABLE IF NOT EXISTS rtc_stats_data_channel (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_data_channel_pk_seq'),
+      timestamp TIMESTAMP,
+      channel_id VARCHAR,
+      session_id VARCHAR,
+      connection_id VARCHAR,
+      rtc_timestamp DOUBLE,
+      -- RTCStats
+      type VARCHAR,
+      id VARCHAR,
+      -- RTCDataChannelStats
+      label VARCHAR,
+      protocol VARCHAR,
+      data_channel_identifier SMALLINT,
+      state VARCHAR,  -- REQUIRED field
+      messages_sent BIGINT,
+      bytes_sent BIGINT,
+      messages_received BIGINT,
+      bytes_received BIGINT
+    )
+  )";
+  execute_query(create_data_channel_table_sql);
+
+  // 新しいテーブルのインデックスを作成
+  execute_query(
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_remote_inbound_rtp_composite ON "
+      "rtc_stats_remote_inbound_rtp(channel_id, connection_id, timestamp)");
+  
+  execute_query(
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_remote_outbound_rtp_composite ON "
+      "rtc_stats_remote_outbound_rtp(channel_id, connection_id, timestamp)");
+  
+  execute_query(
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_data_channel_composite ON "
+      "rtc_stats_data_channel(channel_id, connection_id, timestamp)");
 }
 
 
@@ -926,6 +1037,163 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                           << exec_result.error()
                           << " for connection_id=" << connection_id;
         throw std::runtime_error("Failed to insert media-source stats: " +
+                                 exec_result.error());
+      }
+
+    } else if (rtc_type == "remote-inbound-rtp") {
+      // remote-inbound-rtp統計情報の挿入処理
+      duckdb_utils::PreparedStatement stmt;
+      const char* prepare_sql =
+          "INSERT INTO rtc_stats_remote_inbound_rtp (timestamp, channel_id, session_id, "
+          "connection_id, rtc_timestamp, "
+          "type, id, ssrc, kind, transport_id, codec_id, "
+          "packets_received, packets_received_with_ect1, packets_received_with_ce, "
+          "packets_reported_as_lost, packets_reported_as_lost_but_recovered, "
+          "packets_lost, jitter, "
+          "local_id, round_trip_time, total_round_trip_time, fraction_lost, "
+          "round_trip_time_measurements, packets_with_bleached_ect1_marking) "
+          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
+          "$11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)";
+
+      if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare remote-inbound-rtp stats statement: "
+                          << stmt.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error(
+            "Failed to prepare remote-inbound-rtp stats statement: " + stmt.error());
+      }
+
+      // パラメータをバインド
+      int idx = 1;
+      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("transportId").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceivedWithEct1"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceivedWithCe"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReportedAsLost"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReportedAsLostButRecovered"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsLost"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("jitter"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("localId").c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("roundTripTime"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalRoundTripTime"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("fractionLost"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("roundTripTimeMeasurements"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsWithBleachedEct1Marking"));
+
+      // 実行
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert remote-inbound-rtp stats: "
+                          << exec_result.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to insert remote-inbound-rtp stats: " +
+                                 exec_result.error());
+      }
+
+    } else if (rtc_type == "remote-outbound-rtp") {
+      // remote-outbound-rtp統計情報の挿入処理
+      duckdb_utils::PreparedStatement stmt;
+      const char* prepare_sql =
+          "INSERT INTO rtc_stats_remote_outbound_rtp (timestamp, channel_id, session_id, "
+          "connection_id, rtc_timestamp, "
+          "type, id, ssrc, kind, transport_id, codec_id, "
+          "packets_sent, bytes_sent, "
+          "local_id, remote_timestamp, reports_sent, round_trip_time, "
+          "total_round_trip_time, round_trip_time_measurements) "
+          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
+          "$11, $12, $13, $14, $15, $16, $17, $18)";
+
+      if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare remote-outbound-rtp stats statement: "
+                          << stmt.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error(
+            "Failed to prepare remote-outbound-rtp stats statement: " + stmt.error());
+      }
+
+      // パラメータをバインド
+      int idx = 1;
+      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("transportId").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesSent"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("localId").c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("remoteTimestamp"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("reportsSent"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("roundTripTime"));
+      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalRoundTripTime"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("roundTripTimeMeasurements"));
+
+      // 実行
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert remote-outbound-rtp stats: "
+                          << exec_result.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to insert remote-outbound-rtp stats: " +
+                                 exec_result.error());
+      }
+
+    } else if (rtc_type == "data-channel") {
+      // data-channel統計情報の挿入処理
+      duckdb_utils::PreparedStatement stmt;
+      const char* prepare_sql =
+          "INSERT INTO rtc_stats_data_channel (timestamp, channel_id, session_id, "
+          "connection_id, rtc_timestamp, "
+          "type, id, label, protocol, data_channel_identifier, state, "
+          "messages_sent, bytes_sent, messages_received, bytes_received) "
+          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
+          "$11, $12, $13, $14)";
+
+      if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
+        RTC_LOG(LS_ERROR) << "Failed to prepare data-channel stats statement: "
+                          << stmt.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error(
+            "Failed to prepare data-channel stats statement: " + stmt.error());
+      }
+
+      // パラメータをバインド
+      int idx = 1;
+      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
+      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("label").c_str());
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("protocol").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("dataChannelIdentifier"));
+      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("state").c_str());
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("messagesSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesSent"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("messagesReceived"));
+      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesReceived"));
+
+      // 実行
+      duckdb_utils::Result exec_result;
+      if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), exec_result)) {
+        RTC_LOG(LS_ERROR) << "Failed to insert data-channel stats: "
+                          << exec_result.error()
+                          << " for connection_id=" << connection_id;
+        throw std::runtime_error("Failed to insert data-channel stats: " +
                                  exec_result.error());
       }
 
