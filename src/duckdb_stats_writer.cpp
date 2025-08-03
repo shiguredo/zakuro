@@ -115,14 +115,14 @@ void DuckDBStatsWriter::CreateTable() {
   };
 
   // シーケンスを作成
-  execute_query("CREATE SEQUENCE IF NOT EXISTS connections_pk_seq START 1");
-  execute_query("CREATE SEQUENCE IF NOT EXISTS codec_stats_pk_seq START 1");
+  execute_query("CREATE SEQUENCE IF NOT EXISTS connection_pk_seq START 1");
+  execute_query("CREATE SEQUENCE IF NOT EXISTS rtc_stats_codec_pk_seq START 1");
   execute_query(
-      "CREATE SEQUENCE IF NOT EXISTS inbound_rtp_stats_pk_seq START 1");
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_inbound_rtp_pk_seq START 1");
   execute_query(
-      "CREATE SEQUENCE IF NOT EXISTS outbound_rtp_stats_pk_seq START 1");
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_outbound_rtp_pk_seq START 1");
   execute_query(
-      "CREATE SEQUENCE IF NOT EXISTS media_source_stats_pk_seq START 1");
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_media_source_pk_seq START 1");
 
   // zakuro テーブルを作成
   std::string create_zakuro_table_sql = R"(
@@ -161,8 +161,8 @@ void DuckDBStatsWriter::CreateTable() {
 
   // 接続情報テーブルを作成
   std::string create_table_sql = R"(
-    CREATE TABLE IF NOT EXISTS connections (
-      pk BIGINT PRIMARY KEY DEFAULT nextval('connections_pk_seq'),
+    CREATE TABLE IF NOT EXISTS connection (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('connection_pk_seq'),
       timestamp TIMESTAMP,
       channel_id VARCHAR,
       connection_id VARCHAR,
@@ -177,8 +177,8 @@ void DuckDBStatsWriter::CreateTable() {
 
   // codec統計情報テーブルを作成
   std::string create_codec_table_sql = R"(
-    CREATE TABLE IF NOT EXISTS codec_stats (
-      pk BIGINT PRIMARY KEY DEFAULT nextval('codec_stats_pk_seq'),
+    CREATE TABLE IF NOT EXISTS rtc_stats_codec (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_codec_pk_seq'),
       timestamp TIMESTAMP,
       channel_id VARCHAR,
       session_id VARCHAR,
@@ -198,8 +198,8 @@ void DuckDBStatsWriter::CreateTable() {
 
   // inbound-rtp統計情報テーブルを作成
   std::string create_inbound_table_sql = R"(
-    CREATE TABLE IF NOT EXISTS inbound_rtp_stats (
-      pk BIGINT PRIMARY KEY DEFAULT nextval('inbound_rtp_stats_pk_seq'),
+    CREATE TABLE IF NOT EXISTS rtc_stats_inbound_rtp (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_inbound_rtp_pk_seq'),
       timestamp TIMESTAMP,
       channel_id VARCHAR,
       session_id VARCHAR,
@@ -284,8 +284,8 @@ void DuckDBStatsWriter::CreateTable() {
 
   // outbound-rtp統計情報テーブルを作成
   std::string create_outbound_table_sql = R"(
-    CREATE TABLE IF NOT EXISTS outbound_rtp_stats (
-      pk BIGINT PRIMARY KEY DEFAULT nextval('outbound_rtp_stats_pk_seq'),
+    CREATE TABLE IF NOT EXISTS rtc_stats_outbound_rtp (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_outbound_rtp_pk_seq'),
       timestamp TIMESTAMP,
       channel_id VARCHAR,
       session_id VARCHAR,
@@ -345,8 +345,8 @@ void DuckDBStatsWriter::CreateTable() {
 
   // media-source統計情報テーブルを作成
   std::string create_media_source_table_sql = R"(
-    CREATE TABLE IF NOT EXISTS media_source_stats (
-      pk BIGINT PRIMARY KEY DEFAULT nextval('media_source_stats_pk_seq'),
+    CREATE TABLE IF NOT EXISTS rtc_stats_media_source (
+      pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_media_source_pk_seq'),
       timestamp TIMESTAMP,
       channel_id VARCHAR,
       session_id VARCHAR,
@@ -377,28 +377,28 @@ void DuckDBStatsWriter::CreateTable() {
   // 主要な検索パターンに必要なインデックスのみを作成
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_connection_id ON "
-      "connections(connection_id)");
+      "connection(connection_id)");
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_connections_composite ON "
-      "connections(channel_id, timestamp)");
+      "CREATE INDEX IF NOT EXISTS idx_connection_composite ON "
+      "connection(channel_id, timestamp)");
 
   // 各統計情報テーブルの複合インデックスのみを作成
   // 個別のカラムインデックスは削除してパフォーマンスを向上
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_codec_composite ON "
-      "codec_stats(channel_id, connection_id, timestamp)");
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_codec_composite ON "
+      "rtc_stats_codec(channel_id, connection_id, timestamp)");
 
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_inbound_composite ON "
-      "inbound_rtp_stats(channel_id, connection_id, timestamp)");
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_inbound_rtp_composite ON "
+      "rtc_stats_inbound_rtp(channel_id, connection_id, timestamp)");
 
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_outbound_composite ON "
-      "outbound_rtp_stats(channel_id, connection_id, timestamp)");
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_outbound_rtp_composite ON "
+      "rtc_stats_outbound_rtp(channel_id, connection_id, timestamp)");
 
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_media_source_composite ON "
-      "media_source_stats(channel_id, connection_id, timestamp)");
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_media_source_composite ON "
+      "rtc_stats_media_source(channel_id, connection_id, timestamp)");
 }
 
 
@@ -425,7 +425,7 @@ bool DuckDBStatsWriter::WriteStats(
       // PreparedStatementを毎回作成
       duckdb_utils::PreparedStatement stmt;
       const char* connections_sql =
-          "INSERT INTO connections (timestamp, channel_id, connection_id, "
+          "INSERT INTO connection (timestamp, channel_id, connection_id, "
           "session_id, audio, video, "
           "websocket_connected, datachannel_connected) "
           "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7)";
@@ -545,7 +545,7 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // PreparedStatementを毎回作成
       duckdb_utils::PreparedStatement codec_stmt;
       const char* codec_sql =
-          "INSERT INTO codec_stats (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_codec (timestamp, channel_id, session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, mime_type, payload_type, clock_rate, channels, "
           "sdp_fmtp_line) "
@@ -590,7 +590,7 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // inbound-rtp統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO inbound_rtp_stats (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_inbound_rtp (timestamp, channel_id, session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, ssrc, kind, transport_id, codec_id, "
           "packets_received, packets_lost, bytes_received, jitter, "
@@ -746,7 +746,7 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // outbound-rtp統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO outbound_rtp_stats (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_outbound_rtp (timestamp, channel_id, session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, ssrc, kind, transport_id, codec_id, "
           "packets_sent, bytes_sent, packets_sent_with_ect1, "
@@ -879,7 +879,7 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // media-source統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO media_source_stats (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_media_source (timestamp, channel_id, session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, track_identifier, kind, "
           "audio_level, total_audio_energy, total_samples_duration, "
