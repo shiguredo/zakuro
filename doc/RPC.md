@@ -31,7 +31,7 @@ Zakuro および関連ライブラリのバージョン情報を取得します�
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "zakuro": "2025.3.0-dev",
+    "zakuro": "2025.3.0-canary0",
     "duckdb": "1.3.2",
     "sora_cpp_sdk": "2025.4.0",
     "libwebrtc": "m138.7204.0.1",
@@ -174,6 +174,7 @@ Zakuro シナリオ情報を記録します。
 受信 RTP ストリームの統計情報を記録します。
 
 主要なカラム：
+
 - 基本情報: pk, timestamp, channel_id, session_id, connection_id
 - RTP 情報: ssrc, kind (audio/video), transport_id, codec_id
 - パケット統計: packets_received, packets_lost, bytes_received
@@ -186,6 +187,7 @@ Zakuro シナリオ情報を記録します。
 送信 RTP ストリームの統計情報を記録します。
 
 主要なカラム：
+
 - 基本情報: pk, timestamp, channel_id, session_id, connection_id
 - RTP 情報: ssrc, kind (audio/video), transport_id, codec_id
 - パケット統計: packets_sent, bytes_sent
@@ -198,6 +200,7 @@ Zakuro シナリオ情報を記録します。
 メディアソースの統計情報を記録します。
 
 主要なカラム：
+
 - 基本情報: pk, timestamp, channel_id, session_id, connection_id
 - メディア情報: track_identifier, kind (audio/video)
 - オーディオ統計: audio_level, total_audio_energy, echo_return_loss
