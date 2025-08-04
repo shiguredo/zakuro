@@ -332,9 +332,10 @@ void StatsCollectorCallback::OnStatsDelivered(
   for (const auto& stats : *report) {
     const std::string type = stats.type();
 
-    // フィルタリング: inbound-rtp, outbound-rtp, codec, media-source のみ
+    // フィルタリング: inbound-rtp, outbound-rtp, codec, media-source, remote-inbound-rtp, remote-outbound-rtp, data-channel のみ
     if (type != "inbound-rtp" && type != "outbound-rtp" && type != "codec" &&
-        type != "media-source") {
+        type != "media-source" && type != "remote-inbound-rtp" && 
+        type != "remote-outbound-rtp" && type != "data-channel") {
       continue;
     }
 
