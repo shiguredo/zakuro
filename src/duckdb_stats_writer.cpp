@@ -145,7 +145,9 @@ void DuckDBStatsWriter::CreateTable() {
       yaml_cpp_version VARCHAR,
       duckdb_version VARCHAR,
       config_mode VARCHAR,  -- 'ARGS' or 'YAML'
-      config_json JSON  -- 引数または YAML の設定を JSON として保存
+      config_json JSON,  -- 引数または YAML の設定を JSON として保存
+      start_timestamp TIMESTAMP,  -- プロセス開始時刻
+      stop_timestamp TIMESTAMP  -- プロセス終了時刻
     )
   )";
   execute_query(create_zakuro_table_sql);
@@ -1253,7 +1255,8 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
         yaml_cpp_version,
         duckdb_version,
         config_mode,
-        config_json
+        config_json,
+        start_timestamp
       ) VALUES (
         ?,
         ?,
@@ -1267,7 +1270,8 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
         ?,
         ?,
         ?,
-        ?::JSON
+        ?::JSON,
+        CURRENT_TIMESTAMP
       )
     )";
 
@@ -1405,6 +1409,23 @@ void DuckDBStatsWriter::Close() {
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (conn_) {
+    // 終了時間を記録
+    duckdb_utils::Result update_result;
+    std::string update_query = R"(
+      UPDATE zakuro
+      SET stop_timestamp = CURRENT_TIMESTAMP
+      WHERE start_timestamp = (
+        SELECT MAX(start_timestamp) FROM zakuro
+      )
+    )";
+    if (!duckdb_utils::ExecuteQuery(conn_, update_query, update_result)) {
+      RTC_LOG(LS_ERROR) << "Failed to update stop_timestamp: "
+                        << update_result.error();
+      // エラーが発生してもクローズ処理を続行
+    } else {
+      RTC_LOG(LS_INFO) << "Updated stop_timestamp in zakuro table";
+    }
+
     // 最後のチェックポイントを実行
     duckdb_utils::Result result;
     if (!duckdb_utils::ExecuteQuery(conn_, "CHECKPOINT", result)) {

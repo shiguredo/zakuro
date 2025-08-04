@@ -19,7 +19,7 @@ Zakuro は WebRTC の統計情報を DuckDB データベースに保存します
 
 ### zakuro テーブル
 
-Zakuro 起動時の環境情報と設定を記録します。
+Zakuro 起動時の環境情報と設定、およびプロセスの実行時間を記録します。
 
 ```sql
 CREATE TABLE zakuro (
@@ -35,7 +35,9 @@ CREATE TABLE zakuro (
     yaml_cpp_version VARCHAR,
     duckdb_version VARCHAR,
     config_mode VARCHAR,  -- 'ARGS' or 'YAML'
-    config_json JSON  -- 引数または YAML の設定を JSON として保存
+    config_json JSON,  -- 引数または YAML の設定を JSON として保存
+    start_timestamp TIMESTAMP,  -- プロセス開始時刻
+    stop_timestamp TIMESTAMP  -- プロセス終了時刻
 )
 ```
 
@@ -416,3 +418,5 @@ CREATE INDEX idx_rtc_stats_data_channel_composite ON rtc_stats_data_channel(chan
 - すべてのタイムスタンプは UTC で記録されます
 - `rtc_timestamp` は WebRTC の performance.timeOrigin + performance.now() の値（ミリ秒）です
 - `rtc_stats_outbound_rtp` の `psnrSum` と `psnrMeasurements` フィールドは現在未実装です
+- `zakuro` テーブルの `start_timestamp` はプロセス起動時に自動的に記録されます
+- `zakuro` テーブルの `stop_timestamp` はプロセス終了時（正常終了またはシグナル受信時）に記録されます
