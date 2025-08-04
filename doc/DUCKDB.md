@@ -1,6 +1,6 @@
 # Zakuro DuckDB スキーマドキュメント
 
-Zakuro は WebRTC の統計情報を DuckDB データベースに保存します。データベースファイルは `zakuro_stats_YYYYMMDD_HHMMSS_mmm.db` 形式で生成されます。
+Zakuro は WebRTC の統計情報を DuckDB データベースに保存します。データベースファイルは `zakuro_YYYYMMDD_HHMMSS_mmm.db` 形式で生成されます。
 
 ## テーブル一覧
 

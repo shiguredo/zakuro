@@ -1450,7 +1450,7 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
   localtime_r(&time_t, &tm);
 
   std::ostringstream oss;
-  oss << base_path << "/zakuro_stats_" << std::put_time(&tm, "%Y%m%d_%H%M%S")
+  oss << base_path << "/zakuro_" << std::put_time(&tm, "%Y%m%d_%H%M%S")
       << "_" << std::setfill('0') << std::setw(MillisecondFieldWidth)
       << ms.count() << ".db";
 
