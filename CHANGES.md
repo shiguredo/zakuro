@@ -14,7 +14,7 @@
 - [CHANGE] kuzushi 機能を削除する
   - @voluntas
 - [ADD] DuckDB を使用した WebRTC 統計情報の永続化機能を追加する
-  - 統計情報は `zakuro_stats_YYYYMMDD_HHMMSS_mmm.ddb` 形式のファイルに保存される
+  - 統計情報は `zakuro_stats_YYYYMMDD_HHMMSS_mmm.db` 形式のファイルに保存される
   - 対応済み WebRTC 統計情報
     - `codec`
     - `outbound-rtp`

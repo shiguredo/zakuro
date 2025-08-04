@@ -1,24 +1,68 @@
 # Zakuro DuckDB スキーマドキュメント
 
-Zakuro は WebRTC の統計情報を DuckDB データベースに保存します。データベースファイルは `zakuro_stats_YYYYMMDD_HHMMSS_mmm.ddb` 形式で生成されます。
+Zakuro は WebRTC の統計情報を DuckDB データベースに保存します。データベースファイルは `zakuro_stats_YYYYMMDD_HHMMSS_mmm.db` 形式で生成されます。
 
 ## テーブル一覧
 
-- `connections` - 接続情報
-- `codec_stats` - コーデック統計情報
-- `inbound_rtp_stats` - 受信 RTP ストリーム統計情報
-- `outbound_rtp_stats` - 送信 RTP ストリーム統計情報
-- `media_source_stats` - メディアソース統計情報
+- `zakuro` - Zakuro 起動情報
+- `zakuro_scenario` - シナリオ設定情報
+- `connection` - 接続情報
+- `rtc_stats_codec` - コーデック統計情報
+- `rtc_stats_inbound_rtp` - 受信 RTP ストリーム統計情報
+- `rtc_stats_outbound_rtp` - 送信 RTP ストリーム統計情報
+- `rtc_stats_media_source` - メディアソース統計情報
+- `rtc_stats_remote_inbound_rtp` - リモート受信 RTP ストリーム統計情報
+- `rtc_stats_remote_outbound_rtp` - リモート送信 RTP ストリーム統計情報
+- `rtc_stats_data_channel` - データチャネル統計情報
 
 ## テーブルスキーマ
 
-### connections テーブル
+### zakuro テーブル
+
+Zakuro 起動時の環境情報と設定を記録します。
+
+```sql
+CREATE TABLE zakuro (
+    version VARCHAR,
+    environment VARCHAR,
+    webrtc_version VARCHAR,
+    sora_cpp_sdk_version VARCHAR,
+    boost_version VARCHAR,
+    cli11_version VARCHAR,
+    cmake_version VARCHAR,
+    blend2d_version VARCHAR,
+    openh264_version VARCHAR,
+    yaml_cpp_version VARCHAR,
+    duckdb_version VARCHAR,
+    config_mode VARCHAR,  -- 'ARGS' or 'YAML'
+    config_json JSON  -- 引数または YAML の設定を JSON として保存
+)
+```
+
+### zakuro_scenario テーブル
+
+シナリオ実行時の設定情報を記録します。
+
+```sql
+CREATE TABLE zakuro_scenario (
+    vcs INTEGER,
+    duration DOUBLE,
+    repeat_interval DOUBLE,
+    max_retry INTEGER,
+    retry_interval DOUBLE,
+    sora_signaling_urls VARCHAR[],
+    sora_channel_id VARCHAR,
+    sora_role VARCHAR
+)
+```
+
+### connection テーブル
 
 接続情報を記録します。
 
 ```sql
-CREATE TABLE connections (
-    pk BIGINT PRIMARY KEY DEFAULT nextval('connections_pk_seq'),
+CREATE TABLE connection (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('connection_pk_seq'),
     timestamp TIMESTAMP,
     channel_id VARCHAR,
     connection_id VARCHAR,
@@ -30,13 +74,13 @@ CREATE TABLE connections (
 )
 ```
 
-### codec_stats テーブル
+### rtc_stats_codec テーブル
 
 コーデック情報を記録します。
 
 ```sql
-CREATE TABLE codec_stats (
-    pk BIGINT PRIMARY KEY DEFAULT nextval('codec_stats_pk_seq'),
+CREATE TABLE rtc_stats_codec (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_codec_pk_seq'),
     timestamp TIMESTAMP,
     channel_id VARCHAR,
     session_id VARCHAR,
@@ -53,13 +97,13 @@ CREATE TABLE codec_stats (
 )
 ```
 
-### inbound_rtp_stats テーブル
+### rtc_stats_inbound_rtp テーブル
 
 受信 RTP ストリームの統計情報を記録します。
 
 ```sql
-CREATE TABLE inbound_rtp_stats (
-    pk BIGINT PRIMARY KEY DEFAULT nextval('inbound_rtp_stats_pk_seq'),
+CREATE TABLE rtc_stats_inbound_rtp (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_inbound_rtp_pk_seq'),
     timestamp TIMESTAMP,
     channel_id VARCHAR,
     session_id VARCHAR,
@@ -141,13 +185,13 @@ CREATE TABLE inbound_rtp_stats (
 )
 ```
 
-### outbound_rtp_stats テーブル
+### rtc_stats_outbound_rtp テーブル
 
 送信 RTP ストリームの統計情報を記録します。
 
 ```sql
-CREATE TABLE outbound_rtp_stats (
-    pk BIGINT PRIMARY KEY DEFAULT nextval('outbound_rtp_stats_pk_seq'),
+CREATE TABLE rtc_stats_outbound_rtp (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_outbound_rtp_pk_seq'),
     timestamp TIMESTAMP,
     channel_id VARCHAR,
     session_id VARCHAR,
@@ -204,13 +248,13 @@ CREATE TABLE outbound_rtp_stats (
 )
 ```
 
-### media_source_stats テーブル
+### rtc_stats_media_source テーブル
 
 メディアソースの統計情報を記録します。
 
 ```sql
-CREATE TABLE media_source_stats (
-    pk BIGINT PRIMARY KEY DEFAULT nextval('media_source_stats_pk_seq'),
+CREATE TABLE rtc_stats_media_source (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_media_source_pk_seq'),
     timestamp TIMESTAMP,
     channel_id VARCHAR,
     session_id VARCHAR,
@@ -236,35 +280,139 @@ CREATE TABLE media_source_stats (
 )
 ```
 
+### rtc_stats_remote_inbound_rtp テーブル
+
+リモート受信 RTP ストリームの統計情報を記録します。
+
+```sql
+CREATE TABLE rtc_stats_remote_inbound_rtp (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_remote_inbound_rtp_pk_seq'),
+    timestamp TIMESTAMP,
+    channel_id VARCHAR,
+    session_id VARCHAR,
+    connection_id VARCHAR,
+    rtc_timestamp DOUBLE,
+    -- RTCStats
+    type VARCHAR,
+    id VARCHAR,
+    -- RTCRtpStreamStats
+    ssrc BIGINT,
+    kind VARCHAR,
+    transport_id VARCHAR,
+    codec_id VARCHAR,
+    -- RTCReceivedRtpStreamStats
+    packets_received BIGINT,
+    packets_received_with_ect1 BIGINT,
+    packets_received_with_ce BIGINT,
+    packets_reported_as_lost BIGINT,
+    packets_reported_as_lost_but_recovered BIGINT,
+    packets_lost BIGINT,
+    jitter DOUBLE,
+    -- RTCRemoteInboundRtpStreamStats
+    local_id VARCHAR,
+    round_trip_time DOUBLE,
+    total_round_trip_time DOUBLE,
+    fraction_lost DOUBLE,
+    round_trip_time_measurements BIGINT,
+    packets_with_bleached_ect1_marking BIGINT
+)
+```
+
+### rtc_stats_remote_outbound_rtp テーブル
+
+リモート送信 RTP ストリームの統計情報を記録します。
+
+```sql
+CREATE TABLE rtc_stats_remote_outbound_rtp (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_remote_outbound_rtp_pk_seq'),
+    timestamp TIMESTAMP,
+    channel_id VARCHAR,
+    session_id VARCHAR,
+    connection_id VARCHAR,
+    rtc_timestamp DOUBLE,
+    -- RTCStats
+    type VARCHAR,
+    id VARCHAR,
+    -- RTCRtpStreamStats
+    ssrc BIGINT,
+    kind VARCHAR,
+    transport_id VARCHAR,
+    codec_id VARCHAR,
+    -- RTCSentRtpStreamStats
+    packets_sent BIGINT,
+    bytes_sent BIGINT,
+    -- RTCRemoteOutboundRtpStreamStats
+    local_id VARCHAR,
+    remote_timestamp DOUBLE,
+    reports_sent BIGINT,
+    round_trip_time DOUBLE,
+    total_round_trip_time DOUBLE,
+    round_trip_time_measurements BIGINT
+)
+```
+
+### rtc_stats_data_channel テーブル
+
+データチャネルの統計情報を記録します。
+
+```sql
+CREATE TABLE rtc_stats_data_channel (
+    pk BIGINT PRIMARY KEY DEFAULT nextval('rtc_stats_data_channel_pk_seq'),
+    timestamp TIMESTAMP,
+    channel_id VARCHAR,
+    session_id VARCHAR,
+    connection_id VARCHAR,
+    rtc_timestamp DOUBLE,
+    -- RTCStats
+    type VARCHAR,
+    id VARCHAR,
+    -- RTCDataChannelStats
+    label VARCHAR,
+    protocol VARCHAR,
+    data_channel_identifier SMALLINT,
+    state VARCHAR,  -- REQUIRED field
+    messages_sent BIGINT,
+    bytes_sent BIGINT,
+    messages_received BIGINT,
+    bytes_received BIGINT
+)
+```
+
 ## シーケンス
 
 各テーブルの主キー用シーケンス：
 
-- `connections_pk_seq`
-- `codec_stats_pk_seq`
-- `inbound_rtp_stats_pk_seq`
-- `outbound_rtp_stats_pk_seq`
-- `media_source_stats_pk_seq`
+- `connection_pk_seq`
+- `rtc_stats_codec_pk_seq`
+- `rtc_stats_inbound_rtp_pk_seq`
+- `rtc_stats_outbound_rtp_pk_seq`
+- `rtc_stats_media_source_pk_seq`
+- `rtc_stats_remote_inbound_rtp_pk_seq`
+- `rtc_stats_remote_outbound_rtp_pk_seq`
+- `rtc_stats_data_channel_pk_seq`
 
 ## インデックス
 
 パフォーマンス最適化のために以下のインデックスが作成されています：
 
 ```sql
--- connections テーブル
-CREATE INDEX idx_connection_id ON connections(connection_id);
-CREATE INDEX idx_connections_composite ON connections(channel_id, timestamp);
+-- connection テーブル
+CREATE INDEX idx_connection_id ON connection(connection_id);
+CREATE INDEX idx_connection_composite ON connection(channel_id, timestamp);
 
 -- 各統計情報テーブル
-CREATE INDEX idx_codec_composite ON codec_stats(channel_id, connection_id, timestamp);
-CREATE INDEX idx_inbound_composite ON inbound_rtp_stats(channel_id, connection_id, timestamp);
-CREATE INDEX idx_outbound_composite ON outbound_rtp_stats(channel_id, connection_id, timestamp);
-CREATE INDEX idx_media_source_composite ON media_source_stats(channel_id, connection_id, timestamp);
+CREATE INDEX idx_rtc_stats_codec_composite ON rtc_stats_codec(channel_id, connection_id, timestamp);
+CREATE INDEX idx_rtc_stats_inbound_rtp_composite ON rtc_stats_inbound_rtp(channel_id, connection_id, timestamp);
+CREATE INDEX idx_rtc_stats_outbound_rtp_composite ON rtc_stats_outbound_rtp(channel_id, connection_id, timestamp);
+CREATE INDEX idx_rtc_stats_media_source_composite ON rtc_stats_media_source(channel_id, connection_id, timestamp);
+CREATE INDEX idx_rtc_stats_remote_inbound_rtp_composite ON rtc_stats_remote_inbound_rtp(channel_id, connection_id, timestamp);
+CREATE INDEX idx_rtc_stats_remote_outbound_rtp_composite ON rtc_stats_remote_outbound_rtp(channel_id, connection_id, timestamp);
+CREATE INDEX idx_rtc_stats_data_channel_composite ON rtc_stats_data_channel(channel_id, connection_id, timestamp);
 ```
 
 ## 注意事項
 
-- `codec_stats` テーブルには UNIQUE 制約があるため、同じコーデック情報は重複して挿入されません
+- `rtc_stats_codec` テーブルには UNIQUE 制約があるため、同じコーデック情報は重複して挿入されません
 - すべてのタイムスタンプは UTC で記録されます
 - `rtc_timestamp` は WebRTC の performance.timeOrigin + performance.now() の値（ミリ秒）です
-- `outbound_rtp_stats` の `psnrSum` と `psnrMeasurements` フィールドは現在未実装です
+- `rtc_stats_outbound_rtp` の `psnrSum` と `psnrMeasurements` フィールドは現在未実装です
