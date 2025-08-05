@@ -23,6 +23,7 @@ from buildbase import (
     install_blend2d_official,
     install_cli11,
     install_cmake,
+    install_duckdb,
     install_llvm,
     install_openh264,
     install_sora_and_deps,
@@ -219,6 +220,16 @@ def install_deps(
         }
         install_yaml(**install_yaml_args)
 
+        # DuckDB
+        install_duckdb_args = {
+            "version": deps["DUCKDB_VERSION"],
+            "version_file": os.path.join(install_dir, "duckdb.version"),
+            "source_dir": source_dir,
+            "install_dir": install_dir,
+            "platform": platform,
+        }
+        install_duckdb(**install_duckdb_args)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -293,12 +304,25 @@ def main():
             f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}"
         )
         cmake_args.append(f"-DYAML_ROOT_DIR={cmake_path(os.path.join(install_dir, 'yaml'))}")
+        cmake_args.append(f"-DDUCKDB_ROOT_DIR={cmake_path(os.path.join(install_dir, 'duckdb'))}")
         cmake_args += get_common_cmake_args(install_dir, args.target, webrtc_info)
 
         cmd(["cmake", BASE_DIR, *cmake_args])
         cmd(
             ["cmake", "--build", ".", f"-j{multiprocessing.cpu_count()}", "--config", configuration]
         )
+        
+        # DuckDBのダイナミックライブラリをビルドディレクトリにコピー
+        if platform == "macos_arm64":
+            shutil.copyfile(
+                os.path.join(install_dir, "duckdb", "lib", "libduckdb.dylib"),
+                os.path.join(build_dir, "zakuro", "libduckdb.dylib")
+            )
+        elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+            shutil.copyfile(
+                os.path.join(install_dir, "duckdb", "lib", "libduckdb.so"),
+                os.path.join(build_dir, "zakuro", "libduckdb.so")
+            )
 
     if args.package:
         mkdir_p(package_dir)
@@ -313,6 +337,13 @@ def main():
         with cd(zakuro_package_dir):
             shutil.copyfile(os.path.join(build_dir, "zakuro", "zakuro"), "zakuro")
             shutil.copyfile(os.path.join(BASE_DIR, "LICENSE"), "LICENSE")
+            
+            # DuckDBのダイナミックライブラリをコピー
+            if platform == "macos_arm64":
+                shutil.copyfile(os.path.join(install_dir, "duckdb", "lib", "libduckdb.dylib"), "libduckdb.dylib")
+            elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+                shutil.copyfile(os.path.join(install_dir, "duckdb", "lib", "libduckdb.so"), "libduckdb.so")
+            
             with open("NOTICE", "w") as f:
                 f.write(open(os.path.join(BASE_DIR, "NOTICE")).read())
                 f.write(open(os.path.join(install_dir, "webrtc", "NOTICE")).read())

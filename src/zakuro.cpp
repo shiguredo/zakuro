@@ -272,6 +272,8 @@ int Zakuro::Run() {
   vc_config.openh264 = config_.openh264;
   vc_config.initial_mute_video = config_.initial_mute_video;
   vc_config.initial_mute_audio = config_.initial_mute_audio;
+  vc_config.duckdb_writer = config_.duckdb_writer;
+  vc_config.rtc_stats_interval = config_.rtc_stats_interval;
   if (config_.no_audio_device) {
     vc_config.audio_type = VirtualClientConfig::AudioType::NoAudio;
   } else if (fake_audio_key_trigger) {
@@ -437,8 +439,10 @@ int Zakuro::Run() {
   // signaling URL のバリデーション
   for (const auto& url : config_.sora_signaling_urls) {
     if (url.find("wss://") != 0 && url.find("ws://") != 0) {
-      std::cerr << "[" << config_.name << "] Error: Invalid signaling URL: " << url << std::endl;
-      std::cerr << "Signaling URL must start with 'ws://' or 'wss://'" << std::endl;
+      std::cerr << "[" << config_.name
+                << "] Error: Invalid signaling URL: " << url << std::endl;
+      std::cerr << "Signaling URL must start with 'ws://' or 'wss://'"
+                << std::endl;
       return 1;
     }
   }

@@ -201,9 +201,6 @@ class ScenarioPlayer {
 
         data.insert(data.begin(), buf, buf + sizeof(buf));
 
-        RTC_LOG(LS_INFO) << "Send DataChannel unixtime(us)=" << time
-                         << " counter=" << counter
-                         << " connection_id=" << conn_id;
         (*config_.vcs)[client_id]->SendMessage(op.label, data);
         counter += 1;
         break;
@@ -219,7 +216,6 @@ class ScenarioPlayer {
       case ScenarioData::OP_EXIT: {
         (*config_.vcs)[client_id]->Close([this,
                                           client_id](std::string message) {
-          RTC_LOG(LS_INFO) << "Client " << client_id << " exited: " << message;
           client_infos_[client_id].exit = true;
           bool all_exited =
               std::all_of(client_infos_.begin(), client_infos_.end(),
