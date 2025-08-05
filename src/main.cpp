@@ -237,8 +237,6 @@ int main(int argc, char* argv[]) {
                         << duckdb_output_dir;
       // エラーでも続行（統計情報の記録は必須ではない）
     } else {
-      RTC_LOG(LS_INFO) << "DuckDB stats writer initialized in directory: " 
-                       << duckdb_output_dir;
       
       // zakuro 起動情報を保存
       std::string config_mode = config_file.empty() ? "ARGS" : "YAML";
@@ -305,8 +303,6 @@ int main(int argc, char* argv[]) {
       }
     }
     g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
-  } else {
-    RTC_LOG(LS_INFO) << "DuckDB stats output disabled by --no-duckdb-output";
   }
 
   // 各 config に duckdb_writer を設定
@@ -320,7 +316,6 @@ int main(int argc, char* argv[]) {
   }
 
   // HTTP サーバーの起動
-  RTC_LOG(LS_INFO) << "HTTP port setting: " << http_port;
   std::unique_ptr<HttpServer> http_server;
   if (http_port != "none") {
     try {
@@ -339,8 +334,6 @@ int main(int argc, char* argv[]) {
       RTC_LOG(LS_ERROR) << "Invalid HTTP port value: " << http_port;
       return 1;
     }
-  } else {
-    RTC_LOG(LS_INFO) << "HTTP server not started (http-port is none)";
   }
 
   // 集めた stats を定期的にファイルに出力する

@@ -175,6 +175,7 @@ void DuckDBStatsWriter::CreateTable() {
       channel_id VARCHAR,
       connection_id VARCHAR,
       session_id VARCHAR,
+      role VARCHAR,
       audio BOOLEAN,
       video BOOLEAN,
       websocket_connected BOOLEAN,
@@ -539,9 +540,9 @@ bool DuckDBStatsWriter::WriteStats(
       duckdb_utils::PreparedStatement stmt;
       const char* connections_sql =
           "INSERT INTO connection (timestamp, channel_id, connection_id, "
-          "session_id, audio, video, "
+          "session_id, role, audio, video, "
           "websocket_connected, datachannel_connected) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7)";
+          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8)";
       if (!duckdb_utils::Prepare(conn_, connections_sql, stmt)) {
         RTC_LOG(LS_ERROR) << "Failed to prepare connections statement: "
                           << stmt.error();
@@ -553,10 +554,11 @@ bool DuckDBStatsWriter::WriteStats(
       duckdb_bind_varchar(stmt.get_raw(), 1, stat.channel_id.c_str());
       duckdb_bind_varchar(stmt.get_raw(), 2, stat.connection_id.c_str());
       duckdb_bind_varchar(stmt.get_raw(), 3, stat.session_id.c_str());
-      duckdb_bind_boolean(stmt.get_raw(), 4, stat.has_audio_track);
-      duckdb_bind_boolean(stmt.get_raw(), 5, stat.has_video_track);
-      duckdb_bind_boolean(stmt.get_raw(), 6, stat.websocket_connected);
-      duckdb_bind_boolean(stmt.get_raw(), 7, stat.datachannel_connected);
+      duckdb_bind_varchar(stmt.get_raw(), 4, stat.role.c_str());
+      duckdb_bind_boolean(stmt.get_raw(), 5, stat.has_audio_track);
+      duckdb_bind_boolean(stmt.get_raw(), 6, stat.has_video_track);
+      duckdb_bind_boolean(stmt.get_raw(), 7, stat.websocket_connected);
+      duckdb_bind_boolean(stmt.get_raw(), 8, stat.datachannel_connected);
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -1307,10 +1309,6 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
     // トランザクションをコミット
     transaction.Commit();
 
-    RTC_LOG(LS_INFO) << "zakuro info written successfully"
-                     << " version=" << version
-                     << " config_mode=" << config_mode;
-
     return true;
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Failed to write zakuro info: " << e.what();
@@ -1396,8 +1394,6 @@ bool DuckDBStatsWriter::WriteZakuroScenario(
     // トランザクションをコミット
     transaction.Commit();
 
-    RTC_LOG(LS_INFO) << "zakuro scenario written successfully";
-
     return true;
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "Failed to write zakuro scenario: " << e.what();
@@ -1422,8 +1418,6 @@ void DuckDBStatsWriter::Close() {
       RTC_LOG(LS_ERROR) << "Failed to update stop_timestamp: "
                         << update_result.error();
       // エラーが発生してもクローズ処理を続行
-    } else {
-      RTC_LOG(LS_INFO) << "Updated stop_timestamp in zakuro table";
     }
 
     // 最後のチェックポイントを実行

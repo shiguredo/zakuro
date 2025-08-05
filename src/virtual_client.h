@@ -24,6 +24,7 @@ struct VirtualClientStats {
   std::string channel_id;
   std::string connection_id;
   std::string session_id;
+  std::string role;
   std::string connected_url;
   bool websocket_connected = false;
   bool datachannel_connected = false;
@@ -117,6 +118,7 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   std::string channel_id_;
   std::string session_id_;
   std::string connection_id_;
+  std::string role_;
   bool has_audio_ = false;
   bool has_video_ = false;
 

@@ -31,7 +31,8 @@ VirtualClient::VirtualClient(const VirtualClientConfig& config)
     : config_(config),
       retry_timer_(*config.sora_config.io_context),
       rtc_stats_timer_(
-          new boost::asio::deadline_timer(*config.sora_config.io_context)) {}
+          new boost::asio::deadline_timer(*config.sora_config.io_context)),
+      role_(config.sora_config.role) {}
 
 void VirtualClient::Connect() {
   if (closing_) {
@@ -140,6 +141,7 @@ VirtualClientStats VirtualClient::GetStats() const {
     st.channel_id = channel_id_;
     st.connection_id = connection_id_;
     st.session_id = session_id_;
+    st.role = role_;
     st.has_audio_track = has_audio_;
     st.has_video_track = has_video_;
   }
@@ -179,7 +181,6 @@ void VirtualClient::OnSetOffer(std::string offer) {
     std::vector<VirtualClientStats> stats;
     stats.push_back(GetStats());
     config_.duckdb_writer->WriteStats(stats);
-    RTC_LOG(LS_INFO) << "Wrote connection info to DuckDB on type:offer";
 
     // WebRTC統計情報の定期取得を開始
     StartRTCStatsTimer();
