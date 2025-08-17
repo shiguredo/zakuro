@@ -15,7 +15,6 @@
 #include <rtc_base/string_utils.h>
 
 #include <blend2d.h>
-#include <yaml-cpp/yaml.h>
 
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
@@ -85,32 +84,45 @@ int main(int argc, char* argv[]) {
     configs.push_back(config);
   } else {
     // 設定ファイルがある場合は設定ファイルから引数を構築し直して再度パースする
-    YAML::Node config_node = YAML::LoadFile(config_file);
-    if (!config_node["zakuro"]) {
+    boost::json::value config_json = Util::LoadJsoncFile(config_file);
+    if (!config_json.is_object() || !config_json.as_object().contains("zakuro")) {
       std::cerr << "設定ファイルのルートに zakuro キーがありません。"
                 << std::endl;
       return 1;
     }
-    const YAML::Node& zakuro_node = config_node["zakuro"];
+    const auto& zakuro_obj = config_json.as_object().at("zakuro").as_object();
     std::vector<std::string> common_args;
     common_args.clear();
-    if (zakuro_node["log-level"]) {
+    
+    // JSON値から文字列を取得するヘルパー関数
+    auto get_string = [](const boost::json::value& v) -> std::string {
+      if (v.is_string()) {
+        return std::string(v.as_string());
+      } else if (v.is_int64()) {
+        return std::to_string(v.as_int64());
+      } else if (v.is_double()) {
+        return std::to_string(v.as_double());
+      } else if (v.is_bool()) {
+        return v.as_bool() ? "true" : "false";
+      }
+      return "";
+    };
+    
+    if (zakuro_obj.contains("log-level")) {
       common_args.push_back("--log-level");
-      common_args.push_back(zakuro_node["log-level"].as<std::string>());
+      common_args.push_back(get_string(zakuro_obj.at("log-level")));
     }
-    if (zakuro_node["port"]) {
+    if (zakuro_obj.contains("port")) {
       common_args.push_back("--port");
-      common_args.push_back(zakuro_node["port"].as<std::string>());
+      common_args.push_back(get_string(zakuro_obj.at("port")));
     }
-    if (zakuro_node["output-file-connection-id"]) {
+    if (zakuro_obj.contains("output-file-connection-id")) {
       common_args.push_back("--output-file-connection-id");
-      common_args.push_back(
-          zakuro_node["output-file-connection-id"].as<std::string>());
+      common_args.push_back(get_string(zakuro_obj.at("output-file-connection-id")));
     }
-    if (zakuro_node["instance-hatch-rate"]) {
+    if (zakuro_obj.contains("instance-hatch-rate")) {
       common_args.push_back("--instance-hatch-rate");
-      common_args.push_back(
-          zakuro_node["instance-hatch-rate"].as<std::string>());
+      common_args.push_back(get_string(zakuro_obj.at("instance-hatch-rate")));
     }
 
     std::vector<std::string> post_args;
@@ -127,17 +139,17 @@ int main(int argc, char* argv[]) {
       post_args.push_back(*it);
     }
 
-    if (!zakuro_node["instances"]) {
+    if (!zakuro_obj.contains("instances")) {
       std::cerr << "zakuro の下に instances キーがありません。" << std::endl;
       return 1;
     }
-    const YAML::Node& instances_node = zakuro_node["instances"];
-    if (instances_node.size() == 0) {
+    const auto& instances_array = zakuro_obj.at("instances").as_array();
+    if (instances_array.size() == 0) {
       std::cerr << "instances の下に設定がありません。" << std::endl;
       return 1;
     }
-    for (auto instance : instances_node) {
-      auto argss = Util::NodeToArgs(instance);
+    for (const auto& instance : instances_array) {
+      auto argss = Util::ParseInstanceToArgs(instance);
       for (auto args : argss) {
         args.insert(args.begin(), common_args.begin(), common_args.end());
         args.insert(args.end(), post_args.begin(), post_args.end());

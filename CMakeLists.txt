@@ -7,7 +7,7 @@ cmake_policy(SET CMP0091 NEW)
 
 project(zakuro C CXX)
 
-list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR} ${YAML_ROOT_DIR})
+list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${SORA_DIR}/share/cmake)
 
 set(Boost_USE_STATIC_LIBS ON)
@@ -19,7 +19,6 @@ find_package(Sora REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Blend2D REQUIRED)
 find_package(CLI11 REQUIRED)
-find_package(yaml-cpp REQUIRED)
 
 add_executable(zakuro)
 
@@ -56,7 +55,6 @@ target_link_libraries(zakuro
     Boost::filesystem
     CLI11::CLI11
     Blend2D::Blend2D
-    yaml-cpp::yaml-cpp
 )
 
 target_compile_definitions(zakuro

@@ -121,43 +121,59 @@ Zakuro ではマイクからの音声入力の代わりに wav ファイルを�
 
 Zakuro ではカメラからの映像入力の代わりに y4m ファイルを指定することができます。
 
-### YAML 設定
+### JSONC 設定
 
-```yaml
-zakuro:
-  log-level: none
-  port: -1
-  instances:
-    - name: zakuro1
-      vcs: 2
-      sora:
-        signaling-url: "wss://sora.example.com/signaling"
-        channel-id: "sora"
-        role: "sendrecv"
-        video-codec-type: VP8
-        spotlight: true
-        simulcast: true
-    - name: zakuro2
-      vcs: 2
-      sora:
-        signaling-url: "wss://sora.example.com/signaling"
-        channel-id: "sora"
-        role: "sendrecv"
-        video-codec-type: VP8
-        spotlight: true
-        simulcast: true
+```jsonc
+{
+  "zakuro": {
+    "log-level": "none",
+    "port": -1,
+    "instances": [
+      {
+        "name": "zakuro1",
+        "vcs": 2,
+        "sora": {
+          "signaling-url": "wss://sora.example.com/signaling",
+          "channel-id": "sora",
+          "role": "sendrecv",
+          "video-codec-type": "VP8",
+          "spotlight": true,
+          "simulcast": true
+        }
+      },
+      {
+        "name": "zakuro2",
+        "vcs": 2,
+        "sora": {
+          "signaling-url": "wss://sora.example.com/signaling",
+          "channel-id": "sora",
+          "role": "sendrecv",
+          "video-codec-type": "VP8",
+          "spotlight": true,
+          "simulcast": true
+        }
+      }
+    ]
+  }
+}
 ```
 
 ### instance-num と ${} によるシナリオの動的生成
 
-```yaml
-  instances:
-    - instance-num: 2
-      name: zakuro
-      vcs: 2
-      sora:
-        channel-id: "sora${}"
-        ...
+```jsonc
+{
+  "instances": [
+    {
+      "instance-num": 2,
+      "name": "zakuro",
+      "vcs": 2,
+      "sora": {
+        "channel-id": "sora${}"
+        // ...
+      }
+    }
+  ]
+}
 ```
 
 ### DataChannel メッセージングの設定
@@ -165,45 +181,63 @@ zakuro:
 - DataChannel メッセージングバイナリの先頭には `<<"ZAKURO", UnixTimeMicro:64, Counter:64>>` が入ります
 - Sora DevTools はメッセージの先頭に `ZAKURO` がある場合、そのメッセージの時刻とカウンターのみを表示します
 
-```yaml
-zakuro:
-  instances:
-    - name: zakuro
-      vcs: 2
-      sora:
-        signaling-url: "wss://sora.example.com/signaling"
-        channel-id: sora
-        role: sendrecv
-        data-channel-signaling: true
-        data-channels:
-          - label: "#test"
-            direction: "sendrecv"
-            # 省略時は 500 (ms)
-            interval: 1000
-            # 省略時は 48 (bytes)
-            size_min: 100
-            # 省略時は 48 (bytes)
-            size_max: 5000
-            # 順番保証するか
-            # ordered: true
-            # 何ミリ秒間再送するか
-            # max_packet_lifetime: 1
-            # 何回再送するか
-            # max_retransmits: 1
+```jsonc
+{
+  "zakuro": {
+    "instances": [
+      {
+        "name": "zakuro",
+        "vcs": 2,
+        "sora": {
+          "signaling-url": "wss://sora.example.com/signaling",
+          "channel-id": "sora",
+          "role": "sendrecv",
+          "data-channel-signaling": true,
+          "data-channels": [
+            {
+              "label": "#test",
+              "direction": "sendrecv",
+              // 省略時は 500 (ms)
+              "interval": 1000,
+              // 省略時は 48 (bytes)
+              "size_min": 100,
+              // 省略時は 48 (bytes)
+              "size_max": 5000
+              // 順番保証するか
+              // "ordered": true,
+              // 何ミリ秒間再送するか
+              // "max_packet_lifetime": 1,
+              // 何回再送するか
+              // "max_retransmits": 1
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 ```
 
 ### 複数シグナリング URL
 
-```yaml
-zakuro:
-  instances:
-    - name: zakuro
-      vcs: 2
-      sora:
-        signaling-url:
-          - "wss://sora1.example.com/signaling"
-          - "wss://sora2.example.com/signaling"
-          - "wss://sora3.example.com/signaling"
-        channel-id: sora
-        role: sendrecv
+```jsonc
+{
+  "zakuro": {
+    "instances": [
+      {
+        "name": "zakuro",
+        "vcs": 2,
+        "sora": {
+          "signaling-url": [
+            "wss://sora1.example.com/signaling",
+            "wss://sora2.example.com/signaling",
+            "wss://sora3.example.com/signaling"
+          ],
+          "channel-id": "sora",
+          "role": "sendrecv"
+        }
+      }
+    ]
+  }
+}
 ```
