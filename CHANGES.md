@@ -11,6 +11,11 @@
 
 ## develop
 
+- [CHANGE] 設定ファイル形式を YAML から JSONC (JSON with Comments) に変更する
+  - yaml-cpp 依存を削除
+  - コメントと末尾カンマをサポートする JSONC 形式を採用
+  - 設定ファイルの拡張子を `.yaml` から `.jsonc` に変更
+  - @voluntas
 - [CHANGE] kuzushi 機能を削除する
   - @voluntas
 
@@ -65,7 +70,6 @@
 
 - [ADD] .github ディレクトリに copilot-instructions.md を追加
   - @torikizi
-
 
 ## 2025.1.0
 
