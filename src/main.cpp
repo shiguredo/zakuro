@@ -84,14 +84,8 @@ int main(int argc, char* argv[]) {
     configs.push_back(config);
   } else {
     // 設定ファイルがある場合は設定ファイルから引数を構築し直して再度パースする
-    boost::json::value config_json = Util::LoadJsoncFile(config_file);
-    if (!config_json.is_object() ||
-        !config_json.as_object().contains("zakuro")) {
-      std::cerr << "設定ファイルのルートに zakuro キーがありません。"
-                << std::endl;
-      return 1;
-    }
-    const auto& zakuro_obj = config_json.as_object().at("zakuro").as_object();
+    boost::json::value zakuro_value = Util::LoadJsoncFile(config_file);
+    const auto& zakuro_obj = zakuro_value.as_object();
     std::vector<std::string> common_args;
     common_args.clear();
 
@@ -131,7 +125,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (!zakuro_obj.contains("instances")) {
-      std::cerr << "zakuro の下に instances キーがありません。" << std::endl;
+      std::cerr << "instances キーがありません。" << std::endl;
       return 1;
     }
     const auto& instances_array = zakuro_obj.at("instances").as_array();

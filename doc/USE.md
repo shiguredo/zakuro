@@ -125,36 +125,34 @@ Zakuro ではカメラからの映像入力の代わりに y4m ファイルを�
 
 ```jsonc
 {
-  "zakuro": {
-    "log-level": "none",
-    "port": -1,
-    "instances": [
-      {
-        "name": "zakuro1",
-        "vcs": 2,
-        "sora": {
-          "signaling-url": "wss://sora.example.com/signaling",
-          "channel-id": "sora",
-          "role": "sendrecv",
-          "video-codec-type": "VP8",
-          "spotlight": true,
-          "simulcast": true
-        }
-      },
-      {
-        "name": "zakuro2",
-        "vcs": 2,
-        "sora": {
-          "signaling-url": "wss://sora.example.com/signaling",
-          "channel-id": "sora",
-          "role": "sendrecv",
-          "video-codec-type": "VP8",
-          "spotlight": true,
-          "simulcast": true
-        }
+  "log-level": "none",
+  "port": -1,
+  "instances": [
+    {
+      "name": "zakuro1",
+      "vcs": 2,
+      "sora": {
+        "signaling-url": "wss://sora.example.com/signaling",
+        "channel-id": "sora",
+        "role": "sendrecv",
+        "video-codec-type": "VP8",
+        "spotlight": true,
+        "simulcast": true
       }
-    ]
-  }
+    },
+    {
+      "name": "zakuro2",
+      "vcs": 2,
+      "sora": {
+        "signaling-url": "wss://sora.example.com/signaling",
+        "channel-id": "sora",
+        "role": "sendrecv",
+        "video-codec-type": "VP8",
+        "spotlight": true,
+        "simulcast": true
+      }
+    }
+  ]
 }
 ```
 
@@ -183,38 +181,36 @@ Zakuro ではカメラからの映像入力の代わりに y4m ファイルを�
 
 ```jsonc
 {
-  "zakuro": {
-    "instances": [
-      {
-        "name": "zakuro",
-        "vcs": 2,
-        "sora": {
-          "signaling-url": "wss://sora.example.com/signaling",
-          "channel-id": "sora",
-          "role": "sendrecv",
-          "data-channel-signaling": true,
-          "data-channels": [
-            {
-              "label": "#test",
-              "direction": "sendrecv",
-              // 省略時は 500 (ms)
-              "interval": 1000,
-              // 省略時は 48 (bytes)
-              "size_min": 100,
-              // 省略時は 48 (bytes)
-              "size_max": 5000
-              // 順番保証するか
-              // "ordered": true,
-              // 何ミリ秒間再送するか
-              // "max_packet_lifetime": 1,
-              // 何回再送するか
-              // "max_retransmits": 1
-            }
-          ]
-        }
+  "instances": [
+    {
+      "name": "zakuro",
+      "vcs": 2,
+      "sora": {
+        "signaling-url": "wss://sora.example.com/signaling",
+        "channel-id": "sora",
+        "role": "sendrecv",
+        "data-channel-signaling": true,
+        "data-channels": [
+          {
+            "label": "#test",
+            "direction": "sendrecv",
+            // 省略時は 500 (ms)
+            "interval": 1000,
+            // 省略時は 48 (bytes)
+            "size_min": 100,
+            // 省略時は 48 (bytes)
+            "size_max": 5000
+            // 順番保証するか
+            // "ordered": true,
+            // 何ミリ秒間再送するか
+            // "max_packet_lifetime": 1,
+            // 何回再送するか
+            // "max_retransmits": 1
+          }
+        ]
       }
-    ]
-  }
+    }
+  ]
 }
 ```
 
@@ -222,22 +218,20 @@ Zakuro ではカメラからの映像入力の代わりに y4m ファイルを�
 
 ```jsonc
 {
-  "zakuro": {
-    "instances": [
-      {
-        "name": "zakuro",
-        "vcs": 2,
-        "sora": {
-          "signaling-url": [
-            "wss://sora1.example.com/signaling",
-            "wss://sora2.example.com/signaling",
-            "wss://sora3.example.com/signaling"
-          ],
-          "channel-id": "sora",
-          "role": "sendrecv"
-        }
+  "instances": [
+    {
+      "name": "zakuro",
+      "vcs": 2,
+      "sora": {
+        "signaling-url": [
+          "wss://sora1.example.com/signaling",
+          "wss://sora2.example.com/signaling",
+          "wss://sora3.example.com/signaling"
+        ],
+        "channel-id": "sora",
+        "role": "sendrecv"
       }
-    ]
-  }
+    }
+  ]
 }
 ```
