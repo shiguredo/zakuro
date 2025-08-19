@@ -85,7 +85,8 @@ int main(int argc, char* argv[]) {
   } else {
     // 設定ファイルがある場合は設定ファイルから引数を構築し直して再度パースする
     boost::json::value config_json = Util::LoadJsoncFile(config_file);
-    if (!config_json.is_object() || !config_json.as_object().contains("zakuro")) {
+    if (!config_json.is_object() ||
+        !config_json.as_object().contains("zakuro")) {
       std::cerr << "設定ファイルのルートに zakuro キーがありません。"
                 << std::endl;
       return 1;
@@ -93,36 +94,26 @@ int main(int argc, char* argv[]) {
     const auto& zakuro_obj = config_json.as_object().at("zakuro").as_object();
     std::vector<std::string> common_args;
     common_args.clear();
-    
-    // JSON値から文字列を取得するヘルパー関数
-    auto get_string = [](const boost::json::value& v) -> std::string {
-      if (v.is_string()) {
-        return std::string(v.as_string());
-      } else if (v.is_int64()) {
-        return std::to_string(v.as_int64());
-      } else if (v.is_double()) {
-        return std::to_string(v.as_double());
-      } else if (v.is_bool()) {
-        return v.as_bool() ? "true" : "false";
-      }
-      return "";
-    };
-    
+
     if (zakuro_obj.contains("log-level")) {
       common_args.push_back("--log-level");
-      common_args.push_back(get_string(zakuro_obj.at("log-level")));
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("log-level")));
     }
     if (zakuro_obj.contains("port")) {
       common_args.push_back("--port");
-      common_args.push_back(get_string(zakuro_obj.at("port")));
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("port")));
     }
     if (zakuro_obj.contains("output-file-connection-id")) {
       common_args.push_back("--output-file-connection-id");
-      common_args.push_back(get_string(zakuro_obj.at("output-file-connection-id")));
+      common_args.push_back(Util::PrimitiveValueToString(
+          zakuro_obj.at("output-file-connection-id")));
     }
     if (zakuro_obj.contains("instance-hatch-rate")) {
       common_args.push_back("--instance-hatch-rate");
-      common_args.push_back(get_string(zakuro_obj.at("instance-hatch-rate")));
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("instance-hatch-rate")));
     }
 
     std::vector<std::string> post_args;
@@ -175,8 +166,8 @@ int main(int argc, char* argv[]) {
   webrtc::LogMessage::LogThreads();
 
   std::unique_ptr<webrtc::FileRotatingLogSink> log_sink(
-      new webrtc::FileRotatingLogSink("./", "webrtc_logs", kDefaultMaxLogFileSize,
-                                   10));
+      new webrtc::FileRotatingLogSink("./", "webrtc_logs",
+                                      kDefaultMaxLogFileSize, 10));
   if (!log_sink->Init()) {
     RTC_LOG(LS_ERROR) << __FUNCTION__ << "Failed to open log file";
     log_sink.reset();

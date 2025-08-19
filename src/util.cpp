@@ -483,127 +483,103 @@ static std::string ConvertEnv(const std::string& input,
   return result;
 }
 
-std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(const boost::json::value& inst) {
+std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
+    const boost::json::value& inst) {
   std::vector<std::vector<std::string>> argss;
 
   bool has_error = false;
 
   int instance_num = 1;
-  if (inst.is_object()) {
-    const auto& obj = inst.as_object();
-    auto it = obj.find("instance-num");
-    if (it != obj.end() && it->value().is_int64()) {
-      instance_num = static_cast<int>(it->value().as_int64());
-    }
+  const auto& obj = inst.as_object();
+  auto it = obj.find("instance-num");
+  if (obj.contains("instance-num")) {
+    instance_num = boost::json::value_to<int>(obj.at("instance-num"));
   }
-
-  // JSON値から文字列を取得するヘルパー関数
-  auto get_string = [](const boost::json::value& v) -> std::string {
-    if (v.is_string()) {
-      return std::string(v.as_string());
-    } else if (v.is_int64()) {
-      return std::to_string(v.as_int64());
-    } else if (v.is_double()) {
-      return std::to_string(v.as_double());
-    } else if (v.is_bool()) {
-      return v.as_bool() ? "true" : "false";
-    }
-    return "";
-  };
 
   for (int i = 0; i < instance_num; i++) {
     std::map<std::string, std::string> envs;
     envs[""] = std::to_string(i + 1);
     std::vector<std::string> args;
 
-    const auto& obj = inst.as_object();
-    
-    // 各オプションを処理
-    auto add_option = [&](const std::string& key, const std::string& prefix = "") {
+    // 値のあるオプション
+    auto add_option = [&args, &envs](const boost::json::object& obj,
+                                     const std::string& prefix,
+                                     const std::string& key) {
       auto it = obj.find(key);
       if (it != obj.end()) {
-        const auto& value = it->value();
-        if (value.is_null()) return;
-        
-        std::string arg_key = "--" + prefix + key;
-        args.push_back(arg_key);
-        
-        std::string str_value = get_string(value);
-        args.push_back(ConvertEnv(str_value, envs));
+        args.push_back("--" + prefix + key);
+        args.push_back(ConvertEnv(PrimitiveValueToString(it->value()), envs));
       }
     };
-    
-    auto add_flag = [&](const std::string& key, const std::string& prefix = "") {
+
+    // フラグオプション
+    auto add_flag = [&args, &envs](const boost::json::object& obj,
+                                   const std::string& prefix,
+                                   const std::string& key) {
       auto it = obj.find(key);
       if (it != obj.end() && it->value().is_bool() && it->value().as_bool()) {
         args.push_back("--" + prefix + key);
       }
     };
 
+    // JSONオブジェクトをそのまま渡すオプション
+    auto add_json_option = [&args, &envs](const boost::json::object& obj,
+                                          const std::string& prefix,
+                                          const std::string& key) {
+      auto it = obj.find(key);
+      if (it != obj.end()) {
+        args.push_back("--" + prefix + key);
+        args.push_back(boost::json::serialize(it->value()));
+      }
+    };
+
+    const auto& obj = inst.as_object();
+
     // 一般オプション
-    add_option("name");
-    add_option("vcs");
-    add_option("vcs-hatch-rate");
-    add_option("duration");
-    add_option("repeat-interval");
-    add_option("max-retry");
-    add_option("retry-interval");
-    add_flag("no-video-device");
-    add_flag("no-audio-device");
-    add_flag("fake-capture-device");
-    add_option("fake-video-capture");
-    add_option("fake-audio-capture");
-    add_flag("sandstorm");
-    add_option("video-device");
-    add_option("resolution");
-    add_option("framerate");
-    add_flag("fixed-resolution");
-    add_option("priority");
-    add_flag("insecure");
-    add_option("openh264");
-    add_option("scenario");
-    add_option("client-cert");
-    add_option("client-key");
-    add_option("initial-mute-video");
-    add_option("initial-mute-audio");
-    add_option("degradation-preference");
+    add_option(obj, "", "name");
+    add_option(obj, "", "vcs");
+    add_option(obj, "", "vcs-hatch-rate");
+    add_option(obj, "", "duration");
+    add_option(obj, "", "repeat-interval");
+    add_option(obj, "", "max-retry");
+    add_option(obj, "", "retry-interval");
+    add_flag(obj, "", "no-video-device");
+    add_flag(obj, "", "no-audio-device");
+    add_flag(obj, "", "fake-capture-device");
+    add_option(obj, "", "fake-video-capture");
+    add_option(obj, "", "fake-audio-capture");
+    add_flag(obj, "", "sandstorm");
+    add_option(obj, "", "video-device");
+    add_option(obj, "", "resolution");
+    add_option(obj, "", "framerate");
+    add_flag(obj, "", "fixed-resolution");
+    add_option(obj, "", "priority");
+    add_flag(obj, "", "insecure");
+    add_option(obj, "", "openh264");
+    add_option(obj, "", "scenario");
+    add_option(obj, "", "client-cert");
+    add_option(obj, "", "client-key");
+    add_option(obj, "", "initial-mute-video");
+    add_option(obj, "", "initial-mute-audio");
+    add_option(obj, "", "degradation-preference");
 
     // コーデックプリファレンス
-    add_option("vp8-encoder");
-    add_option("vp8-decoder");
-    add_option("vp9-encoder");
-    add_option("vp9-decoder");
-    add_option("av1-encoder");
-    add_option("av1-decoder");
-    add_option("h264-encoder");
-    add_option("h264-decoder");
-    add_option("h265-encoder");
-    add_option("h265-decoder");
+    add_option(obj, "", "vp8-encoder");
+    add_option(obj, "", "vp8-decoder");
+    add_option(obj, "", "vp9-encoder");
+    add_option(obj, "", "vp9-decoder");
+    add_option(obj, "", "av1-encoder");
+    add_option(obj, "", "av1-decoder");
+    add_option(obj, "", "h264-encoder");
+    add_option(obj, "", "h264-decoder");
+    add_option(obj, "", "h265-encoder");
+    add_option(obj, "", "h265-decoder");
 
     // soraオプション
     auto sora_it = obj.find("sora");
-    if (sora_it != obj.end() && sora_it->value().is_object()) {
+    if (sora_it != obj.end()) {
       const auto& sora_obj = sora_it->value().as_object();
-      
-      // soraオプション用のヘルパー関数
-      auto add_sora_option = [&](const std::string& key) {
-        auto it = sora_obj.find(key);
-        if (it != sora_obj.end()) {
-          const auto& value = it->value();
-          if (value.is_null()) return;
-          
-          args.push_back("--sora-" + key);
-          args.push_back(ConvertEnv(get_string(value), envs));
-        }
-      };
-      
-      auto add_sora_flag = [&](const std::string& key) {
-        auto it = sora_obj.find(key);
-        if (it != sora_obj.end() && it->value().is_bool() && it->value().as_bool()) {
-          args.push_back("--sora-" + key);
-        }
-      };
-      
+
       // --sora-signaling-url: string or string[]
       {
         auto it = sora_obj.find("signaling-url");
@@ -612,63 +588,49 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(const boost::jso
           if (value.is_array()) {
             args.push_back("--sora-signaling-url");
             for (const auto& v : value.as_array()) {
-              args.push_back(ConvertEnv(get_string(v), envs));
+              args.push_back(ConvertEnv(PrimitiveValueToString(v), envs));
             }
           } else if (value.is_string()) {
             args.push_back("--sora-signaling-url");
-            args.push_back(ConvertEnv(get_string(value), envs));
+            args.push_back(ConvertEnv(PrimitiveValueToString(value), envs));
           } else {
-            std::cerr << "signaling-url "
-                         "の値は文字列または文字列の配列である必要があります。"
-                      << std::endl;
-            has_error = true;
+            throw std::runtime_error(
+                "sora.signaling-url must be string or string[]");
           }
         }
       }
-      
-      add_sora_option("disable-signaling-url-randomization");
-      add_sora_option("channel-id");
-      add_sora_option("client-id");
-      add_sora_option("bundle-id");
-      add_sora_option("role");
-      add_sora_option("video");
-      add_sora_option("audio");
-      add_sora_option("video-codec-type");
-      add_sora_option("audio-codec-type");
-      add_sora_option("video-bit-rate");
-      add_sora_option("audio-bit-rate");
-      add_sora_option("simulcast");
-      add_sora_option("simulcast-rid");
-      add_sora_option("spotlight");
-      add_sora_option("spotlight-number");
-      add_sora_option("spotlight-focus-rid");
-      add_sora_option("spotlight-unfocus-rid");
-      add_sora_option("data-channel-signaling");
-      add_sora_option("data-channel-signaling-timeout");
-      add_sora_option("ignore-disconnect-websocket");
-      add_sora_option("disconnect-wait-timeout");
-      
-      // JSONオブジェクトをそのまま渡すオプション
-      auto add_json_option = [&](const std::string& key, const std::string& option_name) {
-        auto it = sora_obj.find(key);
-        if (it != sora_obj.end()) {
-          args.push_back(option_name);
-          args.push_back(boost::json::serialize(it->value()));
-        }
-      };
-      
-      add_json_option("metadata", "--sora-metadata");
-      add_json_option("signaling-notify-metadata", "--sora-signaling-notify-metadata");
-      add_json_option("data-channels", "--sora-data-channels");
-      add_json_option("video-vp9-params", "--sora-video-vp9-params");
-      add_json_option("video-av1-params", "--sora-video-av1-params");
-      add_json_option("video-h264-params", "--sora-video-h264-params");
-      add_json_option("video-h265-params", "--sora-video-h265-params");
+
+      add_option(sora_obj, "sora-", "disable-signaling-url-randomization");
+      add_option(sora_obj, "sora-", "channel-id");
+      add_option(sora_obj, "sora-", "client-id");
+      add_option(sora_obj, "sora-", "bundle-id");
+      add_option(sora_obj, "sora-", "role");
+      add_option(sora_obj, "sora-", "video");
+      add_option(sora_obj, "sora-", "audio");
+      add_option(sora_obj, "sora-", "video-codec-type");
+      add_option(sora_obj, "sora-", "audio-codec-type");
+      add_option(sora_obj, "sora-", "video-bit-rate");
+      add_option(sora_obj, "sora-", "audio-bit-rate");
+      add_option(sora_obj, "sora-", "simulcast");
+      add_option(sora_obj, "sora-", "simulcast-rid");
+      add_option(sora_obj, "sora-", "spotlight");
+      add_option(sora_obj, "sora-", "spotlight-number");
+      add_option(sora_obj, "sora-", "spotlight-focus-rid");
+      add_option(sora_obj, "sora-", "spotlight-unfocus-rid");
+      add_option(sora_obj, "sora-", "data-channel-signaling");
+      add_option(sora_obj, "sora-", "data-channel-signaling-timeout");
+      add_option(sora_obj, "sora-", "ignore-disconnect-websocket");
+      add_option(sora_obj, "sora-", "disconnect-wait-timeout");
+
+      add_json_option(sora_obj, "sora-", "metadata");
+      add_json_option(sora_obj, "sora-", "signaling-notify-metadata");
+      add_json_option(sora_obj, "sora-", "data-channels");
+      add_json_option(sora_obj, "sora-", "video-vp9-params");
+      add_json_option(sora_obj, "sora-", "video-av1-params");
+      add_json_option(sora_obj, "sora-", "video-h264-params");
+      add_json_option(sora_obj, "sora-", "video-h265-params");
     }
 
-    if (has_error) {
-      throw std::exception();
-    }
     argss.push_back(args);
   }
 
@@ -678,33 +640,34 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(const boost::jso
 boost::json::value Util::LoadJsoncFile(const std::string& file_path) {
   // ファイルの拡張子を確認
   boost::filesystem::path path(file_path);
-  if (path.extension() != ".jsonc") {
-    throw std::runtime_error("Only .jsonc files are supported. Got: " + file_path);
+  if (path.extension() != ".json" && path.extension() != ".jsonc") {
+    throw std::runtime_error("Only .json or .jsonc files are supported. Got: " +
+                             file_path);
   }
-  
+
   // ファイルを読み込む
   std::ifstream file(file_path);
   if (!file.is_open()) {
     throw std::runtime_error("Failed to open file: " + file_path);
   }
-  
+
   std::stringstream buffer;
   buffer << file.rdbuf();
   std::string content = buffer.str();
-  
+
   // parse_optionsを設定（コメントと末尾カンマを許可）
   boost::json::parse_options opt;
   opt.allow_comments = true;
   opt.allow_trailing_commas = true;
-  
+
   // Boost JSONでパース
   boost::system::error_code ec;
   boost::json::value result = boost::json::parse(content, ec, {}, opt);
-  
+
   if (ec) {
     throw std::runtime_error("JSON parse error: " + ec.message());
   }
-  
+
   return result;
 }
 
@@ -750,6 +713,15 @@ std::string Util::IceConnectionStateToString(
       return "max";
   }
   return "unknown";
+}
+
+std::string Util::PrimitiveValueToString(const boost::json::value& v) {
+  if (v.is_string()) {
+    return std::string(v.as_string());
+  } else if (v.is_primitive()) {
+    return boost::json::serialize(v);
+  }
+  return "";
 }
 
 namespace http = boost::beast::http;
