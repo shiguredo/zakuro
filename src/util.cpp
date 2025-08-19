@@ -565,15 +565,10 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
 
     // コーデックプリファレンス
     add_option(obj, "", "vp8-encoder");
-    add_option(obj, "", "vp8-decoder");
     add_option(obj, "", "vp9-encoder");
-    add_option(obj, "", "vp9-decoder");
     add_option(obj, "", "av1-encoder");
-    add_option(obj, "", "av1-decoder");
     add_option(obj, "", "h264-encoder");
-    add_option(obj, "", "h264-decoder");
     add_option(obj, "", "h265-encoder");
-    add_option(obj, "", "h265-decoder");
 
     // soraオプション
     auto sora_it = obj.find("sora");
@@ -600,7 +595,7 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
         }
       }
 
-      add_option(sora_obj, "sora-", "disable-signaling-url-randomization");
+      add_flag(sora_obj, "sora-", "disable-signaling-url-randomization");
       add_option(sora_obj, "sora-", "channel-id");
       add_option(sora_obj, "sora-", "client-id");
       add_option(sora_obj, "sora-", "bundle-id");
