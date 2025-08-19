@@ -144,7 +144,7 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
       COMMAND ld
-      ARGS -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/${objfile} ${file}
+      ARGS -r -b binary -z noexecstack -o ${CMAKE_CURRENT_BINARY_DIR}/${objfile} ${file}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
       MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file})
     set_source_files_properties(${objfile}
