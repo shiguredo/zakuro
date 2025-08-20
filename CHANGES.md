@@ -14,6 +14,7 @@
 - [CHANGE] 設定ファイル形式を YAML から JSONC (JSON with Comments) に変更する
   - `/` と `/* */` コメントと末尾カンマをサポートする JSONC 形式を採用
   - 設定ファイルの拡張子を `.yaml` から `.jsonc` に変更
+  - トップレベルの `zakuro` を削除しました
   - @voluntas
 - [CHANGE] 設定ファイルの JSONC 化により不要になった `yaml-cpp` 依存を削除
   - @voluntas
