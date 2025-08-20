@@ -39,7 +39,7 @@ webrtc_logs_*
 *.swp
 *.log
 
-*.yaml
+*.jsonc
 
 /_package
 /_source

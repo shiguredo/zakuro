@@ -57,7 +57,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_flag("--show-video-codec-capability", show_video_codec_capability,
                "Show available video codec capability");
 
-  app.add_option("--config", config_file, "YAML config file path")
+  app.add_option("--config", config_file, "JSONC config file path")
       ->check(CLI::ExistingFile);
 
   auto log_level_map = std::vector<std::pair<std::string, int>>(
@@ -492,11 +492,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   }
 }
 
-template <class T>
-static std::string ConvertEnv(const YAML::Node& node,
+static std::string ConvertEnv(const std::string& input,
                               const std::map<std::string, std::string>& envs) {
-  // とりあえず文字列として取り出して置換する
-  std::string input = node.as<std::string>();
   std::string result;
   std::regex re("\\$\\{(.*?)\\}");
   std::sregex_iterator it(input.begin(), input.end(), re);
@@ -519,68 +516,20 @@ static std::string ConvertEnv(const YAML::Node& node,
   } else {
     result = input;
   }
-
-  // 変換後、実際に対象の型に置換できるかチェック
-  YAML::Node n(result);
-  return std::to_string(n.as<T>());
+  return result;
 }
 
-std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
+std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
+    const boost::json::value& inst) {
   std::vector<std::vector<std::string>> argss;
 
   bool has_error = false;
 
   int instance_num = 1;
-  {
-    const YAML::Node& node = inst["instance-num"];
-    if (node) {
-      instance_num = node.as<int>();
-    }
-  }
-
-#define DEF_SCALAR(x, prefix, key, type, type_name)                            \
-  try {                                                                        \
-    const YAML::Node& node = x[key];                                           \
-    if (node) {                                                                \
-      if (!node.IsScalar()) {                                                  \
-        std::cerr << "\"" key "\" の値は " type_name " である必要があります。" \
-                  << std::endl;                                                \
-        has_error = true;                                                      \
-      } else {                                                                 \
-        args.push_back("--" prefix key);                                       \
-        args.push_back(ConvertEnv<type>(node, envs));                          \
-      }                                                                        \
-    }                                                                          \
-  } catch (YAML::BadConversion & e) {                                          \
-    std::cerr << "\"" key "\" の値は " type_name " である必要があります。"     \
-              << std::endl;                                                    \
-    has_error = true;                                                          \
-  }
-
-#define DEF_STRING(x, prefix, key) \
-  DEF_SCALAR(x, prefix, key, std::string, "文字列")
-#define DEF_INTEGER(x, prefix, key) DEF_SCALAR(x, prefix, key, int, "整数")
-#define DEF_DOUBLE(x, prefix, key) DEF_SCALAR(x, prefix, key, double, "実数")
-#define DEF_BOOLEAN(x, prefix, key) DEF_SCALAR(x, prefix, key, bool, "bool値")
-
-#define DEF_FLAG(x, prefix, key)                                        \
-  try {                                                                 \
-    const YAML::Node& node = x[key];                                    \
-    if (node) {                                                         \
-      if (!node.IsScalar()) {                                           \
-        std::cerr << "\"" key "\" の値は bool値 である必要があります。" \
-                  << std::endl;                                         \
-        has_error = true;                                               \
-      } else {                                                          \
-        if (node.as<bool>()) {                                          \
-          args.push_back("--" prefix key);                              \
-        }                                                               \
-      }                                                                 \
-    }                                                                   \
-  } catch (YAML::BadConversion & e) {                                   \
-    std::cerr << "\"" key "\" の値は bool値 である必要があります。"     \
-              << std::endl;                                             \
-    has_error = true;                                                   \
+  const auto& obj = inst.as_object();
+  auto it = obj.find("instance-num");
+  if (obj.contains("instance-num")) {
+    instance_num = boost::json::value_to<int>(obj.at("instance-num"));
   }
 
   for (int i = 0; i < instance_num; i++) {
@@ -588,187 +537,171 @@ std::vector<std::vector<std::string>> Util::NodeToArgs(const YAML::Node& inst) {
     envs[""] = std::to_string(i + 1);
     std::vector<std::string> args;
 
-    DEF_STRING(inst, "", "name");
-    DEF_INTEGER(inst, "", "vcs");
-    DEF_DOUBLE(inst, "", "vcs-hatch-rate");
-    DEF_DOUBLE(inst, "", "duration");
-    DEF_DOUBLE(inst, "", "repeat-interval");
-    DEF_INTEGER(inst, "", "max-retry");
-    DEF_INTEGER(inst, "", "retry-interval");
-    DEF_FLAG(inst, "", "no-video-device");
-    DEF_FLAG(inst, "", "no-audio-device");
-    DEF_FLAG(inst, "", "fake-capture-device");
-    DEF_STRING(inst, "", "fake-video-capture");
-    DEF_STRING(inst, "", "fake-audio-capture");
-    DEF_FLAG(inst, "", "sandstorm");
-    DEF_STRING(inst, "", "video-device");
-    DEF_STRING(inst, "", "resolution");
-    DEF_INTEGER(inst, "", "framerate");
-    DEF_FLAG(inst, "", "fixed-resolution");
-    DEF_STRING(inst, "", "priority");
-    DEF_FLAG(inst, "", "insecure");
-    DEF_STRING(inst, "", "openh264");
-    DEF_STRING(inst, "", "scenario");
-    DEF_STRING(inst, "", "client-cert");
-    DEF_STRING(inst, "", "client-key");
-    DEF_BOOLEAN(inst, "", "initial-mute-video");
-    DEF_BOOLEAN(inst, "", "initial-mute-audio");
-    DEF_STRING(inst, "", "degradation-preference");
-    DEF_STRING(inst, "", "duckdb-output-dir");
-    DEF_FLAG(inst, "", "no-duckdb-output");
+    // 値のあるオプション
+    auto add_option = [&args, &envs](const boost::json::object& obj,
+                                     const std::string& prefix,
+                                     const std::string& key) {
+      auto it = obj.find(key);
+      if (it != obj.end()) {
+        args.push_back("--" + prefix + key);
+        args.push_back(ConvertEnv(PrimitiveValueToString(it->value()), envs));
+      }
+    };
+
+    // フラグオプション
+    auto add_flag = [&args, &envs](const boost::json::object& obj,
+                                   const std::string& prefix,
+                                   const std::string& key) {
+      auto it = obj.find(key);
+      if (it != obj.end() && it->value().is_bool() && it->value().as_bool()) {
+        args.push_back("--" + prefix + key);
+      }
+    };
+
+    // JSONオブジェクトをそのまま渡すオプション
+    auto add_json_option = [&args, &envs](const boost::json::object& obj,
+                                          const std::string& prefix,
+                                          const std::string& key) {
+      auto it = obj.find(key);
+      if (it != obj.end()) {
+        args.push_back("--" + prefix + key);
+        args.push_back(boost::json::serialize(it->value()));
+      }
+    };
+
+    const auto& obj = inst.as_object();
+
+    // 一般オプション
+    add_option(obj, "", "name");
+    add_option(obj, "", "vcs");
+    add_option(obj, "", "vcs-hatch-rate");
+    add_option(obj, "", "duration");
+    add_option(obj, "", "repeat-interval");
+    add_option(obj, "", "max-retry");
+    add_option(obj, "", "retry-interval");
+    add_flag(obj, "", "no-video-device");
+    add_flag(obj, "", "no-audio-device");
+    add_flag(obj, "", "fake-capture-device");
+    add_option(obj, "", "fake-video-capture");
+    add_option(obj, "", "fake-audio-capture");
+    add_flag(obj, "", "sandstorm");
+    add_option(obj, "", "video-device");
+    add_option(obj, "", "resolution");
+    add_option(obj, "", "framerate");
+    add_flag(obj, "", "fixed-resolution");
+    add_option(obj, "", "priority");
+    add_flag(obj, "", "insecure");
+    add_option(obj, "", "openh264");
+    add_option(obj, "", "scenario");
+    add_option(obj, "", "client-cert");
+    add_option(obj, "", "client-key");
+    add_option(obj, "", "initial-mute-video");
+    add_option(obj, "", "initial-mute-audio");
+    add_option(obj, "", "degradation-preference");
+    add_option(obj, "", "duckdb-output-dir");
+    add_flag(obj, "", "no-duckdb-output");
 
     // コーデックプリファレンス
-    DEF_STRING(inst, "", "vp8-encoder");
-    DEF_STRING(inst, "", "vp8-decoder");
-    DEF_STRING(inst, "", "vp9-encoder");
-    DEF_STRING(inst, "", "vp9-decoder");
-    DEF_STRING(inst, "", "av1-encoder");
-    DEF_STRING(inst, "", "av1-decoder");
-    DEF_STRING(inst, "", "h264-encoder");
-    DEF_STRING(inst, "", "h264-decoder");
-    DEF_STRING(inst, "", "h265-encoder");
-    DEF_STRING(inst, "", "h265-decoder");
+    add_option(obj, "", "vp8-encoder");
+    add_option(obj, "", "vp9-encoder");
+    add_option(obj, "", "av1-encoder");
+    add_option(obj, "", "h264-encoder");
+    add_option(obj, "", "h265-encoder");
 
-    const YAML::Node& sora = inst["sora"];
-    if (sora) {
+    // soraオプション
+    auto sora_it = obj.find("sora");
+    if (sora_it != obj.end()) {
+      const auto& sora_obj = sora_it->value().as_object();
+
       // --sora-signaling-url: string or string[]
       {
-        try {
-          const YAML::Node& node = sora["signaling-url"];
-          if (node.IsSequence()) {
+        auto it = sora_obj.find("signaling-url");
+        if (it != sora_obj.end()) {
+          const auto& value = it->value();
+          if (value.is_array()) {
             args.push_back("--sora-signaling-url");
-            for (auto v : node) {
-              args.push_back(ConvertEnv<std::string>(v, envs));
+            for (const auto& v : value.as_array()) {
+              args.push_back(ConvertEnv(PrimitiveValueToString(v), envs));
             }
-          } else if (node.IsScalar()) {
-            DEF_STRING(sora, "sora-", "signaling-url");
+          } else if (value.is_string()) {
+            args.push_back("--sora-signaling-url");
+            args.push_back(ConvertEnv(PrimitiveValueToString(value), envs));
           } else {
-            throw std::exception();
+            throw std::runtime_error(
+                "sora.signaling-url must be string or string[]");
           }
-        } catch (std::exception& e) {
-          std::cerr << "signaling-url "
-                       "の値は文字列または文字列の配列である必要があります。"
-                    << std::endl;
-          has_error = true;
         }
       }
-      DEF_BOOLEAN(sora, "sora-", "disable-signaling-url-randomization");
 
-      DEF_STRING(sora, "sora-", "channel-id");
-      DEF_STRING(sora, "sora-", "client-id");
-      DEF_STRING(sora, "sora-", "bundle-id");
-      DEF_STRING(sora, "sora-", "role");
-      DEF_BOOLEAN(sora, "sora-", "video");
-      DEF_BOOLEAN(sora, "sora-", "audio");
-      DEF_STRING(sora, "sora-", "video-codec-type");
-      DEF_STRING(sora, "sora-", "audio-codec-type");
-      DEF_INTEGER(sora, "sora-", "video-bit-rate");
-      DEF_INTEGER(sora, "sora-", "audio-bit-rate");
-      DEF_BOOLEAN(sora, "sora-", "simulcast");
-      DEF_STRING(sora, "sora-", "simulcast-rid");
-      DEF_BOOLEAN(sora, "sora-", "spotlight");
-      DEF_INTEGER(sora, "sora-", "spotlight-number");
-      DEF_STRING(sora, "sora-", "spotlight-focus-rid");
-      DEF_STRING(sora, "sora-", "spotlight-unfocus-rid");
-      DEF_STRING(sora, "sora-", "data-channel-signaling");
-      DEF_INTEGER(sora, "sora-", "data-channel-signaling-timeout");
-      DEF_STRING(sora, "sora-", "ignore-disconnect-websocket");
-      DEF_INTEGER(sora, "sora-", "disconnect-wait-timeout");
-      if (sora["metadata"]) {
-        boost::json::value value = NodeToJson(sora["metadata"]);
-        args.push_back("--sora-metadata");
-        args.push_back(boost::json::serialize(value));
-      }
-      if (sora["signaling-notify-metadata"]) {
-        boost::json::value value =
-            NodeToJson(sora["signaling-notify-metadata"]);
-        args.push_back("--sora-signaling-notify-metadata");
-        args.push_back(boost::json::serialize(value));
-      }
-      if (sora["data-channels"]) {
-        boost::json::value value = NodeToJson(sora["data-channels"]);
-        args.push_back("--sora-data-channels");
-        args.push_back(boost::json::serialize(value));
-      }
-      // ビデオコーデックパラメータ
-      if (sora["video-vp9-params"]) {
-        boost::json::value value = NodeToJson(sora["video-vp9-params"]);
-        args.push_back("--sora-video-vp9-params");
-        args.push_back(boost::json::serialize(value));
-      }
-      if (sora["video-av1-params"]) {
-        boost::json::value value = NodeToJson(sora["video-av1-params"]);
-        args.push_back("--sora-video-av1-params");
-        args.push_back(boost::json::serialize(value));
-      }
-      if (sora["video-h264-params"]) {
-        boost::json::value value = NodeToJson(sora["video-h264-params"]);
-        args.push_back("--sora-video-h264-params");
-        args.push_back(boost::json::serialize(value));
-      }
-      if (sora["video-h265-params"]) {
-        boost::json::value value = NodeToJson(sora["video-h265-params"]);
-        args.push_back("--sora-video-h265-params");
-        args.push_back(boost::json::serialize(value));
-      }
+      add_flag(sora_obj, "sora-", "disable-signaling-url-randomization");
+      add_option(sora_obj, "sora-", "channel-id");
+      add_option(sora_obj, "sora-", "client-id");
+      add_option(sora_obj, "sora-", "bundle-id");
+      add_option(sora_obj, "sora-", "role");
+      add_option(sora_obj, "sora-", "video");
+      add_option(sora_obj, "sora-", "audio");
+      add_option(sora_obj, "sora-", "video-codec-type");
+      add_option(sora_obj, "sora-", "audio-codec-type");
+      add_option(sora_obj, "sora-", "video-bit-rate");
+      add_option(sora_obj, "sora-", "audio-bit-rate");
+      add_option(sora_obj, "sora-", "simulcast");
+      add_option(sora_obj, "sora-", "simulcast-rid");
+      add_option(sora_obj, "sora-", "spotlight");
+      add_option(sora_obj, "sora-", "spotlight-number");
+      add_option(sora_obj, "sora-", "spotlight-focus-rid");
+      add_option(sora_obj, "sora-", "spotlight-unfocus-rid");
+      add_option(sora_obj, "sora-", "data-channel-signaling");
+      add_option(sora_obj, "sora-", "data-channel-signaling-timeout");
+      add_option(sora_obj, "sora-", "ignore-disconnect-websocket");
+      add_option(sora_obj, "sora-", "disconnect-wait-timeout");
+
+      add_json_option(sora_obj, "sora-", "metadata");
+      add_json_option(sora_obj, "sora-", "signaling-notify-metadata");
+      add_json_option(sora_obj, "sora-", "data-channels");
+      add_json_option(sora_obj, "sora-", "video-vp9-params");
+      add_json_option(sora_obj, "sora-", "video-av1-params");
+      add_json_option(sora_obj, "sora-", "video-h264-params");
+      add_json_option(sora_obj, "sora-", "video-h265-params");
     }
 
-    if (has_error) {
-      throw std::exception();
-    }
     argss.push_back(args);
   }
 
   return argss;
 }
 
-boost::json::value Util::NodeToJson(const YAML::Node& node) {
-  switch (node.Type()) {
-    case YAML::NodeType::Null: {
-      return nullptr;
-    }
-    case YAML::NodeType::Scalar: {
-      if (node.Tag() == "!") {
-        // 文字列
-        return node.as<std::string>().c_str();
-      } else {
-        try {
-          // bool値として解釈
-          return node.as<bool>();
-        } catch (YAML::BadConversion& e) {
-          try {
-            // ダメだったら整数として解釈
-            return node.as<int64_t>();
-          } catch (YAML::BadConversion& e) {
-            // ダメだったら浮動小数点数として解釈
-            try {
-              return node.as<double>();
-            } catch (YAML::BadConversion& e) {
-              // それでもダメなら文字列として解釈する
-              return node.as<std::string>().c_str();
-            }
-          }
-        }
-      }
-    }
-    case YAML::NodeType::Sequence: {
-      boost::json::array ar;
-      for (auto v : node) {
-        ar.push_back(NodeToJson(v));
-      }
-      return ar;
-    }
-    case YAML::NodeType::Map: {
-      boost::json::object obj;
-      for (auto p : node) {
-        obj[p.first.as<std::string>()] = NodeToJson(p.second);
-      }
-      return obj;
-    }
-    case YAML::NodeType::Undefined:
-    default:
-      throw std::exception();
+boost::json::value Util::LoadJsoncFile(const std::string& file_path) {
+  // ファイルの拡張子を確認
+  boost::filesystem::path path(file_path);
+  if (path.extension() != ".json" && path.extension() != ".jsonc") {
+    throw std::runtime_error("Only .json or .jsonc files are supported. Got: " +
+                             file_path);
   }
+
+  // ファイルを読み込む
+  std::ifstream file(file_path);
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open file: " + file_path);
+  }
+
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  std::string content = buffer.str();
+
+  // parse_optionsを設定（コメントと末尾カンマを許可）
+  boost::json::parse_options opt;
+  opt.allow_comments = true;
+  opt.allow_trailing_commas = true;
+
+  // Boost JSONでパース
+  boost::system::error_code ec;
+  boost::json::value result = boost::json::parse(content, ec, {}, opt);
+
+  if (ec) {
+    throw std::runtime_error("JSON parse error: " + ec.message());
+  }
+
+  return result;
 }
 
 std::string Util::GenerateRandomChars() {
@@ -813,6 +746,15 @@ std::string Util::IceConnectionStateToString(
       return "max";
   }
   return "unknown";
+}
+
+std::string Util::PrimitiveValueToString(const boost::json::value& v) {
+  if (v.is_string()) {
+    return std::string(v.as_string());
+  } else if (v.is_primitive()) {
+    return boost::json::serialize(v);
+  }
+  return "";
 }
 
 namespace http = boost::beast::http;

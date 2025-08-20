@@ -5,7 +5,7 @@ cmake_policy(SET CMP0054 NEW)
 
 project(zakuro C CXX)
 
-list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR} ${YAML_ROOT_DIR})
+list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${SORA_DIR}/share/cmake)
 
 set(Boost_USE_STATIC_LIBS ON)
@@ -17,7 +17,6 @@ find_package(Sora REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Blend2D REQUIRED)
 find_package(CLI11 REQUIRED)
-find_package(yaml-cpp REQUIRED)
 
 # DuckDB を手動で設定（システムのライブラリを使わないため）
 set(DuckDB_INCLUDE_DIRS ${DUCKDB_ROOT_DIR}/include)
@@ -77,7 +76,6 @@ target_link_libraries(zakuro
     Boost::filesystem
     CLI11::CLI11
     Blend2D::Blend2D
-    yaml-cpp::yaml-cpp
     ${DuckDB_LIBRARIES}
 )
 
@@ -174,7 +172,7 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
       COMMAND ld
-      ARGS -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/${objfile} ${file}
+      ARGS -r -b binary -z noexecstack -o ${CMAKE_CURRENT_BINARY_DIR}/${objfile} ${file}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
       MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file})
     set_source_files_properties(${objfile}

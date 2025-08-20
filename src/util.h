@@ -10,9 +10,6 @@
 // WebRTC
 #include <api/peer_connection_interface.h>
 
-// YAML
-#include <yaml-cpp/yaml.h>
-
 #include "zakuro.h"
 
 class Util {
@@ -27,14 +24,16 @@ class Util {
                         double& instance_hatch_rate,
                         ZakuroConfig& config,
                         bool ignore_config);
-  static std::vector<std::vector<std::string>> NodeToArgs(
-      const YAML::Node& inst);
-  static boost::json::value NodeToJson(const YAML::Node& node);
+  static std::vector<std::vector<std::string>> ParseInstanceToArgs(
+      const boost::json::value& inst);
+  static boost::json::value LoadJsoncFile(const std::string& file_path);
   static std::string GenerateRandomChars();
   static std::string GenerateRandomChars(size_t length);
   static std::string GenerateRandomNumericChars(size_t length);
   static std::string IceConnectionStateToString(
       webrtc::PeerConnectionInterface::IceConnectionState state);
+  // JSON値から文字列を取得するヘルパー関数
+  static std::string PrimitiveValueToString(const boost::json::value& value);
 
   // MIME type をファイル名の拡張子から調べる
   static boost::beast::string_view MimeType(boost::beast::string_view path);
