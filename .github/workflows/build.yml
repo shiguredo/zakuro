@@ -27,7 +27,7 @@ jobs:
     name: Build zakuro for ${{ matrix.name }}
     runs-on: ${{ matrix.name == 'ubuntu-24.04_x86_64' && 'ubuntu-24.04' || 'ubuntu-22.04' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install deps
         run: |
           DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libx11-dev libxext-dev
@@ -55,7 +55,7 @@ jobs:
       - build-linux
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/download
         with:
           platform: ubuntu-22.04_x86_64

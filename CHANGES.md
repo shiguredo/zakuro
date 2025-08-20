@@ -21,6 +21,13 @@
 - [CHANGE] kuzushi 機能を削除する
   - @voluntas
 
+### misc
+
+- [UPDATE] actions/checkout を v5 にアップデート
+  - @torikizi
+- [UPDATE] actions/download-artifact を v5 にアップデート
+  - @torikizi
+
 ## 2025.2.0
 
 **リリース日**: 2025-07-18
