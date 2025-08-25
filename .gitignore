@@ -34,9 +34,10 @@
 zakuro
 core
 *.tar.gz
-webrtc_logs_0
+webrtc_logs_*
 .DS_Store
 *.swp
+*.log
 
 *.jsonc
 
@@ -45,3 +46,20 @@ webrtc_logs_0
 /_build
 /_install
 /__pycache__
+*.pyc
+
+# DuckDB
+
+*.db
+*.ddb
+*.wal
+
+# Claude
+
+/.claude
+CLAUDE.local.md
+
+
+# yaml
+*.yaml
+*.yml

@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.23)
 
 # Only interpret if() arguments as variables or keywords when unquoted.
 cmake_policy(SET CMP0054 NEW)
-# MSVC runtime library flags are selected by an abstraction.
-cmake_policy(SET CMP0091 NEW)
 
 project(zakuro C CXX)
 
@@ -20,10 +18,27 @@ find_package(Threads REQUIRED)
 find_package(Blend2D REQUIRED)
 find_package(CLI11 REQUIRED)
 
+# DuckDB を手動で設定（システムのライブラリを使わないため）
+set(DuckDB_INCLUDE_DIRS ${DUCKDB_ROOT_DIR}/include)
+
+# プラットフォーム別のダイナミックライブラリ設定
+if(ZAKURO_PLATFORM STREQUAL "macos_arm64")
+    # macOSの場合は .dylib
+    set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb.dylib)
+elseif(ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+    # Linuxの場合は .so
+    set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb.so)
+else()
+    message(FATAL_ERROR "Unsupported platform for DuckDB: ${ZAKURO_PLATFORM}")
+endif()
+
 add_executable(zakuro)
 
 set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
 set_target_properties(zakuro PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# RPATH設定
+set_target_properties(zakuro PROPERTIES BUILD_RPATH_USE_ORIGIN ON)
 
 string(SUBSTRING "${ZAKURO_COMMIT}" 0 8 ZAKURO_COMMIT_SHORT)
 string(SUBSTRING "${WEBRTC_COMMIT}" 0 8 WEBRTC_COMMIT_SHORT)
@@ -31,11 +46,17 @@ configure_file(src/zakuro_version.gen.h.template ${CMAKE_CURRENT_BINARY_DIR}/zak
 target_include_directories(zakuro PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 # OpenH264
 target_include_directories(zakuro PRIVATE ${OPENH264_ROOT_DIR}/include)
+# DuckDB
+target_include_directories(zakuro PRIVATE ${DuckDB_INCLUDE_DIRS})
 
 target_sources(zakuro
   PRIVATE
+    src/duckdb_stats_writer.cpp
+    src/duckdb_utils.cpp
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
+    src/http_server.cpp
+    src/json_rpc.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
     src/util.cpp
@@ -55,7 +76,14 @@ target_link_libraries(zakuro
     Boost::filesystem
     CLI11::CLI11
     Blend2D::Blend2D
+    ${DuckDB_LIBRARIES}
 )
+
+
+# Ubuntu 24.04 での追加のリンクオプション
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(zakuro PRIVATE pthread dl)
+endif()
 
 target_compile_definitions(zakuro
   PRIVATE
@@ -176,6 +204,18 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
+  # DuckDBダイナミックライブラリのRPATH設定
+  set_target_properties(zakuro PROPERTIES
+    BUILD_RPATH_USE_ORIGIN ON
+    INSTALL_RPATH "@executable_path"
+    BUILD_WITH_INSTALL_RPATH TRUE
+  )
 
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+  # LinuxでのRPATH設定
+  set_target_properties(zakuro PROPERTIES
+    BUILD_RPATH_USE_ORIGIN ON
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_WITH_INSTALL_RPATH TRUE
+  )
 endif()

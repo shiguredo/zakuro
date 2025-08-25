@@ -2150,6 +2150,50 @@ def install_aom(version, source_dir, build_dir, install_dir, configuration, cmak
         cmd(["cmake", "--install", aom_build_dir])
 
 
+@versioned
+def install_duckdb(version, source_dir, install_dir, platform):
+    duckdb_install_dir = os.path.join(install_dir, "duckdb")
+    rm_rf(duckdb_install_dir)
+    mkdir_p(duckdb_install_dir)
+    
+    # プラットフォーム別のダウンロードURL（ダイナミックライブラリ）
+    if platform == "macos_arm64":
+        # macOS用のuniversalバイナリを使用
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-osx-universal.zip"
+    elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-linux-amd64.zip"
+    else:
+        raise Exception(f"Unsupported platform for DuckDB: {platform}")
+    
+    # ダウンロードと展開
+    path = download(url, source_dir)
+    with cd(duckdb_install_dir):
+        cmd(["unzip", "-q", path])
+    
+    # ディレクトリ構造を整理
+    # include ディレクトリを作成してヘッダーファイルを移動
+    include_dir = os.path.join(duckdb_install_dir, "include")
+    mkdir_p(include_dir)
+    
+    # ヘッダーファイルを移動（C APIのヘッダーのみ）
+    if os.path.exists(os.path.join(duckdb_install_dir, "duckdb.h")):
+        shutil.move(os.path.join(duckdb_install_dir, "duckdb.h"), include_dir)
+    
+    # lib ディレクトリを作成してライブラリファイルを移動
+    lib_dir = os.path.join(duckdb_install_dir, "lib")
+    mkdir_p(lib_dir)
+    
+    # ダイナミックライブラリファイルを移動
+    if platform == "macos_arm64":
+        # macOSの場合は .dylib ファイル
+        for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.dylib")):
+            shutil.move(lib_file, lib_dir)
+    elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        # Linuxの場合は .so ファイル
+        for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.so")):
+            shutil.move(lib_file, lib_dir)
+
+
 class PlatformTarget(object):
     def __init__(self, os, osver, arch, extra=None):
         self.os = os

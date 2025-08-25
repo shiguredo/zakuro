@@ -36,7 +36,9 @@ std::string to_string(std::string str) {
 void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& config_file,
                      int& log_level,
-                     int& port,
+                     std::string& http_port,
+                     std::string& http_host,
+                     std::string& ui_remote_url,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
                      ZakuroConfig& config,
@@ -62,8 +64,31 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
-  app.add_option("--port", port, "Port number (default: -1)")
-      ->check(CLI::Range(-1, 65535));
+  app.add_option(
+         "--http-port", http_port,
+         "HTTP port number for JSON-RPC and reverse proxy (default: none)")
+      ->check(CLI::Validator(
+          [](std::string input) -> std::string {
+            if (input == "none") {
+              return std::string();
+            }
+            try {
+              int port = std::stoi(input);
+              if (port < 1 || port > 65535) {
+                return "Port must be between 1 and 65535";
+              }
+            } catch (const std::exception&) {
+              return "Must be 'none' or a valid port number";
+            }
+            return std::string();
+          },
+          "PORT_OR_NONE"));
+  app.add_option(
+      "--http-host", http_host,
+      "HTTP host address to bind (default: 127.0.0.1)");
+  app.add_option(
+      "--ui-remote-url", ui_remote_url,
+      "Remote URL for UI reverse proxy (default: http://localhost:5173)");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,
@@ -160,6 +185,17 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       ->check(CLI::ExistingFile);
   app.add_option("--scenario", config.scenario, "Scenario type")
       ->check(CLI::IsMember({"", "reconnect"}));
+
+  // WebRTC 統計情報の取得間隔
+  app.add_option("--rtc-stats-interval", config.rtc_stats_interval,
+                 "WebRTC stats collection interval in seconds (default: 1, "
+                 "min: 1, max: 300)")
+      ->check(CLI::Range(1, 300));
+  // DuckDB 関連オプション
+  app.add_option("--duckdb-output-dir", config.duckdb_output_dir,
+                 "DuckDB output directory path");
+  app.add_flag("--no-duckdb-output", config.no_duckdb_output,
+               "Disable DuckDB statistics output (default: false)");
   app.add_option("--client-cert", config.client_cert,
                  "Cert file path for client certification (PEM format)")
       ->check(CLI::ExistingFile);
@@ -562,6 +598,8 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
     add_option(obj, "", "initial-mute-video");
     add_option(obj, "", "initial-mute-audio");
     add_option(obj, "", "degradation-preference");
+    add_option(obj, "", "duckdb-output-dir");
+    add_flag(obj, "", "no-duckdb-output");
 
     // コーデックプリファレンス
     add_option(obj, "", "vp8-encoder");

@@ -18,6 +18,7 @@
 #include "game/game_key_core.h"
 
 class ZakuroStats;
+class DuckDBStatsWriter;
 
 struct ZakuroConfig {
   int id = 0;
@@ -91,6 +92,15 @@ struct ZakuroConfig {
   std::shared_ptr<GameKeyCore> key_core;
 
   std::shared_ptr<ZakuroStats> stats;
+
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+
+  // WebRTC 統計情報の取得間隔（秒）
+  int rtc_stats_interval = 1;  // デフォルト 1秒
+
+  // DuckDB 関連の設定
+  std::string duckdb_output_dir = "";  // DuckDB ファイルの出力先ディレクトリ
+  bool no_duckdb_output = false;  // DuckDB への統計情報出力を無効化
 
   struct Size {
     int width;
