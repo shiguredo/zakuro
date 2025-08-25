@@ -195,6 +195,7 @@ def install_deps(
             "install_dir": install_dir,
             "ios": False,
             "cmake_args": cmake_args,
+            "expected_sha256": deps["BLEND2D_SHA256_HASH"],
         }
         install_blend2d_official(**install_blend2d_args)
 
