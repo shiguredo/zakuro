@@ -437,8 +437,10 @@ int Zakuro::Run() {
   // signaling URL のバリデーション
   for (const auto& url : config_.sora_signaling_urls) {
     if (url.find("wss://") != 0 && url.find("ws://") != 0) {
-      std::cerr << "[" << config_.name << "] Error: Invalid signaling URL: " << url << std::endl;
-      std::cerr << "Signaling URL must start with 'ws://' or 'wss://'" << std::endl;
+      std::cerr << "[" << config_.name
+                << "] Error: Invalid signaling URL: " << url << std::endl;
+      std::cerr << "Signaling URL must start with 'ws://' or 'wss://'"
+                << std::endl;
       return 1;
     }
   }

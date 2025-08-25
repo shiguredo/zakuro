@@ -3,11 +3,11 @@
 // WebRTC
 #include <api/video/i420_buffer.h>
 #include <media/base/media_constants.h>
-#include <modules/video_coding/include/video_error_codes.h>
 #include <modules/video_coding/codecs/av1/libaom_av1_encoder.h>
 #include <modules/video_coding/codecs/h264/include/h264.h>
 #include <modules/video_coding/codecs/vp8/include/vp8.h>
 #include <modules/video_coding/codecs/vp9/include/vp9.h>
+#include <modules/video_coding/include/video_error_codes.h>
 
 bool NopVideoDecoder::Configure(const Settings& settings) {
   return true;

@@ -10,8 +10,8 @@
 #include <vector>
 
 // webrtc
-#include "api/make_ref_counted.h"
 #include "api/environment/environment_factory.h"
+#include "api/make_ref_counted.h"
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "rtc_base/ref_counted_object.h"
@@ -39,7 +39,6 @@ struct ZakuroAudioDeviceModuleConfig {
   std::function<void(std::vector<int16_t>&)> render;
   int sample_rate;
   int channels;
-
 };
 
 class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
