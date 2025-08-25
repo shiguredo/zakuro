@@ -1,4 +1,5 @@
 import argparse
+import glob
 import logging
 import multiprocessing
 import os
@@ -220,22 +221,39 @@ def install_deps(
         install_duckdb(**install_duckdb_args)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"]
-    )
-    parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--relwithdebinfo", action="store_true")
-    parser.add_argument("--local-webrtc-build-dir", type=os.path.abspath)
-    parser.add_argument("--local-webrtc-build-args", default="", type=shlex.split)
-    parser.add_argument("--local-sora-cpp-sdk-dir", type=os.path.abspath)
-    parser.add_argument("--local-sora-cpp-sdk-args", default="", type=shlex.split)
-    parser.add_argument("--package", action="store_true")
+def _find_clang_binary(name: str) -> Optional[str]:
+    if shutil.which(name) is not None:
+        return name
+    else:
+        for n in range(50, 14, -1):
+            if shutil.which(f"{name}-{n}") is not None:
+                return f"{name}-{n}"
+    return None
 
-    args = parser.parse_args()
 
-    platform = args.target
+def _format(
+    clang_format_path: Optional[str] = None,
+):
+    if clang_format_path is None:
+        clang_format_path = _find_clang_binary("clang-format")
+    if clang_format_path is None:
+        raise Exception("clang-format not found. Please install it or specify the path.")
+    patterns = [
+        "src/**/*.h",
+        "src/**/*.cpp",
+    ]
+    target_files = []
+    for pattern in patterns:
+        files = glob.glob(pattern, recursive=True)
+        target_files.extend(files)
+    if target_files:
+        cmd([clang_format_path, "-i"] + target_files)
+
+
+def _build(args):
+
+    target = args.target
+    platform = target
     configuration_dir = "debug" if args.debug else "release"
     source_dir = os.path.join(BASE_DIR, "_source", platform, configuration_dir)
     build_dir = os.path.join(BASE_DIR, "_build", platform, configuration_dir)
@@ -355,6 +373,37 @@ def main():
             with open(os.path.join(package_dir, "zakuro.env"), "w") as f:
                 f.write("CONTENT_TYPE=application/gzip\n")
                 f.write(f"PACKAGE_NAME={archive_name}\n")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    sp = parser.add_subparsers(dest="command")
+
+    # build コマンド
+    bp = sp.add_parser("build")
+    bp.add_argument(
+        "target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"]
+    )
+    bp.add_argument("--debug", action="store_true")
+    bp.add_argument("--relwithdebinfo", action="store_true")
+    bp.add_argument("--local-webrtc-build-dir", type=os.path.abspath)
+    bp.add_argument("--local-webrtc-build-args", default="", type=shlex.split)
+    bp.add_argument("--local-sora-cpp-sdk-dir", type=os.path.abspath)
+    bp.add_argument("--local-sora-cpp-sdk-args", default="", type=shlex.split)
+    bp.add_argument("--package", action="store_true")
+
+    # format コマンド
+    fp = sp.add_parser("format")
+    fp.add_argument("--clang-format-path", type=str, default=None)
+
+    args = parser.parse_args()
+
+    if args.command == "build":
+        _build(args)
+    elif args.command == "format":
+        _format(clang_format_path=args.clang_format_path)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
