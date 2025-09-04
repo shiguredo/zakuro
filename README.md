@@ -21,7 +21,7 @@ WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/
 ## 特徴
 
 - 最新の WebRTC SFU Sora に対応
-- YAML によるシナリオファイルへ対応
+- JSONC によるシナリオファイルへ対応
 - 動的インスタンス作成へ対応
 - クラスター機能への対応
   - 複数シグナリング URL を指定できる
@@ -59,7 +59,7 @@ Options:
   --version                   Show version information
   --show-video-codec-capability
                               Show available video codec capability
-  --config TEXT:FILE          YAML config file path
+  --config TEXT:FILE          JSONC config file path
   --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
                               Log severity level threshold
   --port INT:INT in [-1 - 65535]
