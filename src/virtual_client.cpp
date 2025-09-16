@@ -1,5 +1,6 @@
 #include "virtual_client.h"
 
+#include <chrono>
 #include <iostream>
 
 // Sora C++ SDK
