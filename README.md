@@ -35,6 +35,12 @@ WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/
 - 期間繰り返し対応
   - 30 秒負荷かけて切断を繰り返すなど
 
+## 動作環境
+
+- macOS 15 arm64
+- Ubuntu 22.04 x86_64
+- Ubuntu 24.04 x86_64
+
 ## 使ってみる
 
 Zakuro を使ってみたい人は [USE.md](doc/USE.md) をお読みください。
