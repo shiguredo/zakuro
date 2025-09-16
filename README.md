@@ -226,5 +226,5 @@ limitations under the License.
 **詳細は Discord やメールなどでお気軽にお問い合わせください**
 
 - Content Hint への対応
-- --fake-video-capture で mjpeg も指定可能にする
-- --audio-device 追加
+- `--fake-video-capture` で mjpeg も指定可能にする
+- `--audio-device` 追加
