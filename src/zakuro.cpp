@@ -606,8 +606,8 @@ int Zakuro::Run() {
     }
 
     // 定期的に VirtualClient の stats を取る
-    boost::asio::deadline_timer timer(ioc);
-    timer.expires_from_now(boost::posix_time::seconds(5));
+    boost::asio::steady_timer timer(ioc);
+    timer.expires_after(std::chrono::seconds(5));
     std::function<void(const boost::system::error_code& ec)> f;
     f = [&vcs, c = config_, &timer, &f](const boost::system::error_code& ec) {
       if (ec == boost::asio::error::operation_aborted) {
@@ -618,7 +618,7 @@ int Zakuro::Run() {
         ss.push_back(vc->GetStats());
       }
       c.stats->Set(c.id, c.name, ss);
-      timer.expires_from_now(boost::posix_time::seconds(10));
+      timer.expires_after(std::chrono::seconds(10));
       timer.async_wait(f);
     };
     timer.async_wait(f);

@@ -171,7 +171,7 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
     // この場合は、設定次第で再接続を試みる
     if (retry_count_ < config_.max_retry) {
       retry_count_ += 1;
-      retry_timer_.expires_from_now(boost::posix_time::milliseconds(
+      retry_timer_.expires_after(std::chrono::milliseconds(
           (int)(config_.retry_interval * 1000)));
       retry_timer_.async_wait([this](boost::system::error_code ec) {
         if (ec) {

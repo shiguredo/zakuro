@@ -5,6 +5,7 @@
 
 // Sora C++ SDK
 #include <sora/sora_client_context.h>
+#include <sora/sora_signaling.h>
 
 // Boost
 #include <boost/asio/io_context.hpp>
@@ -91,7 +92,7 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
   bool need_reconnect_ = false;
   int retry_count_ = 0;
   std::function<void(std::string)> on_close_;
-  boost::asio::deadline_timer retry_timer_;
+  boost::asio::steady_timer retry_timer_;
   std::shared_ptr<sora::SoraSignaling> signaling_;
   webrtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   webrtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
