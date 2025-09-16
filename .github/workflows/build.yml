@@ -1,4 +1,4 @@
-name: build-workflow
+name: build
 
 on:
   push:
@@ -17,7 +17,7 @@ on:
     - 'NOTICE'
 
 jobs:
-  build-linux:
+  build_linux:
     strategy:
       fail-fast: false
       matrix:
@@ -48,11 +48,39 @@ jobs:
         with:
           name: ${{ matrix.name }}.env
           path: _package/${{ matrix.name }}/release/zakuro.env
-  create-release:
+  build_macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        name:
+          - macos-15_arm64
+    name: Build zakuro for ${{ matrix.name }}
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 run.py build ${{ matrix.name }} --package
+      - name: Get package name
+        shell: bash
+        run: |
+          source _package/${{ matrix.name }}/release/zakuro.env
+          echo "name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+        id: package_name
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package_name.outputs.name }}
+          path: _package/${{ matrix.name }}/release/${{ steps.package_name.outputs.name }}
+      - name: Upload Environment
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}.env
+          path: _package/${{ matrix.name }}/release/zakuro.env
+  create_release:
     name: Create Release
     if: contains(github.ref, 'tags/202')
     needs:
-      - build-linux
+      - build_linux
+      - build_macos
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -62,6 +90,9 @@ jobs:
       - uses: ./.github/actions/download
         with:
           platform: ubuntu-24.04_x86_64
+      - uses: ./.github/actions/download
+        with:
+          platform: macos-15_arm64
       - name: Env to output
         run: |
           echo "package_paths=$(cat package_paths.env | tr '\n' ' ')" >> $GITHUB_OUTPUT
