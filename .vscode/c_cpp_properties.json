@@ -14,8 +14,7 @@
                 "${workspaceFolder}/_install/ubuntu-22.04_x86_64/release/boost/include",
                 "${workspaceFolder}/_install/ubuntu-22.04_x86_64/release/cli11/include",
                 "${workspaceFolder}/_install/ubuntu-22.04_x86_64/release/blend2d/include",
-                "${workspaceFolder}/_install/ubuntu-22.04_x86_64/release/openh264/include",
-                "${workspaceFolder}/_install/ubuntu-22.04_x86_64/release/yaml/include"
+                "${workspaceFolder}/_install/ubuntu-22.04_x86_64/release/openh264/include"
             ],
             "defines": [
                 "WEBRTC_POSIX",
@@ -47,8 +46,7 @@
                 "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/boost/include",
                 "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/cli11/include",
                 "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/blend2d/include",
-                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/openh264/include",
-                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/yaml/include"
+                "${workspaceFolder}/_install/ubuntu-24.04_x86_64/release/openh264/include"
             ],
             "defines": [
                 "WEBRTC_POSIX",

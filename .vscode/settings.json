@@ -14,6 +14,12 @@
     "[cpp]": {
         "editor.formatOnSave": true
     },
+    "json.schemas": [{
+        "fileMatch": ["*.jsonc"],
+        "schema": {
+            "allowTrailingCommas": true,
+        }
+    }],
     "files.associations": {
         "*.cs": "csharp",
         "CMakeLists.txt": "cmake",

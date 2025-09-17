@@ -38,7 +38,7 @@ webrtc_logs_0
 .DS_Store
 *.swp
 
-*.yaml
+*.jsonc
 
 /_package
 /_source
