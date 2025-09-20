@@ -193,7 +193,6 @@ def install_deps(
             "source_dir": source_dir,
             "build_dir": build_dir,
             "install_dir": install_dir,
-            "ios": False,
             "cmake_args": cmake_args,
             "expected_sha256": deps["BLEND2D_SHA256_HASH"],
         }
@@ -240,7 +239,6 @@ def _format(
 
 
 def _build(args):
-
     target = args.target
     platform = target
     configuration_dir = "debug" if args.debug else "release"
@@ -346,9 +344,7 @@ def main():
 
     # build コマンド
     bp = sp.add_parser("build")
-    bp.add_argument(
-        "target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"]
-    )
+    bp.add_argument("target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"])
     bp.add_argument("--debug", action="store_true")
     bp.add_argument("--relwithdebinfo", action="store_true")
     bp.add_argument("--local-webrtc-build-dir", type=os.path.abspath)
