@@ -147,7 +147,7 @@ class ScenarioPlayer {
         auto& op = boost::get<ScenarioData::OpSleep>(opv);
         auto ms =
             engine_() % (op.max_time_ms - op.min_time_ms + 1) + op.min_time_ms;
-        info.timer.expires_from_now(boost::posix_time::milliseconds(ms));
+        info.timer.expires_after(std::chrono::milliseconds(ms));
         info.timer.async_wait(
             [this, client_id](const boost::system::error_code& ec) {
               if (ec == boost::asio::error::operation_aborted) {
@@ -242,7 +242,7 @@ class ScenarioPlayer {
     ScenarioData data;
     int op_index;
     int loop_op_index;
-    boost::asio::deadline_timer timer;
+    boost::asio::steady_timer timer;
     bool paused;
     bool exit;
   };

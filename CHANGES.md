@@ -11,6 +11,10 @@
 
 ## develop
 
+## 2025.3.0
+
+**リリース日**: 2025-09-17
+
 - [CHANGE] 設定ファイル形式を YAML から JSONC (JSON with Comments) に変更する
   - `/` と `/* */` コメントと末尾カンマをサポートする JSONC 形式を採用
   - 設定ファイルの拡張子を `.yaml` から `.jsonc` に変更
@@ -54,6 +58,20 @@
   - @voluntas
 - [FIX] VirtualClient::OnDisconnect で rtc_stats_timer_ のキャンセル処理が欠落していた問題を修正する
   - @voluntas
+- [UPDATE] Sora C++ SDK を `2025.5.0` に上げる
+  - libwebrtc のバージョンを `m139.7258.3.0` に上げる
+  - CMake のバージョンを `4.1.0` に上げる
+  - Boost のバージョンを `1.89.0` に上げる
+- [UPDATE] blend2d のバージョンを `0.20.0` に上げる
+  - blend2d の API 変更への追従: `camelCase` から `snake_case` へ移行
+  - 影響範囲: `src/fake_video_capturer.cpp` のみ
+  - 変更内容（旧 → 新）の一例 :
+    - `image_.getData(&data);` -> `image_.get_data(&data);`
+    - `ctx.setFillStyle(BLRgba32(0, 255, 255));` -> `ctx.set_fill_style(BLRgba32(0, 255, 255));`
+    - `ctx.fillPie(0, 0, width * 0.09, 0, 2 * pi);` -> `ctx.fill_pie(0, 0, width * 0.09, 0, 2 * pi);`
+  - 変更対象外の API
+    - `ctx.end()`, `ctx.save()`, `ctx.restore()` は単語なので変更なし
+  - @torikizi
 
 ### misc
 
@@ -67,7 +85,6 @@
 **リリース日**: 2025-07-18
 
 - [UPDATE] Sora C++ SDK を `2025.4.0` に上げる
-  - それに伴って以下のライブラリのバージョンも上げる
   - libwebrtc のバージョンを `m138.7204.0.1` に上げる
     - `rtc::` を `webrtc::` に変更する
     - `cricket::` を `webrtc::` に変更する

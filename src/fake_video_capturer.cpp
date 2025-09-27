@@ -27,8 +27,8 @@ void FakeVideoCapturer::StartCapture() {
       BLFontFace face;
       BLFontData data;
       auto content = EmbeddedBinary::Get(RESOURCE_KOSUGI_REGULAR_TTF);
-      data.createFromData((const uint8_t*)content.ptr, content.size);
-      BLResult err = face.createFromData(data, 0);
+      data.create_from_data((const uint8_t*)content.ptr, content.size);
+      BLResult err = face.create_from_data(data, 0);
 
       // We must handle a possible error returned by the loader.
       if (err) {
@@ -36,9 +36,9 @@ void FakeVideoCapturer::StartCapture() {
         return;
       }
 
-      base_font_.createFromFace(face, config_.height * 0.08);
-      bipbop_font_.createFromFace(face, base_font_.size() * 2.5);
-      stats_font_.createFromFace(face, base_font_.size() * 0.5);
+      base_font_.create_from_face(face, config_.height * 0.08);
+      bipbop_font_.create_from_face(face, base_font_.size() * 2.5);
+      stats_font_.create_from_face(face, base_font_.size() * 0.5);
     }
     if (config_.type == FakeVideoCapturerConfig::Type::Y4MFile) {
       int r = y4m_reader_.Open(config_.y4m_path);
@@ -59,7 +59,7 @@ void FakeVideoCapturer::StartCapture() {
         UpdateImage(now);
 
         BLImageData data;
-        BLResult result = image_.getData(&data);
+        BLResult result = image_.get_data(&data);
         if (result != BL_SUCCESS) {
           std::this_thread::sleep_until(now + std::chrono::milliseconds(16));
           continue;
@@ -67,7 +67,7 @@ void FakeVideoCapturer::StartCapture() {
 
         buffer = webrtc::I420Buffer::Create(config_.width, config_.height);
 
-        libyuv::ABGRToI420((const uint8_t*)data.pixelData, data.stride,
+        libyuv::ABGRToI420((const uint8_t*)data.pixel_data, data.stride,
                            buffer->MutableDataY(), buffer->StrideY(),
                            buffer->MutableDataU(), buffer->StrideU(),
                            buffer->MutableDataV(), buffer->StrideV(),
@@ -122,8 +122,8 @@ void FakeVideoCapturer::UpdateImage(
   if (config_.type == FakeVideoCapturerConfig::Type::Safari) {
     BLContext ctx(image_);
 
-    ctx.setCompOp(BL_COMP_OP_SRC_COPY);
-    ctx.fillAll();
+    ctx.set_comp_op(BL_COMP_OP_SRC_COPY);
+    ctx.fill_all();
 
     ctx.save();
     DrawTexts(ctx, now);
@@ -143,9 +143,9 @@ void FakeVideoCapturer::UpdateImage(
 
     // ランダムピクセル
     BLImageData data;
-    image_.getData(&data);
+    image_.get_data(&data);
     for (int y = 0; y < data.size.h; y++) {
-      auto p = (uint32_t*)((uint8_t*)data.pixelData + y * data.stride);
+      auto p = (uint32_t*)((uint8_t*)data.pixel_data + y * data.stride);
       for (int x = 0; x < data.size.w; x++) {
         p[x] = 0xff000000 | random_.Get();
       }
@@ -170,7 +170,7 @@ void FakeVideoCapturer::DrawTexts(
       std::chrono::duration_cast<std::chrono::milliseconds>(now - started_at_)
           .count();
 
-  ctx.setFillStyle(BLRgba32(0xFFFFFFFF));
+  ctx.set_fill_style(BLRgba32(0xFFFFFFFF));
 
   int width = config_.width;
   int height = config_.height;
@@ -195,36 +195,36 @@ void FakeVideoCapturer::DrawTexts(
                        pad('0', 2, ms / (60 * 1000) % 60) + ':' +
                        pad('0', 2, ms / 1000 % 60) + '.' +
                        pad('0', 3, ms % 1000);
-    ctx.fillUtf8Text(BLPoint(width * 0.05, height * .15), base_font_,
-                     text.c_str());
+    ctx.fill_utf8_text(BLPoint(width * 0.05, height * .15), base_font_,
+                       text.c_str());
   }
 
   {
     std::string text = pad('0', 6, frame_);
-    ctx.fillUtf8Text(BLPoint(width * 0.05, height * .15 + base_font_.size()),
-                     base_font_, text.c_str());
+    ctx.fill_utf8_text(BLPoint(width * 0.05, height * .15 + base_font_.size()),
+                       base_font_, text.c_str());
   }
 
   {
     std::string text = "Requested frame rate: " + std::to_string(fps) + " fps";
-    ctx.fillUtf8Text(BLPoint(width * 0.45, height * 0.75), stats_font_,
-                     text.c_str());
+    ctx.fill_utf8_text(BLPoint(width * 0.45, height * 0.75), stats_font_,
+                       text.c_str());
   }
   {
     std::string text =
         "Size: " + std::to_string(width) + " x " + std::to_string(height);
-    ctx.fillUtf8Text(BLPoint(width * 0.45, height * 0.75 + stats_font_.size()),
-                     stats_font_, text.c_str());
+    ctx.fill_utf8_text(BLPoint(width * 0.45, height * 0.75 + stats_font_.size()),
+                       stats_font_, text.c_str());
   }
 
   {
     int m = frame_ % 60;
     if (m < 15) {
-      ctx.setFillStyle(BLRgba32(0, 255, 255));
-      ctx.fillUtf8Text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bip");
+      ctx.set_fill_style(BLRgba32(0, 255, 255));
+      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bip");
     } else if (m >= 30 && m < 45) {
-      ctx.setFillStyle(BLRgba32(255, 255, 0));
-      ctx.fillUtf8Text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bop");
+      ctx.set_fill_style(BLRgba32(255, 255, 0));
+      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bop");
     }
   }
 }
@@ -238,11 +238,11 @@ void FakeVideoCapturer::DrawAnimations(
   float pi = 3.14159;
   ctx.translate(width * 0.8, height * 0.3);
   ctx.rotate(-pi / 2);
-  ctx.setFillStyle(BLRgba32(255, 255, 255));
-  ctx.fillPie(0, 0, width * 0.09, 0, 2 * pi);
+  ctx.set_fill_style(BLRgba32(255, 255, 255));
+  ctx.fill_pie(0, 0, width * 0.09, 0, 2 * pi);
 
-  ctx.setFillStyle(BLRgba32(160, 160, 160));
-  ctx.fillPie(0, 0, width * 0.09, 0, (frame_ % fps) / (float)fps * 2 * 3.14159);
+  ctx.set_fill_style(BLRgba32(160, 160, 160));
+  ctx.fill_pie(0, 0, width * 0.09, 0, (frame_ % fps) / (float)fps * 2 * 3.14159);
 }
 
 void FakeVideoCapturer::DrawBoxes(
@@ -254,38 +254,38 @@ void FakeVideoCapturer::DrawBoxes(
   float size = width * 0.035;
   float top = height * 0.6;
 
-  ctx.setFillStyle(BLRgba32(255, 255, 255));
-  ctx.setStrokeStyle(BLRgba32(255, 255, 255));
+  ctx.set_fill_style(BLRgba32(255, 255, 255));
+  ctx.set_stroke_style(BLRgba32(255, 255, 255));
 
-  ctx.setStrokeWidth(2);
+  ctx.set_stroke_width(2);
   BLArray<double> dash;
   // 本当はこれで点線になるはずだが、現在動かない
   // https://github.com/blend2d/blend2d/issues/48
   dash.resize(2, 6);
-  ctx.setStrokeDashArray(dash);
-  ctx.strokeRect(2, 2, width - 4, height - 4);
+  ctx.set_stroke_dash_array(dash);
+  ctx.stroke_rect(2, 2, width - 4, height - 4);
 
-  ctx.setStrokeDashArray(BLArray<double>());
-  ctx.strokeLine(0, top + size, width, top + size);
+  ctx.set_stroke_dash_array(BLArray<double>());
+  ctx.stroke_line(0, top + size, width, top + size);
 
-  ctx.setStrokeWidth(2);
+  ctx.set_stroke_width(2);
   float left = size;
   for (int i = 0; i < size / 4; i++) {
-    ctx.strokeLine(left + 4 * i, top, left + 4 * i, top + size);
+    ctx.stroke_line(left + 4 * i, top, left + 4 * i, top + size);
   }
   left += size + 2;
   for (int i = 0; i < size / 4; i++) {
-    ctx.strokeLine(left, top + 4 * i, left + size, top + 4 * i);
+    ctx.stroke_line(left, top + 4 * i, left + size, top + 4 * i);
   }
 
-  ctx.setStrokeWidth(3);
+  ctx.set_stroke_width(3);
   left += size + 2;
   for (int i = 0; i < size / 8; i++) {
-    ctx.strokeLine(left + 8 * i, top, left + 8 * i, top + size);
+    ctx.stroke_line(left + 8 * i, top, left + 8 * i, top + size);
   }
   left += size + 2;
   for (int i = 0; i < size / 8; i++) {
-    ctx.strokeLine(left, top + 8 * i, left + size, top + 8 * i);
+    ctx.stroke_line(left, top + 8 * i, left + size, top + 8 * i);
   }
 
   const BLRgba32 colors[] = {
@@ -295,8 +295,8 @@ void FakeVideoCapturer::DrawBoxes(
   };
   left = size;
   for (const auto& color : colors) {
-    ctx.setFillStyle(color);
-    ctx.fillRect(left, top + size + 2, size + 1, size + 1);
+    ctx.set_fill_style(color);
+    ctx.fill_rect(left, top + size + 2, size + 1, size + 1);
     left += size + 1;
   }
 }

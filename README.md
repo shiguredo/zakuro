@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m138.7204-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7204)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m139.7258-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7258)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -21,7 +21,7 @@ WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/
 ## 特徴
 
 - 最新の WebRTC SFU Sora に対応
-- YAML によるシナリオファイルへ対応
+- JSONC によるシナリオファイルへ対応
 - 動的インスタンス作成へ対応
 - クラスター機能への対応
   - 複数シグナリング URL を指定できる
@@ -34,6 +34,12 @@ WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/
   - ハードウェアアクセラレーターが利用できる
 - 期間繰り返し対応
   - 30 秒負荷かけて切断を繰り返すなど
+
+## 動作環境
+
+- macOS 15 arm64
+- Ubuntu 22.04 x86_64
+- Ubuntu 24.04 x86_64
 
 ## 使ってみる
 
@@ -59,7 +65,7 @@ Options:
   --version                   Show version information
   --show-video-codec-capability
                               Show available video codec capability
-  --config TEXT:FILE          YAML config file path
+  --config TEXT:FILE          JSONC config file path
   --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
                               Log severity level threshold
   --port INT:INT in [-1 - 65535]
@@ -220,5 +226,5 @@ limitations under the License.
 **詳細は Discord やメールなどでお気軽にお問い合わせください**
 
 - Content Hint への対応
-- --fake-video-capture で mjpeg も指定可能にする
-- --audio-device 追加
+- `--fake-video-capture` で mjpeg も指定可能にする
+- `--audio-device` 追加
