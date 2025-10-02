@@ -162,15 +162,15 @@ Options:
                               Parameters for H.264 video codec (default: none)
   --sora-video-h265-params TEXT:JSON Value
                               Parameters for H.265 video codec (default: none)
-  --vp8-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --vp8-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               VP8 encoder implementation
-  --vp9-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --vp9-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               VP9 encoder implementation
-  --av1-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --av1-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               AV1 encoder implementation
-  --h264-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --h264-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               H.264 encoder implementation
-  --h265-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --h265-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               H.265 encoder implementation
 ```
 

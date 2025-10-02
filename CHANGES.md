@@ -11,6 +11,19 @@
 
 ## develop
 
+- [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
+  - @torikizi
+- [UPDATE] Sora C++ SDK を `2025.6.0-canary.4` に上げる
+  - @torikizi
+- [UPDATE] libwebrtc のバージョンを `m140.7339.2.2` に上げる
+  - @torikizi
+- [UPDATE] CMake のバージョンを `4.1.2` に上げる
+  - @torikizi
+- [UPDATE] macOS 向けビルドで WebRTC 付属の clang/libc++ を利用するように調整
+  - `run.py` で macOS ビルド時にも LLVM ツールチェーンを取得し、CMake 引数に反映
+  - `CMakeLists.txt` で libc++ のインクルードパスを自動検出し、`-nostdinc++` と組み合わせてリンクエラーを回避
+  - @torikizi
+
 ## 2025.3.0
 
 **リリース日**: 2025-09-17

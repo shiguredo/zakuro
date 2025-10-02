@@ -57,6 +57,37 @@ target_link_libraries(zakuro
     Blend2D::Blend2D
 )
 
+if (NOT LIBCXX_INCLUDE_DIR)
+  set(_zakuro_libcxx_candidates)
+  if (DEFINED SORA_DIR)
+    list(APPEND _zakuro_libcxx_candidates "${SORA_DIR}/../llvm/libcxx/include")
+  endif()
+  if (DEFINED ZAKURO_PLATFORM)
+    list(APPEND _zakuro_libcxx_candidates
+      "${CMAKE_SOURCE_DIR}/_install/${ZAKURO_PLATFORM}/${CMAKE_BUILD_TYPE}/llvm/libcxx/include")
+  endif()
+  if (WEBRTC_INCLUDE_DIR)
+    list(APPEND _zakuro_libcxx_candidates
+      "${WEBRTC_INCLUDE_DIR}/third_party/libc++/src/include")
+  endif()
+  foreach(_zakuro_libcxx_dir IN LISTS _zakuro_libcxx_candidates)
+    if (EXISTS "${_zakuro_libcxx_dir}")
+      set(LIBCXX_INCLUDE_DIR "${_zakuro_libcxx_dir}")
+      break()
+    endif()
+  endforeach()
+  unset(_zakuro_libcxx_dir)
+  unset(_zakuro_libcxx_candidates)
+endif()
+
+if (LIBCXX_INCLUDE_DIR)
+  target_compile_options(zakuro
+    PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>"
+      "$<$<COMPILE_LANGUAGE:CXX>:-isystem${LIBCXX_INCLUDE_DIR}>"
+  )
+endif()
+
 target_compile_definitions(zakuro
   PRIVATE
     # CLI11 は C++17 でのビルドにおいて std::filesystem を利用するが、これを clang で解決するには c++fs のリンクが必要になる。
