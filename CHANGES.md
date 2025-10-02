@@ -13,9 +13,10 @@
 
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - @torikizi
-- [UPDATE] Sora C++ SDK を `2025.6.0-canary.4` に上げる
+- [UPDATE] Sora C++ SDK を `2025.6.0-canary.5` に上げる
   - @torikizi
-- [UPDATE] libwebrtc のバージョンを `m140.7339.2.2` に上げる
+- [UPDATE] libwebrtc のバージョンを `m141.7390.2.0` に上げる
+  - ZakuroAudioDeviceModule で AudioDeviceBuffer の初期化に `env_` を渡すように修正する
   - @torikizi
 - [UPDATE] CMake のバージョンを `4.1.2` に上げる
   - @torikizi
