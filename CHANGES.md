@@ -12,7 +12,7 @@
 ## develop
 
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
-  - Sora C++ SDK の変更に伴う対応
+  - Sora C++ SDK のアップデートに伴う対応
   - @torikizi
 - [UPDATE] Sora C++ SDK を `2025.6.0-canary.5` に上げる
   - WEBRTC_BUILD_VERSION を `m141.7390.2.0` に上げる
