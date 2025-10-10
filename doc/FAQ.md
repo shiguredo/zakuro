@@ -105,8 +105,8 @@ ffmpeg -i in.mp4 -f wav -vn out.wav
 
 - Intel Video Processing Library (VPL) を利用する場合
   - `--h264-encoder intel_vpl` を指定してください
-- NVIDIA Video Codec SDK を利用する場合
-  - `--h264-encoder nvidia_video_codec_sdk` を指定してください
+- NVIDIA Video Codec を利用する場合
+  - `--h264-encoder nvidia_video_codec` を指定してください
 - AMD Advanced Media Framework (AMF) を利用する場合
   - `--h264-encoder amd_amf` を指定してください
 - 上記エンコーダーを利用しない場合は OpenH264 をダウンロードして利用してください
@@ -123,7 +123,7 @@ H.265 の送信にはハードウェアエンコーダーが必須です。
 
 - Intel Video Processing Library (VPL) を利用する場合
   - `--h265-encoder intel_vpl` を指定してください
-- NVIDIA Video Codec SDK を利用する場合
-  - `--h265-encoder nvidia_video_codec_sdk` を指定してください
+- NVIDIA Video Codec を利用する場合
+  - `--h265-encoder nvidia_video_codec` を指定してください
 - AMD Advanced Media Framework (AMF) を利用する場合
   - `--h265-encoder amd_amf` を指定してください
