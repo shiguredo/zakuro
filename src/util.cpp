@@ -372,12 +372,14 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     auto capability = sora::GetVideoCodecCapability(capability_config);
 
     for (const auto& engine : capability.engines) {
-      std::cout << "Engine: "
-                << boost::json::value_from(engine.name).as_string()
-                << std::endl;
+      std::cout
+          << "Engine: "
+          << boost::json::value_to<std::string>(boost::json::value_from(engine.name))
+          << std::endl;
 
       for (const auto& codec : engine.codecs) {
-        auto codec_type = boost::json::value_from(codec.type).as_string();
+        auto codec_type =
+            boost::json::value_to<std::string>(boost::json::value_from(codec.type));
         if (codec.encoder) {
           std::cout << "  - " << codec_type << " Encoder" << std::endl;
         }
