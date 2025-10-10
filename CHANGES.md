@@ -17,6 +17,7 @@
 - [UPDATE] Sora C++ SDK を `2025.6.0-canary.5` に上げる
   - WEBRTC_BUILD_VERSION を `m141.7390.2.0` に上げる
   - CMAKE_VERSION を `4.1.2` に上げる
+  - ZakuroAudioDeviceModule で AudioDeviceBuffer の初期化に `env_` を渡すように修正する
   - @torikizi
 
 ## 2025.3.0
