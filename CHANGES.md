@@ -22,6 +22,7 @@
   - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
   - @torikizi
 - [UPDATE] run.py を修正し、clang を libwebrtc 提供のものに変更
+  - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
   - @torikizi
 
 ## 2025.3.0
