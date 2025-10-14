@@ -21,6 +21,8 @@
 - [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
   - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
   - @torikizi
+- [UPDATE] run.py を修正し、clang を libwebrtc 提供のものに変更
+  - @torikizi
 
 ## 2025.3.0
 
