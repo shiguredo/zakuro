@@ -71,9 +71,9 @@ def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
             "-D_LIBCPP_ENABLE_NODISCARD",
             "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE",
             "-nostdinc++",
+            f"-isystem{libcxx_include}",
+            f"-isystem{libcxxabi_include}",
         ]
-        cxx_flags.append(f"-isystem{libcxx_include}")
-        cxx_flags.append(f"-isystem{libcxxabi_include}")
         return [
             "-DCMAKE_SYSTEM_PROCESSOR=arm64",
             "-DCMAKE_OSX_ARCHITECTURES=arm64",
