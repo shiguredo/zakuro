@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m139.7258-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7258)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m141.7390-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7390)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -162,15 +162,15 @@ Options:
                               Parameters for H.264 video codec (default: none)
   --sora-video-h265-params TEXT:JSON Value
                               Parameters for H.265 video codec (default: none)
-  --vp8-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --vp8-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               VP8 encoder implementation
-  --vp9-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --vp9-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               VP9 encoder implementation
-  --av1-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --av1-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               AV1 encoder implementation
-  --h264-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --h264-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               H.264 encoder implementation
-  --h265-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+  --h265-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               H.265 encoder implementation
 ```
 

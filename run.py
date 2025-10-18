@@ -57,14 +57,33 @@ def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
         ]
     elif platform == "macos_arm64":
         sysroot = cmdcap(["xcrun", "--sdk", "macosx", "--show-sdk-path"])
+        clang_bin = os.path.join(webrtc_info.clang_dir, "bin")
+        clang = os.path.join(clang_bin, "clang")
+        clangxx = os.path.join(clang_bin, "clang++")
+        libcxx_include = os.path.join(webrtc_info.libcxx_dir, "include")
+        libcxxabi_include = os.path.join(webrtc_info.libcxxabi_dir, "include")
+        cxx_flags = [
+            "-D_LIBCPP_ABI_NAMESPACE=Cr",
+            "-D_LIBCPP_ABI_VERSION=2",
+            "-D_LIBCPP_DISABLE_AVAILABILITY",
+            "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+            "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+            "-D_LIBCPP_ENABLE_NODISCARD",
+            "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE",
+            "-nostdinc++",
+            f"-isystem{libcxx_include}",
+            f"-isystem{libcxxabi_include}",
+        ]
         return [
             "-DCMAKE_SYSTEM_PROCESSOR=arm64",
             "-DCMAKE_OSX_ARCHITECTURES=arm64",
-            "-DCMAKE_C_COMPILER=clang",
-            "-DCMAKE_C_COMPILER_TARGET=aarch64-apple-darwin",
-            "-DCMAKE_CXX_COMPILER=clang++",
-            "-DCMAKE_CXX_COMPILER_TARGET=aarch64-apple-darwin",
+            f"-DCMAKE_C_COMPILER={clang}",
+            "-DCMAKE_C_COMPILER_TARGET=arm64-apple-darwin",
+            f"-DCMAKE_CXX_COMPILER={clangxx}",
+            "-DCMAKE_CXX_COMPILER_TARGET=arm64-apple-darwin",
             f"-DCMAKE_SYSROOT={sysroot}",
+            f"-DCMAKE_OSX_SYSROOT={sysroot}",
+            f"-DCMAKE_CXX_FLAGS={' '.join(cxx_flags)}",
         ]
     else:
         raise Exception(f"Unsupported platform: {platform}")
@@ -111,7 +130,7 @@ def install_deps(
         webrtc_info = get_webrtc_info(platform, local_webrtc_build_dir, install_dir, debug)
 
         if (
-            platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64")
+            platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64", "macos_arm64")
             and local_webrtc_build_dir is None
         ):
             webrtc_version = read_version_file(webrtc_info.version_file)
