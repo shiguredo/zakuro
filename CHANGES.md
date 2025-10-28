@@ -24,6 +24,8 @@
 - [UPDATE] run.py を修正し、clang を libwebrtc 提供のものに変更
   - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
   - @torikizi
+- [UPDATE] CLI11 を `2.6.1` に上げる
+  - @torikizi
 
 ## 2025.3.0
 
