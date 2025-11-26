@@ -12,7 +12,7 @@
 #include <rtc_base/ref_counted_object.h>
 
 // Blend2D
-#include <blend2d.h>
+#include <blend2d/blend2d.h>
 
 #include "xorshift.h"
 #include "y4m_reader.h"
