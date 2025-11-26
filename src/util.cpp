@@ -334,11 +334,11 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
           {{"internal", sora::VideoCodecImplementation::kInternal},
            {"cisco_openh264", sora::VideoCodecImplementation::kCiscoOpenH264},
            {"intel_vpl", sora::VideoCodecImplementation::kIntelVpl},
-           {"nvidia_video_codec_sdk",
-            sora::VideoCodecImplementation::kNvidiaVideoCodecSdk},
+           {"nvidia_video_codec",
+            sora::VideoCodecImplementation::kNvidiaVideoCodec},
            {"amd_amf", sora::VideoCodecImplementation::kAmdAmf}});
   auto video_codec_description =
-      "(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)";
+      "(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)";
 
   // VP8
   app.add_option("--vp8-encoder", config.vp8_encoder,
