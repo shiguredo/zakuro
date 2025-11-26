@@ -14,7 +14,7 @@
 #include <rtc_base/log_sinks.h>
 #include <rtc_base/string_utils.h>
 
-#include <blend2d.h>
+#include <blend2d/blend2d.h>
 
 #include "duckdb_stats_writer.h"
 #include "fake_audio_key_trigger.h"
