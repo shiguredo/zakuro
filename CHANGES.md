@@ -14,9 +14,9 @@
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - @torikizi
-- [UPDATE] Sora C++ SDK を `2025.6.0-canary.10` に上げる
-  - WEBRTC_BUILD_VERSION を `m142.7444.2.0` に上げる
-  - CMAKE_VERSION を `4.1.2` に上げる
+- [UPDATE] Sora C++ SDK を `2025.6.0` に上げる
+  - WEBRTC_BUILD_VERSION を `m143.7499.1.0` に上げる
+  - CMAKE_VERSION を `4.1.3` に上げる
   - @torikizi
 - [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
   - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
