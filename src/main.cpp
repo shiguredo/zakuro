@@ -132,18 +132,18 @@ int main(int argc, char* argv[]) {
       common_args.push_back(
           Util::PrimitiveValueToString(zakuro_obj.at("instance-hatch-rate")));
     }
-    if (zakuro_node["rtc-stats-interval"]) {
+    if (zakuro_obj.contains("rtc-stats-interval")) {
       common_args.push_back("--rtc-stats-interval");
       common_args.push_back(
-          zakuro_node["rtc-stats-interval"].as<std::string>());
+          Util::PrimitiveValueToString(zakuro_obj.at("rtc-stats-interval")));
     }
-    if (zakuro_node["duckdb-output-dir"]) {
+    if (zakuro_obj.contains("duckdb-output-dir")) {
       common_args.push_back("--duckdb-output-dir");
       common_args.push_back(
-          zakuro_node["duckdb-output-dir"].as<std::string>());
+          Util::PrimitiveValueToString(zakuro_obj.at("duckdb-output-dir")));
     }
-    if (zakuro_node["no-duckdb-output"] && 
-        zakuro_node["no-duckdb-output"].as<bool>()) {
+    if (zakuro_obj.contains("no-duckdb-output") &&
+        zakuro_obj.at("no-duckdb-output").as_bool()) {
       common_args.push_back("--no-duckdb-output");
     }
 
@@ -260,20 +260,18 @@ int main(int argc, char* argv[]) {
           config_json["sora_signaling_urls"] = urls;
         }
       } else {
-        // YAML モードの場合、YAML ファイルの内容を JSON として保存
+        // 設定ファイルモードの場合、設定ファイルを再度読み込んで JSON として保存
         try {
-          YAML::Node yaml_node = YAML::LoadFile(config_file);
-          boost::json::value yaml_json = Util::NodeToJson(yaml_node);
-          // boost::json::value を boost::json::object に変換
-          if (yaml_json.is_object()) {
-            config_json = yaml_json.as_object();
+          boost::json::value config_value = Util::LoadJsoncFile(config_file);
+          if (config_value.is_object()) {
+            config_json = config_value.as_object();
           } else {
-            // YAML のルートがオブジェクトでない場合は、オブジェクトでラップ
-            config_json["data"] = yaml_json;
+            // ルートがオブジェクトでない場合は、オブジェクトでラップ
+            config_json["data"] = config_value;
           }
         } catch (const std::exception& e) {
-          RTC_LOG(LS_WARNING) << "Failed to convert YAML to JSON: " << e.what();
-          config_json["error"] = "Failed to convert YAML to JSON";
+          RTC_LOG(LS_WARNING) << "Failed to load config JSON: " << e.what();
+          config_json["error"] = "Failed to load config JSON";
         }
       }
       
