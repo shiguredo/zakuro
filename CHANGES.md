@@ -26,6 +26,8 @@
   - @torikizi
 - [UPDATE] CLI11 を `2.6.1` に上げる
   - @torikizi
+- [FIX] `--fake-audio-capture` 指定時にデータチャネルシナリオが実行されない問題を修正する
+  - @voluntas
 
 ## 2025.3.0
 
