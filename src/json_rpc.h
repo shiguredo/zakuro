@@ -28,6 +28,7 @@ class JsonRpcHandler {
   // 各メソッドのハンドラー
   boost::json::value HandleVersionMethod();
   boost::json::value HandleQueryMethod(const boost::json::value& params);
+  boost::json::value HandleListConnectionsMethod(const boost::json::value& params);
 
   // カスタムエラー型
   struct JsonRpcError {

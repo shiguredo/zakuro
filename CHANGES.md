@@ -75,6 +75,7 @@
 - [ADD] JSON-RPC 2.0 over HTTP/1.1 対応の `/rpc` エンドポイントを追加する
   - `2026.1.0/GetVersion` メソッドで Zakuro および関連ライブラリのバージョン情報を取得可能
   - `2026.1.0/Query` メソッドで DuckDB に対する SQL クエリを実行可能
+  - `2026.1.0/ListConnections` メソッドで接続一覧を取得可能
   - @voluntas
 - [ADD] 実験的に UI 機能を追加する
   - `--ui-remote-url` オプションで UI の URL を設定可能
