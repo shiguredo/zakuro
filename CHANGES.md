@@ -9,44 +9,8 @@
 - FIX
   - バグ修正
 
-## develop
+## feature/add-duckdb
 
-- [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
-  - Sora C++ SDK のアップデートに伴う対応
-  - @torikizi
-- [UPDATE] Sora C++ SDK を `2025.6.0` に上げる
-  - WEBRTC_BUILD_VERSION を `m143.7499.1.0` に上げる
-  - CMAKE_VERSION を `4.1.3` に上げる
-  - @torikizi
-- [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
-  - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
-  - @torikizi
-- [UPDATE] run.py を修正し、clang を libwebrtc 提供のものに変更
-  - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
-  - @torikizi
-- [UPDATE] CLI11 を `2.6.1` に上げる
-  - @torikizi
-
-## 2025.3.1
-
-**リリース日**: 2025-12-03
-
-- [FIX] `--fake-audio-capture` 指定時にデータチャネルシナリオが実行されない問題を修正する
-  - @voluntas
-
-## 2025.3.0
-
-**リリース日**: 2025-09-17
-
-- [CHANGE] 設定ファイル形式を YAML から JSONC (JSON with Comments) に変更する
-  - `/` と `/* */` コメントと末尾カンマをサポートする JSONC 形式を採用
-  - 設定ファイルの拡張子を `.yaml` から `.jsonc` に変更
-  - トップレベルの `zakuro` を削除しました
-  - @voluntas
-- [CHANGE] 設定ファイルの JSONC 化により不要になった `yaml-cpp` 依存を削除
-  - @voluntas
-- [CHANGE] kuzushi 機能を削除する
-  - @voluntas
 - [ADD] DuckDB を使用した WebRTC 統計情報の永続化機能を追加する
   - 統計情報は `zakuro_YYYYMMDD_HHMMSS_mmm.db` 形式のファイルに保存される
   - 対応済み WebRTC 統計情報
@@ -84,7 +48,48 @@
 - [ADD] HTTP プロキシに HTTPS サポートを追加する
   - SSL/TLS 接続、証明書検証、SNI をサポート
   - @voluntas
+- [ADD] pytest を使った E2E テスト基盤を追加する
+  - @voluntas
 - [FIX] VirtualClient::OnDisconnect で rtc_stats_timer_ のキャンセル処理が欠落していた問題を修正する
+  - @voluntas
+
+## develop
+
+- [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
+  - Sora C++ SDK のアップデートに伴う対応
+  - @torikizi
+- [UPDATE] Sora C++ SDK を `2025.6.0` に上げる
+  - WEBRTC_BUILD_VERSION を `m143.7499.1.0` に上げる
+  - CMAKE_VERSION を `4.1.3` に上げる
+  - @torikizi
+- [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
+  - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
+  - @torikizi
+- [UPDATE] run.py を修正し、clang を libwebrtc 提供のものに変更
+  - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
+  - @torikizi
+- [UPDATE] CLI11 を `2.6.1` に上げる
+  - @torikizi
+
+## 2025.3.1
+
+**リリース日**: 2025-12-03
+
+- [FIX] `--fake-audio-capture` 指定時にデータチャネルシナリオが実行されない問題を修正する
+  - @voluntas
+
+## 2025.3.0
+
+**リリース日**: 2025-09-17
+
+- [CHANGE] 設定ファイル形式を YAML から JSONC (JSON with Comments) に変更する
+  - `/` と `/* */` コメントと末尾カンマをサポートする JSONC 形式を採用
+  - 設定ファイルの拡張子を `.yaml` から `.jsonc` に変更
+  - トップレベルの `zakuro` を削除しました
+  - @voluntas
+- [CHANGE] 設定ファイルの JSONC 化により不要になった `yaml-cpp` 依存を削除
+  - @voluntas
+- [CHANGE] kuzushi 機能を削除する
   - @voluntas
 - [UPDATE] Sora C++ SDK を `2025.5.0` に上げる
   - libwebrtc のバージョンを `m139.7258.3.0` に上げる
