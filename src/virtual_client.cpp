@@ -154,7 +154,6 @@ VirtualClientStats VirtualClient::GetStats() const {
 }
 
 void VirtualClient::OnSetOffer(std::string offer) {
-
   // offer メッセージから channel_id, connection_id, session_id, audio, video を取得
   auto json = boost::json::parse(offer);
   {
@@ -224,7 +223,7 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
                                  std::string message) {
   signaling_.reset();
   retry_timer_.cancel();
-  
+
   // RTC統計情報タイマーをキャンセル
   {
     std::lock_guard<std::mutex> lock(rtc_stats_timer_mutex_);
@@ -238,8 +237,8 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
     // この場合は、設定次第で再接続を試みる
     if (retry_count_ < config_.max_retry) {
       retry_count_ += 1;
-      retry_timer_.expires_after(std::chrono::milliseconds(
-          (int)(config_.retry_interval * 1000)));
+      retry_timer_.expires_after(
+          std::chrono::milliseconds((int)(config_.retry_interval * 1000)));
       retry_timer_.async_wait([this](boost::system::error_code ec) {
         if (ec) {
           return;
@@ -335,7 +334,7 @@ void StatsCollectorCallback::OnStatsDelivered(
 
     // フィルタリング: inbound-rtp, outbound-rtp, codec, media-source, remote-inbound-rtp, remote-outbound-rtp, data-channel のみ
     if (type != "inbound-rtp" && type != "outbound-rtp" && type != "codec" &&
-        type != "media-source" && type != "remote-inbound-rtp" && 
+        type != "media-source" && type != "remote-inbound-rtp" &&
         type != "remote-outbound-rtp" && type != "data-channel") {
       continue;
     }

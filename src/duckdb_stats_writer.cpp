@@ -23,19 +23,19 @@ constexpr int MillisecondFieldWidth = 3;
 std::unordered_map<std::string, std::string> ReadDepsFile() {
   std::unordered_map<std::string, std::string> versions;
   std::ifstream file("DEPS");
-  
+
   if (!file.is_open()) {
     RTC_LOG(LS_WARNING) << "Failed to open DEPS file";
     return versions;
   }
-  
+
   std::string line;
   while (std::getline(file, line)) {
     // 空行やコメント行をスキップ
     if (line.empty() || line[0] == '#') {
       continue;
     }
-    
+
     // KEY=VALUE 形式をパース
     size_t pos = line.find('=');
     if (pos != std::string::npos) {
@@ -44,7 +44,7 @@ std::unordered_map<std::string, std::string> ReadDepsFile() {
       versions[key] = value;
     }
   }
-  
+
   return versions;
 }
 }  // namespace
@@ -124,9 +124,11 @@ void DuckDBStatsWriter::CreateTable() {
   execute_query(
       "CREATE SEQUENCE IF NOT EXISTS rtc_stats_media_source_pk_seq START 1");
   execute_query(
-      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_remote_inbound_rtp_pk_seq START 1");
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_remote_inbound_rtp_pk_seq START "
+      "1");
   execute_query(
-      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_remote_outbound_rtp_pk_seq START 1");
+      "CREATE SEQUENCE IF NOT EXISTS rtc_stats_remote_outbound_rtp_pk_seq "
+      "START 1");
   execute_query(
       "CREATE SEQUENCE IF NOT EXISTS rtc_stats_data_channel_pk_seq START 1");
 
@@ -503,18 +505,19 @@ void DuckDBStatsWriter::CreateTable() {
 
   // 新しいテーブルのインデックスを作成
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_remote_inbound_rtp_composite ON "
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_remote_inbound_rtp_composite "
+      "ON "
       "rtc_stats_remote_inbound_rtp(channel_id, connection_id, timestamp)");
-  
+
   execute_query(
-      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_remote_outbound_rtp_composite ON "
+      "CREATE INDEX IF NOT EXISTS idx_rtc_stats_remote_outbound_rtp_composite "
+      "ON "
       "rtc_stats_remote_outbound_rtp(channel_id, connection_id, timestamp)");
-  
+
   execute_query(
       "CREATE INDEX IF NOT EXISTS idx_rtc_stats_data_channel_composite ON "
       "rtc_stats_data_channel(channel_id, connection_id, timestamp)");
 }
-
 
 bool DuckDBStatsWriter::WriteStats(
     const std::vector<VirtualClientStats>& stats) {
@@ -542,7 +545,10 @@ bool DuckDBStatsWriter::WriteStats(
           "INSERT INTO connection (timestamp, channel_id, connection_id, "
           "session_id, role, audio, video, "
           "websocket_connected, datachannel_connected) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8)";
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $connection_id, "
+          "$session_id, "
+          "$role, $audio, $video, $websocket_connected, "
+          "$datachannel_connected)";
       if (!duckdb_utils::Prepare(conn_, connections_sql, stmt)) {
         RTC_LOG(LS_ERROR) << "Failed to prepare connections statement: "
                           << stmt.error();
@@ -551,14 +557,15 @@ bool DuckDBStatsWriter::WriteStats(
       }
 
       // パラメータをバインド
-      duckdb_bind_varchar(stmt.get_raw(), 1, stat.channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 2, stat.connection_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 3, stat.session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 4, stat.role.c_str());
-      duckdb_bind_boolean(stmt.get_raw(), 5, stat.has_audio_track);
-      duckdb_bind_boolean(stmt.get_raw(), 6, stat.has_video_track);
-      duckdb_bind_boolean(stmt.get_raw(), 7, stat.websocket_connected);
-      duckdb_bind_boolean(stmt.get_raw(), 8, stat.datachannel_connected);
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", stat.channel_id.c_str());
+      binder.BindVarchar("connection_id", stat.connection_id.c_str());
+      binder.BindVarchar("session_id", stat.session_id.c_str());
+      binder.BindVarchar("role", stat.role.c_str());
+      binder.BindBoolean("audio", stat.has_audio_track);
+      binder.BindBoolean("video", stat.has_video_track);
+      binder.BindBoolean("websocket_connected", stat.websocket_connected);
+      binder.BindBoolean("datachannel_connected", stat.datachannel_connected);
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -664,8 +671,10 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           "connection_id, rtc_timestamp, "
           "type, id, mime_type, payload_type, clock_rate, channels, "
           "sdp_fmtp_line) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
-          "$11) "
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $session_id, "
+          "$connection_id, "
+          "$rtc_timestamp, $type, $id, $mime_type, $payload_type, $clock_rate, "
+          "$channels, $sdp_fmtp_line) "
           "ON CONFLICT (connection_id, id, mime_type, payload_type, "
           "clock_rate, channels, sdp_fmtp_line) "
           "DO NOTHING";
@@ -677,19 +686,18 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       }
 
       // パラメータをバインド
-      duckdb_bind_varchar(codec_stmt.get_raw(), 1, channel_id.c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 2, session_id.c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 3, connection_id.c_str());
-      duckdb_bind_double(codec_stmt.get_raw(), 4, rtc_timestamp);
-      duckdb_bind_varchar(codec_stmt.get_raw(), 5, get_string("type").c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 6, get_string("id").c_str());
-      duckdb_bind_varchar(codec_stmt.get_raw(), 7,
-                          get_string("mimeType").c_str());
-      duckdb_bind_int64(codec_stmt.get_raw(), 8, get_int64("payloadType"));
-      duckdb_bind_int64(codec_stmt.get_raw(), 9, get_int64("clockRate"));
-      duckdb_bind_int64(codec_stmt.get_raw(), 10, get_int64("channels"));
-      duckdb_bind_varchar(codec_stmt.get_raw(), 11,
-                          get_string("sdpFmtpLine").c_str());
+      duckdb_utils::NamedBinder binder(codec_stmt.get_raw());
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string("type").c_str());
+      binder.BindVarchar("id", get_string("id").c_str());
+      binder.BindVarchar("mime_type", get_string("mimeType").c_str());
+      binder.BindInt64("payload_type", get_int64("payloadType"));
+      binder.BindInt64("clock_rate", get_int64("clockRate"));
+      binder.BindInt64("channels", get_int64("channels"));
+      binder.BindVarchar("sdp_fmtp_line", get_string("sdpFmtpLine").c_str());
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -705,7 +713,8 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // inbound-rtp統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO rtc_stats_inbound_rtp (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_inbound_rtp (timestamp, channel_id, "
+          "session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, ssrc, kind, transport_id, codec_id, "
           "packets_received, packets_lost, bytes_received, jitter, "
@@ -734,13 +743,31 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           "frames_assembled_from_multiple_packets, total_assembly_time, "
           "retransmitted_packets_received, retransmitted_bytes_received, "
           "rtx_ssrc, fec_ssrc) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
-          "$11, $12, $13, $14, $15, $16, $17, $18, $19, $20, "
-          "$21, $22, $23, $24, $25, $26, $27, $28, $29, $30, "
-          "$31, $32, $33, $34, $35, $36, $37, $38, $39, $40, "
-          "$41, $42, $43, $44, $45, $46, $47, $48, $49, $50, "
-          "$51, $52, $53, $54, $55, $56, $57, $58, $59, $60, "
-          "$61, $62, $63)";
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $session_id, "
+          "$connection_id, "
+          "$rtc_timestamp, $type, $id, $ssrc, $kind, $transport_id, $codec_id, "
+          "$packets_received, $packets_lost, $bytes_received, $jitter, "
+          "$last_packet_received_timestamp, $header_bytes_received, "
+          "$packets_discarded, $fec_bytes_received, $fec_packets_received, "
+          "$fec_packets_discarded, $nack_count, $pli_count, $fir_count, "
+          "$track_identifier, $mid, $remote_id, $frames_decoded, "
+          "$key_frames_decoded, $frames_rendered, $frames_dropped, "
+          "$frame_width, $frame_height, $frames_per_second, $qp_sum, "
+          "$total_decode_time, $total_inter_frame_delay, "
+          "$total_squared_inter_frame_delay, $pause_count, "
+          "$total_pauses_duration, $freeze_count, $total_freezes_duration, "
+          "$total_processing_delay, $estimated_playout_timestamp, "
+          "$jitter_buffer_delay, $jitter_buffer_target_delay, "
+          "$jitter_buffer_emitted_count, $jitter_buffer_minimum_delay, "
+          "$total_samples_received, $concealed_samples, "
+          "$silent_concealed_samples, $concealment_events, "
+          "$inserted_samples_for_deceleration, "
+          "$removed_samples_for_acceleration, $audio_level, "
+          "$total_audio_energy, $total_samples_duration, $frames_received, "
+          "$decoder_implementation, $playout_id, $power_efficient_decoder, "
+          "$frames_assembled_from_multiple_packets, $total_assembly_time, "
+          "$retransmitted_packets_received, $retransmitted_bytes_received, "
+          "$rtx_ssrc, $fec_ssrc)";
 
       if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
         RTC_LOG(LS_ERROR) << "Failed to prepare inbound-rtp stats statement: "
@@ -751,101 +778,96 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       }
 
       // パラメータをバインド
-      int idx = 1;
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsLost"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesReceived"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("jitter"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("lastPacketReceivedTimestamp"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("headerBytesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsDiscarded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("fecBytesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("fecPacketsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("fecPacketsDiscarded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("nackCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("pliCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("firCount"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("trackIdentifier").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("mid").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("remoteId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesDecoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("keyFramesDecoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesRendered"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesDropped"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameWidth"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameHeight"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("framesPerSecond"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("qpSum"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalDecodeTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalInterFrameDelay"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalSquaredInterFrameDelay"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("pauseCount"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalPausesDuration"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("freezeCount"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalFreezesDuration"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalProcessingDelay"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("estimatedPlayoutTimestamp"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("jitterBufferDelay"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("jitterBufferTargetDelay"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("jitterBufferEmittedCount"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("jitterBufferMinimumDelay"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("totalSamplesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("concealedSamples"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("silentConcealedSamples"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("concealmentEvents"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("insertedSamplesForDeceleration"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("removedSamplesForAcceleration"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("audioLevel"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalAudioEnergy"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalSamplesDuration"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesReceived"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("decoderImplementation").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("playoutId").c_str());
-      duckdb_bind_boolean(stmt.get_raw(), idx++,
-                          get_bool("powerEfficientDecoder"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("framesAssembledFromMultiplePackets"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalAssemblyTime"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("retransmittedPacketsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("retransmittedBytesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("rtxSsrc"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("fecSsrc"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string("type").c_str());
+      binder.BindVarchar("id", get_string("id").c_str());
+      binder.BindInt64("ssrc", get_int64("ssrc"));
+      binder.BindVarchar("kind", get_string("kind").c_str());
+      binder.BindVarchar("transport_id", get_string("transportId").c_str());
+      binder.BindVarchar("codec_id", get_string("codecId").c_str());
+      binder.BindInt64("packets_received", get_int64("packetsReceived"));
+      binder.BindInt64("packets_lost", get_int64("packetsLost"));
+      binder.BindInt64("bytes_received", get_int64("bytesReceived"));
+      binder.BindDouble("jitter", get_double("jitter"));
+      binder.BindDouble("last_packet_received_timestamp",
+                        get_double("lastPacketReceivedTimestamp"));
+      binder.BindInt64("header_bytes_received",
+                       get_int64("headerBytesReceived"));
+      binder.BindInt64("packets_discarded", get_int64("packetsDiscarded"));
+      binder.BindInt64("fec_bytes_received", get_int64("fecBytesReceived"));
+      binder.BindInt64("fec_packets_received", get_int64("fecPacketsReceived"));
+      binder.BindInt64("fec_packets_discarded",
+                       get_int64("fecPacketsDiscarded"));
+      binder.BindInt64("nack_count", get_int64("nackCount"));
+      binder.BindInt64("pli_count", get_int64("pliCount"));
+      binder.BindInt64("fir_count", get_int64("firCount"));
+      binder.BindVarchar("track_identifier",
+                         get_string("trackIdentifier").c_str());
+      binder.BindVarchar("mid", get_string("mid").c_str());
+      binder.BindVarchar("remote_id", get_string("remoteId").c_str());
+      binder.BindInt64("frames_decoded", get_int64("framesDecoded"));
+      binder.BindInt64("key_frames_decoded", get_int64("keyFramesDecoded"));
+      binder.BindInt64("frames_rendered", get_int64("framesRendered"));
+      binder.BindInt64("frames_dropped", get_int64("framesDropped"));
+      binder.BindInt64("frame_width", get_int64("frameWidth"));
+      binder.BindInt64("frame_height", get_int64("frameHeight"));
+      binder.BindDouble("frames_per_second", get_double("framesPerSecond"));
+      binder.BindInt64("qp_sum", get_int64("qpSum"));
+      binder.BindDouble("total_decode_time", get_double("totalDecodeTime"));
+      binder.BindDouble("total_inter_frame_delay",
+                        get_double("totalInterFrameDelay"));
+      binder.BindDouble("total_squared_inter_frame_delay",
+                        get_double("totalSquaredInterFrameDelay"));
+      binder.BindInt64("pause_count", get_int64("pauseCount"));
+      binder.BindDouble("total_pauses_duration",
+                        get_double("totalPausesDuration"));
+      binder.BindInt64("freeze_count", get_int64("freezeCount"));
+      binder.BindDouble("total_freezes_duration",
+                        get_double("totalFreezesDuration"));
+      binder.BindDouble("total_processing_delay",
+                        get_double("totalProcessingDelay"));
+      binder.BindDouble("estimated_playout_timestamp",
+                        get_double("estimatedPlayoutTimestamp"));
+      binder.BindDouble("jitter_buffer_delay", get_double("jitterBufferDelay"));
+      binder.BindDouble("jitter_buffer_target_delay",
+                        get_double("jitterBufferTargetDelay"));
+      binder.BindInt64("jitter_buffer_emitted_count",
+                       get_int64("jitterBufferEmittedCount"));
+      binder.BindDouble("jitter_buffer_minimum_delay",
+                        get_double("jitterBufferMinimumDelay"));
+      binder.BindInt64("total_samples_received",
+                       get_int64("totalSamplesReceived"));
+      binder.BindInt64("concealed_samples", get_int64("concealedSamples"));
+      binder.BindInt64("silent_concealed_samples",
+                       get_int64("silentConcealedSamples"));
+      binder.BindInt64("concealment_events", get_int64("concealmentEvents"));
+      binder.BindInt64("inserted_samples_for_deceleration",
+                       get_int64("insertedSamplesForDeceleration"));
+      binder.BindInt64("removed_samples_for_acceleration",
+                       get_int64("removedSamplesForAcceleration"));
+      binder.BindDouble("audio_level", get_double("audioLevel"));
+      binder.BindDouble("total_audio_energy", get_double("totalAudioEnergy"));
+      binder.BindDouble("total_samples_duration",
+                        get_double("totalSamplesDuration"));
+      binder.BindInt64("frames_received", get_int64("framesReceived"));
+      binder.BindVarchar("decoder_implementation",
+                         get_string("decoderImplementation").c_str());
+      binder.BindVarchar("playout_id", get_string("playoutId").c_str());
+      binder.BindBoolean("power_efficient_decoder",
+                         get_bool("powerEfficientDecoder"));
+      binder.BindInt64("frames_assembled_from_multiple_packets",
+                       get_int64("framesAssembledFromMultiplePackets"));
+      binder.BindDouble("total_assembly_time", get_double("totalAssemblyTime"));
+      binder.BindInt64("retransmitted_packets_received",
+                       get_int64("retransmittedPacketsReceived"));
+      binder.BindInt64("retransmitted_bytes_received",
+                       get_int64("retransmittedBytesReceived"));
+      binder.BindInt64("rtx_ssrc", get_int64("rtxSsrc"));
+      binder.BindInt64("fec_ssrc", get_int64("fecSsrc"));
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -861,7 +883,8 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // outbound-rtp統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO rtc_stats_outbound_rtp (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_outbound_rtp (timestamp, channel_id, "
+          "session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, ssrc, kind, transport_id, codec_id, "
           "packets_sent, bytes_sent, packets_sent_with_ect1, "
@@ -879,11 +902,24 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           "quality_limitation_resolution_changes, "
           "nack_count, pli_count, fir_count, encoder_implementation, "
           "power_efficient_encoder, active, scalability_mode) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
-          "$11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, "
-          "$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, "
-          "$33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, "
-          "$44, $45, $46, $47)";
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $session_id, "
+          "$connection_id, "
+          "$rtc_timestamp, $type, $id, $ssrc, $kind, $transport_id, $codec_id, "
+          "$packets_sent, $bytes_sent, $packets_sent_with_ect1, "
+          "$mid, $media_source_id, $remote_id, $rid, $encoding_index, "
+          "$header_bytes_sent, $retransmitted_packets_sent, "
+          "$retransmitted_bytes_sent, $rtx_ssrc, $target_bitrate, "
+          "$total_encoded_bytes_target, $frame_width, $frame_height, "
+          "$frames_per_second, $frames_sent, $huge_frames_sent, "
+          "$frames_encoded, $key_frames_encoded, $qp_sum, "
+          "$total_encode_time, $total_packet_send_delay, "
+          "$quality_limitation_reason, $quality_limitation_duration_none, "
+          "$quality_limitation_duration_cpu, "
+          "$quality_limitation_duration_bandwidth, "
+          "$quality_limitation_duration_other, "
+          "$quality_limitation_resolution_changes, "
+          "$nack_count, $pli_count, $fir_count, $encoder_implementation, "
+          "$power_efficient_encoder, $active, $scalability_mode)";
 
       if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
         RTC_LOG(LS_ERROR) << "Failed to prepare outbound-rtp stats statement: "
@@ -893,92 +929,92 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
             "Failed to prepare outbound-rtp stats statement: " + stmt.error());
       }
 
-      // パラメータをバインド
-      int idx = 1;
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("packetsSentWithEct1"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("mid").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("mediaSourceId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("remoteId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("rid").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("encodingIndex"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("headerBytesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("retransmittedPacketsSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("retransmittedBytesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("rtxSsrc"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("targetBitrate"));
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("totalEncodedBytesTarget"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameWidth"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frameHeight"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("framesPerSecond"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("hugeFramesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("framesEncoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("keyFramesEncoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("qpSum"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalEncodeTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalPacketSendDelay"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("qualityLimitationReason").c_str());
       // qualityLimitationDurations は map 型なので、その中から値を取得
       double duration_none = 0.0;
       double duration_cpu = 0.0;
       double duration_bandwidth = 0.0;
       double duration_other = 0.0;
-      
-      if (json_obj.contains("qualityLimitationDurations") && 
+
+      if (json_obj.contains("qualityLimitationDurations") &&
           json_obj.at("qualityLimitationDurations").is_object()) {
         auto durations = json_obj.at("qualityLimitationDurations").as_object();
-        
+
         if (durations.contains("none") && durations.at("none").is_number()) {
           duration_none = durations.at("none").to_number<double>();
         }
         if (durations.contains("cpu") && durations.at("cpu").is_number()) {
           duration_cpu = durations.at("cpu").to_number<double>();
         }
-        if (durations.contains("bandwidth") && durations.at("bandwidth").is_number()) {
+        if (durations.contains("bandwidth") &&
+            durations.at("bandwidth").is_number()) {
           duration_bandwidth = durations.at("bandwidth").to_number<double>();
         }
         if (durations.contains("other") && durations.at("other").is_number()) {
           duration_other = durations.at("other").to_number<double>();
         }
       }
-      
-      duckdb_bind_double(stmt.get_raw(), idx++, duration_none);
-      duckdb_bind_double(stmt.get_raw(), idx++, duration_cpu);
-      duckdb_bind_double(stmt.get_raw(), idx++, duration_bandwidth);
-      duckdb_bind_double(stmt.get_raw(), idx++, duration_other);
-      duckdb_bind_int64(stmt.get_raw(), idx++,
-                        get_int64("qualityLimitationResolutionChanges"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("nackCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("pliCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("firCount"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("encoderImplementation").c_str());
-      duckdb_bind_boolean(stmt.get_raw(), idx++,
-                          get_bool("powerEfficientEncoder"));
-      duckdb_bind_boolean(stmt.get_raw(), idx++, get_bool("active"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("scalabilityMode").c_str());
+
+      // パラメータをバインド
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string("type").c_str());
+      binder.BindVarchar("id", get_string("id").c_str());
+      binder.BindInt64("ssrc", get_int64("ssrc"));
+      binder.BindVarchar("kind", get_string("kind").c_str());
+      binder.BindVarchar("transport_id", get_string("transportId").c_str());
+      binder.BindVarchar("codec_id", get_string("codecId").c_str());
+      binder.BindInt64("packets_sent", get_int64("packetsSent"));
+      binder.BindInt64("bytes_sent", get_int64("bytesSent"));
+      binder.BindInt64("packets_sent_with_ect1",
+                       get_int64("packetsSentWithEct1"));
+      binder.BindVarchar("mid", get_string("mid").c_str());
+      binder.BindVarchar("media_source_id",
+                         get_string("mediaSourceId").c_str());
+      binder.BindVarchar("remote_id", get_string("remoteId").c_str());
+      binder.BindVarchar("rid", get_string("rid").c_str());
+      binder.BindInt64("encoding_index", get_int64("encodingIndex"));
+      binder.BindInt64("header_bytes_sent", get_int64("headerBytesSent"));
+      binder.BindInt64("retransmitted_packets_sent",
+                       get_int64("retransmittedPacketsSent"));
+      binder.BindInt64("retransmitted_bytes_sent",
+                       get_int64("retransmittedBytesSent"));
+      binder.BindInt64("rtx_ssrc", get_int64("rtxSsrc"));
+      binder.BindDouble("target_bitrate", get_double("targetBitrate"));
+      binder.BindInt64("total_encoded_bytes_target",
+                       get_int64("totalEncodedBytesTarget"));
+      binder.BindInt64("frame_width", get_int64("frameWidth"));
+      binder.BindInt64("frame_height", get_int64("frameHeight"));
+      binder.BindDouble("frames_per_second", get_double("framesPerSecond"));
+      binder.BindInt64("frames_sent", get_int64("framesSent"));
+      binder.BindInt64("huge_frames_sent", get_int64("hugeFramesSent"));
+      binder.BindInt64("frames_encoded", get_int64("framesEncoded"));
+      binder.BindInt64("key_frames_encoded", get_int64("keyFramesEncoded"));
+      binder.BindInt64("qp_sum", get_int64("qpSum"));
+      binder.BindDouble("total_encode_time", get_double("totalEncodeTime"));
+      binder.BindDouble("total_packet_send_delay",
+                        get_double("totalPacketSendDelay"));
+      binder.BindVarchar("quality_limitation_reason",
+                         get_string("qualityLimitationReason").c_str());
+      binder.BindDouble("quality_limitation_duration_none", duration_none);
+      binder.BindDouble("quality_limitation_duration_cpu", duration_cpu);
+      binder.BindDouble("quality_limitation_duration_bandwidth",
+                        duration_bandwidth);
+      binder.BindDouble("quality_limitation_duration_other", duration_other);
+      binder.BindInt64("quality_limitation_resolution_changes",
+                       get_int64("qualityLimitationResolutionChanges"));
+      binder.BindInt64("nack_count", get_int64("nackCount"));
+      binder.BindInt64("pli_count", get_int64("pliCount"));
+      binder.BindInt64("fir_count", get_int64("firCount"));
+      binder.BindVarchar("encoder_implementation",
+                         get_string("encoderImplementation").c_str());
+      binder.BindBoolean("power_efficient_encoder",
+                         get_bool("powerEfficientEncoder"));
+      binder.BindBoolean("active", get_bool("active"));
+      binder.BindVarchar("scalability_mode",
+                         get_string("scalabilityMode").c_str());
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -994,14 +1030,19 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // media-source統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO rtc_stats_media_source (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_media_source (timestamp, channel_id, "
+          "session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, track_identifier, kind, "
           "audio_level, total_audio_energy, total_samples_duration, "
           "echo_return_loss, echo_return_loss_enhancement, "
           "width, height, frames, frames_per_second) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, "
-          "$9, $10, $11, $12, $13, $14, $15, $16, $17)";
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $session_id, "
+          "$connection_id, "
+          "$rtc_timestamp, $type, $id, $track_identifier, $kind, "
+          "$audio_level, $total_audio_energy, $total_samples_duration, "
+          "$echo_return_loss, $echo_return_loss_enhancement, "
+          "$width, $height, $frames, $frames_per_second)";
 
       if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
         RTC_LOG(LS_ERROR) << "Failed to prepare media-source stats statement: "
@@ -1012,27 +1053,27 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       }
 
       // パラメータをバインド
-      int idx = 1;
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++,
-                          get_string("trackIdentifier").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("audioLevel"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalAudioEnergy"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("totalSamplesDuration"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("echoReturnLoss"));
-      duckdb_bind_double(stmt.get_raw(), idx++,
-                         get_double("echoReturnLossEnhancement"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("width"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("height"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("frames"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("framesPerSecond"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string("type").c_str());
+      binder.BindVarchar("id", get_string("id").c_str());
+      binder.BindVarchar("track_identifier",
+                         get_string("trackIdentifier").c_str());
+      binder.BindVarchar("kind", get_string("kind").c_str());
+      binder.BindDouble("audio_level", get_double("audioLevel"));
+      binder.BindDouble("total_audio_energy", get_double("totalAudioEnergy"));
+      binder.BindDouble("total_samples_duration",
+                        get_double("totalSamplesDuration"));
+      binder.BindDouble("echo_return_loss", get_double("echoReturnLoss"));
+      binder.BindDouble("echo_return_loss_enhancement",
+                        get_double("echoReturnLossEnhancement"));
+      binder.BindInt64("width", get_int64("width"));
+      binder.BindInt64("height", get_int64("height"));
+      binder.BindInt64("frames", get_int64("frames"));
+      binder.BindDouble("frames_per_second", get_double("framesPerSecond"));
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -1048,50 +1089,67 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // remote-inbound-rtp統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO rtc_stats_remote_inbound_rtp (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_remote_inbound_rtp (timestamp, channel_id, "
+          "session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, ssrc, kind, transport_id, codec_id, "
-          "packets_received, packets_received_with_ect1, packets_received_with_ce, "
+          "packets_received, packets_received_with_ect1, "
+          "packets_received_with_ce, "
           "packets_reported_as_lost, packets_reported_as_lost_but_recovered, "
           "packets_lost, jitter, "
           "local_id, round_trip_time, total_round_trip_time, fraction_lost, "
           "round_trip_time_measurements, packets_with_bleached_ect1_marking) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
-          "$11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)";
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $session_id, "
+          "$connection_id, "
+          "$rtc_timestamp, $type, $id, $ssrc, $kind, $transport_id, $codec_id, "
+          "$packets_received, $packets_received_with_ect1, "
+          "$packets_received_with_ce, "
+          "$packets_reported_as_lost, $packets_reported_as_lost_but_recovered, "
+          "$packets_lost, $jitter, $local_id, $round_trip_time, "
+          "$total_round_trip_time, $fraction_lost, "
+          "$round_trip_time_measurements, $packets_with_bleached_ect1_marking)";
 
       if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
-        RTC_LOG(LS_ERROR) << "Failed to prepare remote-inbound-rtp stats statement: "
-                          << stmt.error()
-                          << " for connection_id=" << connection_id;
+        RTC_LOG(LS_ERROR)
+            << "Failed to prepare remote-inbound-rtp stats statement: "
+            << stmt.error() << " for connection_id=" << connection_id;
         throw std::runtime_error(
-            "Failed to prepare remote-inbound-rtp stats statement: " + stmt.error());
+            "Failed to prepare remote-inbound-rtp stats statement: " +
+            stmt.error());
       }
 
       // パラメータをバインド
-      int idx = 1;
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceivedWithEct1"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReceivedWithCe"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReportedAsLost"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsReportedAsLostButRecovered"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsLost"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("jitter"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("localId").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("roundTripTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalRoundTripTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("fractionLost"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("roundTripTimeMeasurements"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsWithBleachedEct1Marking"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string("type").c_str());
+      binder.BindVarchar("id", get_string("id").c_str());
+      binder.BindInt64("ssrc", get_int64("ssrc"));
+      binder.BindVarchar("kind", get_string("kind").c_str());
+      binder.BindVarchar("transport_id", get_string("transportId").c_str());
+      binder.BindVarchar("codec_id", get_string("codecId").c_str());
+      binder.BindInt64("packets_received", get_int64("packetsReceived"));
+      binder.BindInt64("packets_received_with_ect1",
+                       get_int64("packetsReceivedWithEct1"));
+      binder.BindInt64("packets_received_with_ce",
+                       get_int64("packetsReceivedWithCe"));
+      binder.BindInt64("packets_reported_as_lost",
+                       get_int64("packetsReportedAsLost"));
+      binder.BindInt64("packets_reported_as_lost_but_recovered",
+                       get_int64("packetsReportedAsLostButRecovered"));
+      binder.BindInt64("packets_lost", get_int64("packetsLost"));
+      binder.BindDouble("jitter", get_double("jitter"));
+      binder.BindVarchar("local_id", get_string("localId").c_str());
+      binder.BindDouble("round_trip_time", get_double("roundTripTime"));
+      binder.BindDouble("total_round_trip_time",
+                        get_double("totalRoundTripTime"));
+      binder.BindDouble("fraction_lost", get_double("fractionLost"));
+      binder.BindInt64("round_trip_time_measurements",
+                       get_int64("roundTripTimeMeasurements"));
+      binder.BindInt64("packets_with_bleached_ect1_marking",
+                       get_int64("packetsWithBleachedEct1Marking"));
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -1107,43 +1165,51 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       // remote-outbound-rtp統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO rtc_stats_remote_outbound_rtp (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_remote_outbound_rtp (timestamp, channel_id, "
+          "session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, ssrc, kind, transport_id, codec_id, "
           "packets_sent, bytes_sent, "
           "local_id, remote_timestamp, reports_sent, round_trip_time, "
           "total_round_trip_time, round_trip_time_measurements) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
-          "$11, $12, $13, $14, $15, $16, $17, $18)";
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $session_id, "
+          "$connection_id, "
+          "$rtc_timestamp, $type, $id, $ssrc, $kind, $transport_id, $codec_id, "
+          "$packets_sent, $bytes_sent, $local_id, $remote_timestamp, "
+          "$reports_sent, $round_trip_time, $total_round_trip_time, "
+          "$round_trip_time_measurements)";
 
       if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
-        RTC_LOG(LS_ERROR) << "Failed to prepare remote-outbound-rtp stats statement: "
-                          << stmt.error()
-                          << " for connection_id=" << connection_id;
+        RTC_LOG(LS_ERROR)
+            << "Failed to prepare remote-outbound-rtp stats statement: "
+            << stmt.error() << " for connection_id=" << connection_id;
         throw std::runtime_error(
-            "Failed to prepare remote-outbound-rtp stats statement: " + stmt.error());
+            "Failed to prepare remote-outbound-rtp stats statement: " +
+            stmt.error());
       }
 
       // パラメータをバインド
-      int idx = 1;
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("packetsSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesSent"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("localId").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("remoteTimestamp"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("reportsSent"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("roundTripTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double("totalRoundTripTime"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("roundTripTimeMeasurements"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string("type").c_str());
+      binder.BindVarchar("id", get_string("id").c_str());
+      binder.BindInt64("ssrc", get_int64("ssrc"));
+      binder.BindVarchar("kind", get_string("kind").c_str());
+      binder.BindVarchar("transport_id", get_string("transportId").c_str());
+      binder.BindVarchar("codec_id", get_string("codecId").c_str());
+      binder.BindInt64("packets_sent", get_int64("packetsSent"));
+      binder.BindInt64("bytes_sent", get_int64("bytesSent"));
+      binder.BindVarchar("local_id", get_string("localId").c_str());
+      binder.BindDouble("remote_timestamp", get_double("remoteTimestamp"));
+      binder.BindInt64("reports_sent", get_int64("reportsSent"));
+      binder.BindDouble("round_trip_time", get_double("roundTripTime"));
+      binder.BindDouble("total_round_trip_time",
+                        get_double("totalRoundTripTime"));
+      binder.BindInt64("round_trip_time_measurements",
+                       get_int64("roundTripTimeMeasurements"));
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -1151,20 +1217,25 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         RTC_LOG(LS_ERROR) << "Failed to insert remote-outbound-rtp stats: "
                           << exec_result.error()
                           << " for connection_id=" << connection_id;
-        throw std::runtime_error("Failed to insert remote-outbound-rtp stats: " +
-                                 exec_result.error());
+        throw std::runtime_error(
+            "Failed to insert remote-outbound-rtp stats: " +
+            exec_result.error());
       }
 
     } else if (rtc_type == "data-channel") {
       // data-channel統計情報の挿入処理
       duckdb_utils::PreparedStatement stmt;
       const char* prepare_sql =
-          "INSERT INTO rtc_stats_data_channel (timestamp, channel_id, session_id, "
+          "INSERT INTO rtc_stats_data_channel (timestamp, channel_id, "
+          "session_id, "
           "connection_id, rtc_timestamp, "
           "type, id, label, protocol, data_channel_identifier, state, "
           "messages_sent, bytes_sent, messages_received, bytes_received) "
-          "VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
-          "$11, $12, $13, $14)";
+          "VALUES (CURRENT_TIMESTAMP, $channel_id, $session_id, "
+          "$connection_id, "
+          "$rtc_timestamp, $type, $id, $label, $protocol, "
+          "$data_channel_identifier, $state, $messages_sent, $bytes_sent, "
+          "$messages_received, $bytes_received)";
 
       if (!duckdb_utils::Prepare(conn_, prepare_sql, stmt)) {
         RTC_LOG(LS_ERROR) << "Failed to prepare data-channel stats statement: "
@@ -1175,21 +1246,22 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       }
 
       // パラメータをバインド
-      int idx = 1;
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("id").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("label").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("protocol").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("dataChannelIdentifier"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string("state").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("messagesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("messagesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64("bytesReceived"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string("type").c_str());
+      binder.BindVarchar("id", get_string("id").c_str());
+      binder.BindVarchar("label", get_string("label").c_str());
+      binder.BindVarchar("protocol", get_string("protocol").c_str());
+      binder.BindInt64("data_channel_identifier",
+                       get_int64("dataChannelIdentifier"));
+      binder.BindVarchar("state", get_string("state").c_str());
+      binder.BindInt64("messages_sent", get_int64("messagesSent"));
+      binder.BindInt64("bytes_sent", get_int64("bytesSent"));
+      binder.BindInt64("messages_received", get_int64("messagesReceived"));
+      binder.BindInt64("bytes_received", get_int64("bytesReceived"));
 
       // 実行
       duckdb_utils::Result exec_result;
@@ -1232,10 +1304,10 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
     std::string environment = ZakuroVersion::GetEnvironmentName();
     std::string webrtc_version = ZakuroVersion::GetWebRTCVersion();
     std::string sora_cpp_sdk_version = ZakuroVersion::GetSoraCppSdkVersion();
-    
+
     // DEPS ファイルからバージョン情報を読み込む
     auto deps_versions = ReadDepsFile();
-    
+
     // バージョン情報を取得（見つからない場合は "unknown" を使用）
     auto get_version = [&deps_versions](const std::string& key) {
       auto it = deps_versions.find(key);
@@ -1260,19 +1332,19 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
         config_json,
         start_timestamp
       ) VALUES (
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?::JSON,
+        $version,
+        $environment,
+        $webrtc_version,
+        $sora_cpp_sdk_version,
+        $boost_version,
+        $cli11_version,
+        $cmake_version,
+        $blend2d_version,
+        $openh264_version,
+        $yaml_cpp_version,
+        $duckdb_version,
+        $config_mode,
+        $config_json::JSON,
         CURRENT_TIMESTAMP
       )
     )";
@@ -1285,19 +1357,23 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
     }
 
     // パラメータをバインド
-    duckdb_bind_varchar(stmt.get_raw(), 1, version.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 2, environment.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 3, webrtc_version.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 4, sora_cpp_sdk_version.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 5, get_version("BOOST_VERSION").c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 6, get_version("CLI11_VERSION").c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 7, get_version("CMAKE_VERSION").c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 8, get_version("BLEND2D_VERSION").c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 9, get_version("OPENH264_VERSION").c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 10, get_version("YAML_CPP_VERSION").c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 11, get_version("DUCKDB_VERSION").c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 12, config_mode.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 13, config_json.c_str());
+    duckdb_utils::NamedBinder binder(stmt.get_raw());
+    binder.BindVarchar("version", version.c_str());
+    binder.BindVarchar("environment", environment.c_str());
+    binder.BindVarchar("webrtc_version", webrtc_version.c_str());
+    binder.BindVarchar("sora_cpp_sdk_version", sora_cpp_sdk_version.c_str());
+    binder.BindVarchar("boost_version", get_version("BOOST_VERSION").c_str());
+    binder.BindVarchar("cli11_version", get_version("CLI11_VERSION").c_str());
+    binder.BindVarchar("cmake_version", get_version("CMAKE_VERSION").c_str());
+    binder.BindVarchar("blend2d_version",
+                       get_version("BLEND2D_VERSION").c_str());
+    binder.BindVarchar("openh264_version",
+                       get_version("OPENH264_VERSION").c_str());
+    binder.BindVarchar("yaml_cpp_version",
+                       get_version("YAML_CPP_VERSION").c_str());
+    binder.BindVarchar("duckdb_version", get_version("DUCKDB_VERSION").c_str());
+    binder.BindVarchar("config_mode", config_mode.c_str());
+    binder.BindVarchar("config_json", config_json.c_str());
 
     // 実行
     duckdb_utils::Result exec_result;
@@ -1339,7 +1415,8 @@ bool DuckDBStatsWriter::WriteZakuroScenario(
     // sora_signaling_urls を DuckDB の配列形式に変換
     std::string urls_array = "[";
     for (size_t i = 0; i < sora_signaling_urls.size(); ++i) {
-      if (i > 0) urls_array += ", ";
+      if (i > 0)
+        urls_array += ", ";
       urls_array += "'" + sora_signaling_urls[i] + "'";
     }
     urls_array += "]";
@@ -1356,14 +1433,14 @@ bool DuckDBStatsWriter::WriteZakuroScenario(
         sora_channel_id,
         sora_role
       ) VALUES (
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?::VARCHAR[],
-        ?,
-        ?
+        $vcs,
+        $duration,
+        $repeat_interval,
+        $max_retry,
+        $retry_interval,
+        $sora_signaling_urls::VARCHAR[],
+        $sora_channel_id,
+        $sora_role
       )
     )";
 
@@ -1375,14 +1452,15 @@ bool DuckDBStatsWriter::WriteZakuroScenario(
     }
 
     // パラメータをバインド
-    duckdb_bind_int64(stmt.get_raw(), 1, vcs);
-    duckdb_bind_double(stmt.get_raw(), 2, duration);
-    duckdb_bind_double(stmt.get_raw(), 3, repeat_interval);
-    duckdb_bind_int64(stmt.get_raw(), 4, max_retry);
-    duckdb_bind_double(stmt.get_raw(), 5, retry_interval);
-    duckdb_bind_varchar(stmt.get_raw(), 6, urls_array.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 7, sora_channel_id.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 8, sora_role.c_str());
+    duckdb_utils::NamedBinder binder(stmt.get_raw());
+    binder.BindInt64("vcs", vcs);
+    binder.BindDouble("duration", duration);
+    binder.BindDouble("repeat_interval", repeat_interval);
+    binder.BindInt64("max_retry", max_retry);
+    binder.BindDouble("retry_interval", retry_interval);
+    binder.BindVarchar("sora_signaling_urls", urls_array.c_str());
+    binder.BindVarchar("sora_channel_id", sora_channel_id.c_str());
+    binder.BindVarchar("sora_role", sora_role.c_str());
 
     // 実行
     duckdb_utils::Result exec_result;
@@ -1465,9 +1543,9 @@ std::string DuckDBStatsWriter::GenerateFileName(const std::string& base_path) {
   localtime_r(&time_t, &tm);
 
   std::ostringstream oss;
-  oss << base_path << "/zakuro_" << std::put_time(&tm, "%Y%m%d_%H%M%S")
-      << "_" << std::setfill('0') << std::setw(MillisecondFieldWidth)
-      << ms.count() << ".db";
+  oss << base_path << "/zakuro_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << "_"
+      << std::setfill('0') << std::setw(MillisecondFieldWidth) << ms.count()
+      << ".db";
 
   return oss.str();
 }

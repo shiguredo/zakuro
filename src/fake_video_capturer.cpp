@@ -213,18 +213,21 @@ void FakeVideoCapturer::DrawTexts(
   {
     std::string text =
         "Size: " + std::to_string(width) + " x " + std::to_string(height);
-    ctx.fill_utf8_text(BLPoint(width * 0.45, height * 0.75 + stats_font_.size()),
-                       stats_font_, text.c_str());
+    ctx.fill_utf8_text(
+        BLPoint(width * 0.45, height * 0.75 + stats_font_.size()), stats_font_,
+        text.c_str());
   }
 
   {
     int m = frame_ % 60;
     if (m < 15) {
       ctx.set_fill_style(BLRgba32(0, 255, 255));
-      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bip");
+      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_,
+                         "Bip");
     } else if (m >= 30 && m < 45) {
       ctx.set_fill_style(BLRgba32(255, 255, 0));
-      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bop");
+      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_,
+                         "Bop");
     }
   }
 }
@@ -242,7 +245,8 @@ void FakeVideoCapturer::DrawAnimations(
   ctx.fill_pie(0, 0, width * 0.09, 0, 2 * pi);
 
   ctx.set_fill_style(BLRgba32(160, 160, 160));
-  ctx.fill_pie(0, 0, width * 0.09, 0, (frame_ % fps) / (float)fps * 2 * 3.14159);
+  ctx.fill_pie(0, 0, width * 0.09, 0,
+               (frame_ % fps) / (float)fps * 2 * 3.14159);
 }
 
 void FakeVideoCapturer::DrawBoxes(

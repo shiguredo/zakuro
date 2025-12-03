@@ -99,8 +99,9 @@ int main(int argc, char* argv[]) {
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui_remote_url,
-                  connection_id_stats_file, instance_hatch_rate, config, false);
+  Util::ParseArgs(args, config_file, log_level, http_port, http_host,
+                  ui_remote_url, connection_id_stats_file, instance_hatch_rate,
+                  config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -184,9 +185,9 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui_remote_url,
-                        connection_id_stats_file, instance_hatch_rate, config,
-                        true);
+        Util::ParseArgs(args, config_file, log_level, http_port, http_host,
+                        ui_remote_url, connection_id_stats_file,
+                        instance_hatch_rate, config, true);
         configs.push_back(config);
       }
     }
@@ -221,24 +222,27 @@ int main(int argc, char* argv[]) {
 
   // DuckDB 統計ライターを初期化
   std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
-  
+
   // 最初の config から DuckDB 設定を取得
-  bool no_duckdb_output = !configs.empty() ? configs[0].no_duckdb_output : false;
-  std::string duckdb_output_dir = !configs.empty() && !configs[0].duckdb_output_dir.empty() 
-                                   ? configs[0].duckdb_output_dir : ".";
-  
+  bool no_duckdb_output =
+      !configs.empty() ? configs[0].no_duckdb_output : false;
+  std::string duckdb_output_dir =
+      !configs.empty() && !configs[0].duckdb_output_dir.empty()
+          ? configs[0].duckdb_output_dir
+          : ".";
+
   if (!no_duckdb_output) {
     duckdb_writer.reset(new DuckDBStatsWriter());
     if (!duckdb_writer->Initialize(duckdb_output_dir)) {
-      RTC_LOG(LS_ERROR) << "Failed to initialize DuckDB stats writer in directory: " 
-                        << duckdb_output_dir;
+      RTC_LOG(LS_ERROR)
+          << "Failed to initialize DuckDB stats writer in directory: "
+          << duckdb_output_dir;
       // エラーでも続行（統計情報の記録は必須ではない）
     } else {
-      
       // zakuro 起動情報を保存
       std::string config_mode = config_file.empty() ? "ARGS" : "YAML";
       boost::json::object config_json;
-      
+
       if (config_file.empty()) {
         // 引数モードの場合、主要な設定をJSONに保存
         if (!configs.empty()) {
@@ -251,7 +255,7 @@ int main(int argc, char* argv[]) {
           config_json["retry_interval"] = cfg.retry_interval;
           config_json["sora_channel_id"] = cfg.sora_channel_id;
           config_json["sora_role"] = cfg.sora_role;
-          
+
           // sora_signaling_urls を配列として保存
           boost::json::array urls;
           for (const auto& url : cfg.sora_signaling_urls) {
@@ -274,30 +278,26 @@ int main(int argc, char* argv[]) {
           config_json["error"] = "Failed to load config JSON";
         }
       }
-      
+
       // zakuro 情報を DuckDB に書き込む
       std::string config_json_str = boost::json::serialize(config_json);
       if (!duckdb_writer->WriteZakuroInfo(config_mode, config_json_str)) {
         RTC_LOG(LS_WARNING) << "Failed to write zakuro info to DuckDB";
       }
-      
+
       // シナリオ情報を書き込む
       if (!configs.empty()) {
         const auto& cfg = configs[0];
         if (!duckdb_writer->WriteZakuroScenario(
-                cfg.vcs,
-                cfg.duration,
-                cfg.repeat_interval,
-                cfg.max_retry,
-                cfg.retry_interval,
-                cfg.sora_signaling_urls,
-                cfg.sora_channel_id,
-                cfg.sora_role)) {
+                cfg.vcs, cfg.duration, cfg.repeat_interval, cfg.max_retry,
+                cfg.retry_interval, cfg.sora_signaling_urls,
+                cfg.sora_channel_id, cfg.sora_role)) {
           RTC_LOG(LS_WARNING) << "Failed to write zakuro scenario to DuckDB";
         }
       }
     }
-    g_duckdb_writer = duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
+    g_duckdb_writer =
+        duckdb_writer;  // グローバル変数に設定（シグナルハンドラー用）
   }
 
   // 各 config に duckdb_writer を設定

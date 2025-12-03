@@ -37,7 +37,7 @@ class DuckDBStatsWriter {
   // zakuro 起動情報を書き込む
   bool WriteZakuroInfo(const std::string& config_mode,
                        const std::string& config_json);
-  
+
   // zakuro シナリオ情報を書き込む
   bool WriteZakuroScenario(int vcs,
                            double duration,
@@ -61,10 +61,8 @@ class DuckDBStatsWriter {
   bool initialized_{false};
   std::string db_filename_;  // 現在のデータベースファイル名
 
-
   // テーブルを作成
   void CreateTable();
-
 
   // ファイル名を生成（例: zakuro_20241226_123456_000.db）
   std::string GenerateFileName(const std::string& base_path);

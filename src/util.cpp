@@ -83,9 +83,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
             return std::string();
           },
           "PORT_OR_NONE"));
-  app.add_option(
-      "--http-host", http_host,
-      "HTTP host address to bind (default: 127.0.0.1)");
+  app.add_option("--http-host", http_host,
+                 "HTTP host address to bind (default: 127.0.0.1)");
   app.add_option(
       "--ui-remote-url", ui_remote_url,
       "Remote URL for UI reverse proxy (default: http://localhost:5173)");
