@@ -51,8 +51,12 @@
   - 統計情報は `zakuro_YYYYMMDD_HHMMSS_mmm.db` 形式のファイルに保存される
   - 対応済み WebRTC 統計情報
     - `codec`
-    - `outbound-rtp`
     - `inbound-rtp`
+    - `outbound-rtp`
+    - `remote-inbound-rtp`
+    - `remote-outbound-rtp`
+    - `media-source`
+    - `data-channel`
   - @voluntas
 - [ADD] ビルドシステムに DuckDB のダイナミックライブラリを追加する
   - @voluntas
