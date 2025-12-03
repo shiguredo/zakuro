@@ -54,9 +54,9 @@ json::object JsonRpcHandler::Process(const json::value& request) {
 
   // メソッドの処理
   try {
-    if (method == "version") {
+    if (method == "2026.1.0/GetVersion") {
       return CreateSuccessResponse(id, HandleVersionMethod());
-    } else if (method == "query") {
+    } else if (method == "2026.1.0/Query") {
       auto params = obj.contains("params") ? obj.at("params") : json::object{};
       return CreateSuccessResponse(id, HandleQueryMethod(params));
     } else {
