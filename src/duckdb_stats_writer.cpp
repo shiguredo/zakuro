@@ -531,6 +531,22 @@ bool DuckDBStatsWriter::WriteStats(
   try {
     duckdb_utils::Transaction transaction(conn_);
 
+    // PreparedStatement をループ外で一度だけ作成
+    duckdb_utils::PreparedStatement stmt;
+    const char* connections_sql =
+        "INSERT INTO connection (timestamp, channel_id, connection_id, "
+        "session_id, role, audio, video, "
+        "websocket_connected, datachannel_connected) "
+        "VALUES (CURRENT_TIMESTAMP, $channel_id, $connection_id, "
+        "$session_id, "
+        "$role, $audio, $video, $websocket_connected, "
+        "$datachannel_connected)";
+    if (!duckdb_utils::Prepare(conn_, connections_sql, stmt)) {
+      RTC_LOG(LS_ERROR) << "Failed to prepare connections statement: "
+                        << stmt.error();
+      throw std::runtime_error("Failed to prepare statement: " + stmt.error());
+    }
+
     // 各統計情報を挿入
     int inserted_count = 0;
     for (const auto& stat : stats) {
@@ -539,22 +555,8 @@ bool DuckDBStatsWriter::WriteStats(
         continue;
       }
 
-      // PreparedStatementを毎回作成
-      duckdb_utils::PreparedStatement stmt;
-      const char* connections_sql =
-          "INSERT INTO connection (timestamp, channel_id, connection_id, "
-          "session_id, role, audio, video, "
-          "websocket_connected, datachannel_connected) "
-          "VALUES (CURRENT_TIMESTAMP, $channel_id, $connection_id, "
-          "$session_id, "
-          "$role, $audio, $video, $websocket_connected, "
-          "$datachannel_connected)";
-      if (!duckdb_utils::Prepare(conn_, connections_sql, stmt)) {
-        RTC_LOG(LS_ERROR) << "Failed to prepare connections statement: "
-                          << stmt.error();
-        throw std::runtime_error("Failed to prepare statement: " +
-                                 stmt.error());
-      }
+      // パラメータをクリアして再利用
+      duckdb_clear_bindings(stmt.get_raw());
 
       // パラメータをバインド
       duckdb_utils::NamedBinder binder(stmt.get_raw());
