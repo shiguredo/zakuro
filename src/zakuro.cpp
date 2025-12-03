@@ -555,8 +555,11 @@ int Zakuro::Run() {
     int loop_index;
     if (!fake_audio_key_trigger) {
       data.Reconnect();
+      for (const auto& d : dcs_data) {
+        data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
+      }
       add_reconnect_scenario(data, true);
-      loop_index = 1;
+      loop_index = 1 + dcs_data.size();
     } else if (config_.scenario == "") {
       data.Reconnect();
       for (const auto& d : dcs_data) {
