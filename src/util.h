@@ -1,6 +1,8 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
+#include <optional>
+
 // Boost
 #include <boost/json.hpp>
 
@@ -14,8 +16,8 @@ class Util {
   static void ParseArgs(const std::vector<std::string>& args,
                         std::string& config_file,
                         int& log_level,
-                        std::string& http_port,
-                        std::string& http_host,
+                        std::optional<int>& http_port,
+                        std::optional<std::string>& http_host,
                         std::string& connection_id_stats_file,
                         double& instance_hatch_rate,
                         ZakuroConfig& config,
