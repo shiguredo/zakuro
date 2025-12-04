@@ -26,9 +26,8 @@
   - @torikizi
 - [UPDATE] CLI11 を `2.6.1` に上げる
   - @torikizi
-- [ADD] UI リバースプロキシ機能を追加する
-  - `--ui-remote-url` オプションでリモート URL を指定可能
-  - HTTP/HTTPS 両対応
+- [ADD] `--ui` オプションで Zakuro UI を有効化する機能を追加する
+  - `--ui-remote-url` オプションでリモート URL を変更可能
   - @voluntas
 - [ADD] ヘルスチェック用 HTTP API `/.ok` を追加する
   - GET リクエストで 200 OK を返す
@@ -42,8 +41,9 @@
   - Notification の場合は 204 No Content を返す
   - @voluntas
 - [ADD] HTTP サーバー機能を追加する
-  - `--http-port` オプションで HTTP サーバーを起動可能
-  - `--http-host` オプションでバインドするアドレスを指定可能
+  - デフォルトで `127.0.0.1:3960` で起動
+  - `--http-port` オプションでポート番号を変更可能
+  - `--http-host` オプションでバインドアドレスを変更可能
   - @voluntas
 
 ### misc

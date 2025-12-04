@@ -4,6 +4,7 @@
 
 #include <openssl/ssl.h>
 #include <boost/asio/ssl.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/json.hpp>
 #include <rtc_base/logging.h>
 
@@ -304,8 +305,10 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
       ctx.set_verify_mode(ssl::verify_peer);
       ctx.set_default_verify_paths();
 
-      // SSLストリームを作成
-      ssl::stream<tcp::socket> stream(ioc, ctx);
+      // SSLストリームを作成（beast::tcp_stream を使用してタイムアウトを設定可能にする）
+      beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
+      stream.next_layer().expires_after(
+          std::chrono::seconds(kHttpProxyTimeoutSeconds));
 
       // SNI (Server Name Indication) を設定
       if (!::SSL_set_tlsext_host_name(stream.native_handle(), host.c_str())) {
@@ -315,14 +318,7 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
       // 同期的にDNS解決と接続
       tcp::resolver resolver(ioc);
       auto const results = resolver.resolve(host, port);
-      boost::asio::connect(stream.lowest_layer(), results);
-
-      // タイムアウトを設定
-      stream.lowest_layer().set_option(
-          boost::asio::socket_base::receive_timeout(
-              std::chrono::seconds(kHttpProxyTimeoutSeconds)));
-      stream.lowest_layer().set_option(boost::asio::socket_base::send_timeout(
-          std::chrono::seconds(kHttpProxyTimeoutSeconds)));
+      stream.next_layer().connect(results);
 
       // SSL ハンドシェイク
       stream.handshake(ssl::stream_base::client);
@@ -388,7 +384,7 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
 
     // HTTPの場合の処理
     beast::tcp_stream stream(ioc);
-    stream.expires_after(std::chrono::seconds(30));
+    stream.expires_after(std::chrono::seconds(kHttpProxyTimeoutSeconds));
 
     // 同期的にDNS解決と接続
     tcp::resolver resolver(ioc);
