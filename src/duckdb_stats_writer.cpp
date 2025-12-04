@@ -548,11 +548,15 @@ bool DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
         continue;
       }
 
+      // SQL では $name 形式を使用
       std::string insert_sql = R"(
         INSERT INTO connection (
           timestamp, channel_id, connection_id, session_id,
           role, audio, video, websocket_connected, datachannel_connected
-        ) VALUES (CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+          CURRENT_TIMESTAMP, $channel_id, $connection_id, $session_id,
+          $role, $audio, $video, $websocket_connected, $datachannel_connected
+        )
       )";
 
       duckdb_utils::PreparedStatement stmt;
@@ -561,14 +565,16 @@ bool DuckDBStatsWriter::WriteStats(const std::vector<VirtualClientStats>& stats)
         return false;
       }
 
-      duckdb_bind_varchar(stmt.get_raw(), 1, stat.channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 2, stat.connection_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 3, stat.session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 4, stat.role.c_str());
-      duckdb_bind_boolean(stmt.get_raw(), 5, stat.has_audio_track);
-      duckdb_bind_boolean(stmt.get_raw(), 6, stat.has_video_track);
-      duckdb_bind_boolean(stmt.get_raw(), 7, stat.websocket_connected);
-      duckdb_bind_boolean(stmt.get_raw(), 8, stat.datachannel_connected);
+      // 名前付きパラメータでバインド
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindVarchar("channel_id", stat.channel_id.c_str());
+      binder.BindVarchar("connection_id", stat.connection_id.c_str());
+      binder.BindVarchar("session_id", stat.session_id.c_str());
+      binder.BindVarchar("role", stat.role.c_str());
+      binder.BindBoolean("audio", stat.has_audio_track);
+      binder.BindBoolean("video", stat.has_video_track);
+      binder.BindBoolean("websocket_connected", stat.websocket_connected);
+      binder.BindBoolean("datachannel_connected", stat.datachannel_connected);
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -598,6 +604,7 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_file_path,
   try {
     auto deps = ReadDepsFile();
 
+    // SQL では $name 形式を使用
     std::string insert_sql = R"(
       INSERT INTO zakuro (
         version, environment, webrtc_version, sora_cpp_sdk_version,
@@ -605,7 +612,13 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_file_path,
         openh264_version, yaml_cpp_version, duckdb_version,
         config_file_path, global_config_json, instances_json,
         start_timestamp
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ) VALUES (
+        $version, $environment, $webrtc_version, $sora_cpp_sdk_version,
+        $boost_version, $cli11_version, $cmake_version, $blend2d_version,
+        $openh264_version, $yaml_cpp_version, $duckdb_version,
+        $config_file_path, $global_config_json, $instances_json,
+        CURRENT_TIMESTAMP
+      )
     )";
 
     duckdb_utils::PreparedStatement stmt;
@@ -614,21 +627,22 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_file_path,
       return false;
     }
 
-    // インデックスベースのバインド（1から開始）
-    duckdb_bind_varchar(stmt.get_raw(), 1, ZakuroVersion::GetVersion().c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 2, ZakuroVersion::GetEnvironmentName().c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 3, ZakuroVersion::GetWebRTCVersion().c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 4, ZakuroVersion::GetSoraCppSdkVersion().c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 5, deps["BOOST_VERSION"].c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 6, deps["CLI11_VERSION"].c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 7, deps["CMAKE_VERSION"].c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 8, deps["BLEND2D_VERSION"].c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 9, deps["OPENH264_VERSION"].c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 10, "");  // yaml_cpp_version
-    duckdb_bind_varchar(stmt.get_raw(), 11, deps["DUCKDB_VERSION"].c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 12, config_file_path.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 13, global_config_json.c_str());
-    duckdb_bind_varchar(stmt.get_raw(), 14, instances_json.c_str());
+    // 名前付きパラメータでバインド（$ プレフィックスなしで渡す）
+    duckdb_utils::NamedBinder binder(stmt.get_raw());
+    binder.BindVarchar("version", ZakuroVersion::GetVersion().c_str());
+    binder.BindVarchar("environment", ZakuroVersion::GetEnvironmentName().c_str());
+    binder.BindVarchar("webrtc_version", ZakuroVersion::GetWebRTCVersion().c_str());
+    binder.BindVarchar("sora_cpp_sdk_version", ZakuroVersion::GetSoraCppSdkVersion().c_str());
+    binder.BindVarchar("boost_version", deps["BOOST_VERSION"].c_str());
+    binder.BindVarchar("cli11_version", deps["CLI11_VERSION"].c_str());
+    binder.BindVarchar("cmake_version", deps["CMAKE_VERSION"].c_str());
+    binder.BindVarchar("blend2d_version", deps["BLEND2D_VERSION"].c_str());
+    binder.BindVarchar("openh264_version", deps["OPENH264_VERSION"].c_str());
+    binder.BindVarchar("yaml_cpp_version", "");
+    binder.BindVarchar("duckdb_version", deps["DUCKDB_VERSION"].c_str());
+    binder.BindVarchar("config_file_path", config_file_path.c_str());
+    binder.BindVarchar("global_config_json", global_config_json.c_str());
+    binder.BindVarchar("instances_json", instances_json.c_str());
 
     duckdb_utils::Result result;
     if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -678,7 +692,10 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         INSERT INTO rtc_stats_codec (
           timestamp, channel_id, session_id, connection_id, rtc_timestamp,
           type, id, mime_type, payload_type, clock_rate, channels, sdp_fmtp_line
-        ) VALUES (to_timestamp(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+          to_timestamp($timestamp), $channel_id, $session_id, $connection_id, $rtc_timestamp,
+          $type, $id, $mime_type, $payload_type, $clock_rate, $channels, $sdp_fmtp_line
+        )
         ON CONFLICT DO NOTHING
       )";
 
@@ -689,18 +706,19 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         return false;
       }
 
-      duckdb_bind_double(stmt.get_raw(), 1, timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), 2, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 3, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 4, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), 5, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), 6, get_string(obj, "type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 7, get_string(obj, "id").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), 8, get_string(obj, "mimeType").c_str());
-      duckdb_bind_int64(stmt.get_raw(), 9, get_int64(obj, "payloadType"));
-      duckdb_bind_int64(stmt.get_raw(), 10, get_int64(obj, "clockRate"));
-      duckdb_bind_int64(stmt.get_raw(), 11, get_int64(obj, "channels"));
-      duckdb_bind_varchar(stmt.get_raw(), 12, get_string(obj, "sdpFmtpLine").c_str());
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindDouble("timestamp", timestamp);
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string(obj, "type").c_str());
+      binder.BindVarchar("id", get_string(obj, "id").c_str());
+      binder.BindVarchar("mime_type", get_string(obj, "mimeType").c_str());
+      binder.BindInt64("payload_type", get_int64(obj, "payloadType"));
+      binder.BindInt64("clock_rate", get_int64(obj, "clockRate"));
+      binder.BindInt64("channels", get_int64(obj, "channels"));
+      binder.BindVarchar("sdp_fmtp_line", get_string(obj, "sdpFmtpLine").c_str());
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -731,25 +749,25 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           total_assembly_time, retransmitted_packets_received, retransmitted_bytes_received,
           rtx_ssrc, fec_ssrc
         ) VALUES (
-          to_timestamp(?), ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?,
-          ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?,
-          ?, ?, ?,
-          ?, ?
+          to_timestamp($timestamp), $channel_id, $session_id, $connection_id, $rtc_timestamp,
+          $type, $id, $ssrc, $kind, $transport_id, $codec_id,
+          $packets_received, $packets_lost, $bytes_received, $jitter,
+          $last_packet_received_timestamp, $header_bytes_received, $packets_discarded,
+          $fec_bytes_received, $fec_packets_received, $fec_packets_discarded,
+          $nack_count, $pli_count, $fir_count, $track_identifier, $mid, $remote_id,
+          $frames_decoded, $key_frames_decoded, $frames_rendered, $frames_dropped,
+          $frame_width, $frame_height, $frames_per_second, $qp_sum,
+          $total_decode_time, $total_inter_frame_delay, $total_squared_inter_frame_delay,
+          $pause_count, $total_pauses_duration, $freeze_count, $total_freezes_duration,
+          $total_processing_delay, $estimated_playout_timestamp,
+          $jitter_buffer_delay, $jitter_buffer_target_delay, $jitter_buffer_emitted_count,
+          $jitter_buffer_minimum_delay, $total_samples_received, $concealed_samples,
+          $silent_concealed_samples, $concealment_events, $inserted_samples_for_deceleration,
+          $removed_samples_for_acceleration, $audio_level, $total_audio_energy,
+          $total_samples_duration, $frames_received, $decoder_implementation, $playout_id,
+          $power_efficient_decoder, $frames_assembled_from_multiple_packets,
+          $total_assembly_time, $retransmitted_packets_received, $retransmitted_bytes_received,
+          $rtx_ssrc, $fec_ssrc
         )
       )";
 
@@ -760,74 +778,74 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         return false;
       }
 
-      int idx = 1;
-      duckdb_bind_double(stmt.get_raw(), idx++, timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "packetsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "packetsLost"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "bytesReceived"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "jitter"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "lastPacketReceivedTimestamp"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "headerBytesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "packetsDiscarded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "fecBytesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "fecPacketsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "fecPacketsDiscarded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "nackCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "pliCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "firCount"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "trackIdentifier").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "mid").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "remoteId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "framesDecoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "keyFramesDecoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "framesRendered"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "framesDropped"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "frameWidth"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "frameHeight"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "framesPerSecond"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "qpSum"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalDecodeTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalInterFrameDelay"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalSquaredInterFrameDelay"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "pauseCount"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalPausesDuration"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "freezeCount"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalFreezesDuration"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalProcessingDelay"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "estimatedPlayoutTimestamp"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "jitterBufferDelay"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "jitterBufferTargetDelay"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "jitterBufferEmittedCount"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "jitterBufferMinimumDelay"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "totalSamplesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "concealedSamples"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "silentConcealedSamples"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "concealmentEvents"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "insertedSamplesForDeceleration"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "removedSamplesForAcceleration"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "audioLevel"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalAudioEnergy"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalSamplesDuration"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "framesReceived"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "decoderImplementation").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "playoutId").c_str());
-      duckdb_bind_boolean(stmt.get_raw(), idx++, get_bool(obj, "powerEfficientDecoder"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "framesAssembledFromMultiplePackets"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalAssemblyTime"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "retransmittedPacketsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "retransmittedBytesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "rtxSsrc"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "fecSsrc"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindDouble("timestamp", timestamp);
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string(obj, "type").c_str());
+      binder.BindVarchar("id", get_string(obj, "id").c_str());
+      binder.BindInt64("ssrc", get_int64(obj, "ssrc"));
+      binder.BindVarchar("kind", get_string(obj, "kind").c_str());
+      binder.BindVarchar("transport_id", get_string(obj, "transportId").c_str());
+      binder.BindVarchar("codec_id", get_string(obj, "codecId").c_str());
+      binder.BindInt64("packets_received", get_int64(obj, "packetsReceived"));
+      binder.BindInt64("packets_lost", get_int64(obj, "packetsLost"));
+      binder.BindInt64("bytes_received", get_int64(obj, "bytesReceived"));
+      binder.BindDouble("jitter", get_double(obj, "jitter"));
+      binder.BindDouble("last_packet_received_timestamp", get_double(obj, "lastPacketReceivedTimestamp"));
+      binder.BindInt64("header_bytes_received", get_int64(obj, "headerBytesReceived"));
+      binder.BindInt64("packets_discarded", get_int64(obj, "packetsDiscarded"));
+      binder.BindInt64("fec_bytes_received", get_int64(obj, "fecBytesReceived"));
+      binder.BindInt64("fec_packets_received", get_int64(obj, "fecPacketsReceived"));
+      binder.BindInt64("fec_packets_discarded", get_int64(obj, "fecPacketsDiscarded"));
+      binder.BindInt64("nack_count", get_int64(obj, "nackCount"));
+      binder.BindInt64("pli_count", get_int64(obj, "pliCount"));
+      binder.BindInt64("fir_count", get_int64(obj, "firCount"));
+      binder.BindVarchar("track_identifier", get_string(obj, "trackIdentifier").c_str());
+      binder.BindVarchar("mid", get_string(obj, "mid").c_str());
+      binder.BindVarchar("remote_id", get_string(obj, "remoteId").c_str());
+      binder.BindInt64("frames_decoded", get_int64(obj, "framesDecoded"));
+      binder.BindInt64("key_frames_decoded", get_int64(obj, "keyFramesDecoded"));
+      binder.BindInt64("frames_rendered", get_int64(obj, "framesRendered"));
+      binder.BindInt64("frames_dropped", get_int64(obj, "framesDropped"));
+      binder.BindInt64("frame_width", get_int64(obj, "frameWidth"));
+      binder.BindInt64("frame_height", get_int64(obj, "frameHeight"));
+      binder.BindDouble("frames_per_second", get_double(obj, "framesPerSecond"));
+      binder.BindInt64("qp_sum", get_int64(obj, "qpSum"));
+      binder.BindDouble("total_decode_time", get_double(obj, "totalDecodeTime"));
+      binder.BindDouble("total_inter_frame_delay", get_double(obj, "totalInterFrameDelay"));
+      binder.BindDouble("total_squared_inter_frame_delay", get_double(obj, "totalSquaredInterFrameDelay"));
+      binder.BindInt64("pause_count", get_int64(obj, "pauseCount"));
+      binder.BindDouble("total_pauses_duration", get_double(obj, "totalPausesDuration"));
+      binder.BindInt64("freeze_count", get_int64(obj, "freezeCount"));
+      binder.BindDouble("total_freezes_duration", get_double(obj, "totalFreezesDuration"));
+      binder.BindDouble("total_processing_delay", get_double(obj, "totalProcessingDelay"));
+      binder.BindDouble("estimated_playout_timestamp", get_double(obj, "estimatedPlayoutTimestamp"));
+      binder.BindDouble("jitter_buffer_delay", get_double(obj, "jitterBufferDelay"));
+      binder.BindDouble("jitter_buffer_target_delay", get_double(obj, "jitterBufferTargetDelay"));
+      binder.BindInt64("jitter_buffer_emitted_count", get_int64(obj, "jitterBufferEmittedCount"));
+      binder.BindDouble("jitter_buffer_minimum_delay", get_double(obj, "jitterBufferMinimumDelay"));
+      binder.BindInt64("total_samples_received", get_int64(obj, "totalSamplesReceived"));
+      binder.BindInt64("concealed_samples", get_int64(obj, "concealedSamples"));
+      binder.BindInt64("silent_concealed_samples", get_int64(obj, "silentConcealedSamples"));
+      binder.BindInt64("concealment_events", get_int64(obj, "concealmentEvents"));
+      binder.BindInt64("inserted_samples_for_deceleration", get_int64(obj, "insertedSamplesForDeceleration"));
+      binder.BindInt64("removed_samples_for_acceleration", get_int64(obj, "removedSamplesForAcceleration"));
+      binder.BindDouble("audio_level", get_double(obj, "audioLevel"));
+      binder.BindDouble("total_audio_energy", get_double(obj, "totalAudioEnergy"));
+      binder.BindDouble("total_samples_duration", get_double(obj, "totalSamplesDuration"));
+      binder.BindInt64("frames_received", get_int64(obj, "framesReceived"));
+      binder.BindVarchar("decoder_implementation", get_string(obj, "decoderImplementation").c_str());
+      binder.BindVarchar("playout_id", get_string(obj, "playoutId").c_str());
+      binder.BindBoolean("power_efficient_decoder", get_bool(obj, "powerEfficientDecoder"));
+      binder.BindInt64("frames_assembled_from_multiple_packets", get_int64(obj, "framesAssembledFromMultiplePackets"));
+      binder.BindDouble("total_assembly_time", get_double(obj, "totalAssemblyTime"));
+      binder.BindInt64("retransmitted_packets_received", get_int64(obj, "retransmittedPacketsReceived"));
+      binder.BindInt64("retransmitted_bytes_received", get_int64(obj, "retransmittedBytesReceived"));
+      binder.BindInt64("rtx_ssrc", get_int64(obj, "rtxSsrc"));
+      binder.BindInt64("fec_ssrc", get_int64(obj, "fecSsrc"));
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -851,18 +869,18 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           quality_limitation_resolution_changes, nack_count, pli_count, fir_count,
           encoder_implementation, power_efficient_encoder, active, scalability_mode
         ) VALUES (
-          to_timestamp(?), ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?,
-          ?, ?,
-          ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?
+          to_timestamp($timestamp), $channel_id, $session_id, $connection_id, $rtc_timestamp,
+          $type, $id, $ssrc, $kind, $transport_id, $codec_id,
+          $packets_sent, $bytes_sent, $mid, $media_source_id, $remote_id, $rid,
+          $header_bytes_sent, $retransmitted_packets_sent, $retransmitted_bytes_sent,
+          $rtx_ssrc, $target_bitrate, $total_encoded_bytes_target,
+          $frame_width, $frame_height, $frames_per_second, $frames_sent, $huge_frames_sent,
+          $frames_encoded, $key_frames_encoded, $qp_sum, $total_encode_time,
+          $total_packet_send_delay, $quality_limitation_reason,
+          $quality_limitation_duration_none, $quality_limitation_duration_cpu,
+          $quality_limitation_duration_bandwidth, $quality_limitation_duration_other,
+          $quality_limitation_resolution_changes, $nack_count, $pli_count, $fir_count,
+          $encoder_implementation, $power_efficient_encoder, $active, $scalability_mode
         )
       )";
 
@@ -884,53 +902,53 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         qld_other = get_double(qld, "other");
       }
 
-      int idx = 1;
-      duckdb_bind_double(stmt.get_raw(), idx++, timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "packetsSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "bytesSent"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "mid").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "mediaSourceId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "remoteId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "rid").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "headerBytesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "retransmittedPacketsSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "retransmittedBytesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "rtxSsrc"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "targetBitrate"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "totalEncodedBytesTarget"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "frameWidth"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "frameHeight"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "framesPerSecond"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "framesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "hugeFramesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "framesEncoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "keyFramesEncoded"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "qpSum"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalEncodeTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalPacketSendDelay"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "qualityLimitationReason").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, qld_none);
-      duckdb_bind_double(stmt.get_raw(), idx++, qld_cpu);
-      duckdb_bind_double(stmt.get_raw(), idx++, qld_bandwidth);
-      duckdb_bind_double(stmt.get_raw(), idx++, qld_other);
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "qualityLimitationResolutionChanges"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "nackCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "pliCount"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "firCount"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "encoderImplementation").c_str());
-      duckdb_bind_boolean(stmt.get_raw(), idx++, get_bool(obj, "powerEfficientEncoder"));
-      duckdb_bind_boolean(stmt.get_raw(), idx++, get_bool(obj, "active"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "scalabilityMode").c_str());
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindDouble("timestamp", timestamp);
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string(obj, "type").c_str());
+      binder.BindVarchar("id", get_string(obj, "id").c_str());
+      binder.BindInt64("ssrc", get_int64(obj, "ssrc"));
+      binder.BindVarchar("kind", get_string(obj, "kind").c_str());
+      binder.BindVarchar("transport_id", get_string(obj, "transportId").c_str());
+      binder.BindVarchar("codec_id", get_string(obj, "codecId").c_str());
+      binder.BindInt64("packets_sent", get_int64(obj, "packetsSent"));
+      binder.BindInt64("bytes_sent", get_int64(obj, "bytesSent"));
+      binder.BindVarchar("mid", get_string(obj, "mid").c_str());
+      binder.BindVarchar("media_source_id", get_string(obj, "mediaSourceId").c_str());
+      binder.BindVarchar("remote_id", get_string(obj, "remoteId").c_str());
+      binder.BindVarchar("rid", get_string(obj, "rid").c_str());
+      binder.BindInt64("header_bytes_sent", get_int64(obj, "headerBytesSent"));
+      binder.BindInt64("retransmitted_packets_sent", get_int64(obj, "retransmittedPacketsSent"));
+      binder.BindInt64("retransmitted_bytes_sent", get_int64(obj, "retransmittedBytesSent"));
+      binder.BindInt64("rtx_ssrc", get_int64(obj, "rtxSsrc"));
+      binder.BindDouble("target_bitrate", get_double(obj, "targetBitrate"));
+      binder.BindInt64("total_encoded_bytes_target", get_int64(obj, "totalEncodedBytesTarget"));
+      binder.BindInt64("frame_width", get_int64(obj, "frameWidth"));
+      binder.BindInt64("frame_height", get_int64(obj, "frameHeight"));
+      binder.BindDouble("frames_per_second", get_double(obj, "framesPerSecond"));
+      binder.BindInt64("frames_sent", get_int64(obj, "framesSent"));
+      binder.BindInt64("huge_frames_sent", get_int64(obj, "hugeFramesSent"));
+      binder.BindInt64("frames_encoded", get_int64(obj, "framesEncoded"));
+      binder.BindInt64("key_frames_encoded", get_int64(obj, "keyFramesEncoded"));
+      binder.BindInt64("qp_sum", get_int64(obj, "qpSum"));
+      binder.BindDouble("total_encode_time", get_double(obj, "totalEncodeTime"));
+      binder.BindDouble("total_packet_send_delay", get_double(obj, "totalPacketSendDelay"));
+      binder.BindVarchar("quality_limitation_reason", get_string(obj, "qualityLimitationReason").c_str());
+      binder.BindDouble("quality_limitation_duration_none", qld_none);
+      binder.BindDouble("quality_limitation_duration_cpu", qld_cpu);
+      binder.BindDouble("quality_limitation_duration_bandwidth", qld_bandwidth);
+      binder.BindDouble("quality_limitation_duration_other", qld_other);
+      binder.BindInt64("quality_limitation_resolution_changes", get_int64(obj, "qualityLimitationResolutionChanges"));
+      binder.BindInt64("nack_count", get_int64(obj, "nackCount"));
+      binder.BindInt64("pli_count", get_int64(obj, "pliCount"));
+      binder.BindInt64("fir_count", get_int64(obj, "firCount"));
+      binder.BindVarchar("encoder_implementation", get_string(obj, "encoderImplementation").c_str());
+      binder.BindBoolean("power_efficient_encoder", get_bool(obj, "powerEfficientEncoder"));
+      binder.BindBoolean("active", get_bool(obj, "active"));
+      binder.BindVarchar("scalability_mode", get_string(obj, "scalabilityMode").c_str());
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -946,7 +964,13 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           audio_level, total_audio_energy, total_samples_duration,
           echo_return_loss, echo_return_loss_enhancement,
           width, height, frames, frames_per_second
-        ) VALUES (to_timestamp(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+          to_timestamp($timestamp), $channel_id, $session_id, $connection_id, $rtc_timestamp,
+          $type, $id, $track_identifier, $kind,
+          $audio_level, $total_audio_energy, $total_samples_duration,
+          $echo_return_loss, $echo_return_loss_enhancement,
+          $width, $height, $frames, $frames_per_second
+        )
       )";
 
       duckdb_utils::PreparedStatement stmt;
@@ -956,25 +980,25 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         return false;
       }
 
-      int idx = 1;
-      duckdb_bind_double(stmt.get_raw(), idx++, timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "id").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "trackIdentifier").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "kind").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "audioLevel"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalAudioEnergy"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalSamplesDuration"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "echoReturnLoss"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "echoReturnLossEnhancement"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "width"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "height"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "frames"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "framesPerSecond"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindDouble("timestamp", timestamp);
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string(obj, "type").c_str());
+      binder.BindVarchar("id", get_string(obj, "id").c_str());
+      binder.BindVarchar("track_identifier", get_string(obj, "trackIdentifier").c_str());
+      binder.BindVarchar("kind", get_string(obj, "kind").c_str());
+      binder.BindDouble("audio_level", get_double(obj, "audioLevel"));
+      binder.BindDouble("total_audio_energy", get_double(obj, "totalAudioEnergy"));
+      binder.BindDouble("total_samples_duration", get_double(obj, "totalSamplesDuration"));
+      binder.BindDouble("echo_return_loss", get_double(obj, "echoReturnLoss"));
+      binder.BindDouble("echo_return_loss_enhancement", get_double(obj, "echoReturnLossEnhancement"));
+      binder.BindInt64("width", get_int64(obj, "width"));
+      binder.BindInt64("height", get_int64(obj, "height"));
+      binder.BindInt64("frames", get_int64(obj, "frames"));
+      binder.BindDouble("frames_per_second", get_double(obj, "framesPerSecond"));
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -990,7 +1014,13 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           packets_received, packets_lost, jitter,
           local_id, round_trip_time, total_round_trip_time,
           fraction_lost, round_trip_time_measurements
-        ) VALUES (to_timestamp(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+          to_timestamp($timestamp), $channel_id, $session_id, $connection_id, $rtc_timestamp,
+          $type, $id, $ssrc, $kind, $transport_id, $codec_id,
+          $packets_received, $packets_lost, $jitter,
+          $local_id, $round_trip_time, $total_round_trip_time,
+          $fraction_lost, $round_trip_time_measurements
+        )
       )";
 
       duckdb_utils::PreparedStatement stmt;
@@ -1000,26 +1030,26 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         return false;
       }
 
-      int idx = 1;
-      duckdb_bind_double(stmt.get_raw(), idx++, timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "packetsReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "packetsLost"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "jitter"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "localId").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "roundTripTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalRoundTripTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "fractionLost"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "roundTripTimeMeasurements"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindDouble("timestamp", timestamp);
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string(obj, "type").c_str());
+      binder.BindVarchar("id", get_string(obj, "id").c_str());
+      binder.BindInt64("ssrc", get_int64(obj, "ssrc"));
+      binder.BindVarchar("kind", get_string(obj, "kind").c_str());
+      binder.BindVarchar("transport_id", get_string(obj, "transportId").c_str());
+      binder.BindVarchar("codec_id", get_string(obj, "codecId").c_str());
+      binder.BindInt64("packets_received", get_int64(obj, "packetsReceived"));
+      binder.BindInt64("packets_lost", get_int64(obj, "packetsLost"));
+      binder.BindDouble("jitter", get_double(obj, "jitter"));
+      binder.BindVarchar("local_id", get_string(obj, "localId").c_str());
+      binder.BindDouble("round_trip_time", get_double(obj, "roundTripTime"));
+      binder.BindDouble("total_round_trip_time", get_double(obj, "totalRoundTripTime"));
+      binder.BindDouble("fraction_lost", get_double(obj, "fractionLost"));
+      binder.BindInt64("round_trip_time_measurements", get_int64(obj, "roundTripTimeMeasurements"));
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -1035,7 +1065,13 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           packets_sent, bytes_sent,
           local_id, remote_timestamp, reports_sent,
           round_trip_time, total_round_trip_time, round_trip_time_measurements
-        ) VALUES (to_timestamp(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+          to_timestamp($timestamp), $channel_id, $session_id, $connection_id, $rtc_timestamp,
+          $type, $id, $ssrc, $kind, $transport_id, $codec_id,
+          $packets_sent, $bytes_sent,
+          $local_id, $remote_timestamp, $reports_sent,
+          $round_trip_time, $total_round_trip_time, $round_trip_time_measurements
+        )
       )";
 
       duckdb_utils::PreparedStatement stmt;
@@ -1045,26 +1081,26 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         return false;
       }
 
-      int idx = 1;
-      duckdb_bind_double(stmt.get_raw(), idx++, timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "id").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "ssrc"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "kind").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "transportId").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "codecId").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "packetsSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "bytesSent"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "localId").c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "remoteTimestamp"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "reportsSent"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "roundTripTime"));
-      duckdb_bind_double(stmt.get_raw(), idx++, get_double(obj, "totalRoundTripTime"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "roundTripTimeMeasurements"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindDouble("timestamp", timestamp);
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string(obj, "type").c_str());
+      binder.BindVarchar("id", get_string(obj, "id").c_str());
+      binder.BindInt64("ssrc", get_int64(obj, "ssrc"));
+      binder.BindVarchar("kind", get_string(obj, "kind").c_str());
+      binder.BindVarchar("transport_id", get_string(obj, "transportId").c_str());
+      binder.BindVarchar("codec_id", get_string(obj, "codecId").c_str());
+      binder.BindInt64("packets_sent", get_int64(obj, "packetsSent"));
+      binder.BindInt64("bytes_sent", get_int64(obj, "bytesSent"));
+      binder.BindVarchar("local_id", get_string(obj, "localId").c_str());
+      binder.BindDouble("remote_timestamp", get_double(obj, "remoteTimestamp"));
+      binder.BindInt64("reports_sent", get_int64(obj, "reportsSent"));
+      binder.BindDouble("round_trip_time", get_double(obj, "roundTripTime"));
+      binder.BindDouble("total_round_trip_time", get_double(obj, "totalRoundTripTime"));
+      binder.BindInt64("round_trip_time_measurements", get_int64(obj, "roundTripTimeMeasurements"));
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
@@ -1078,7 +1114,11 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
           timestamp, channel_id, session_id, connection_id, rtc_timestamp,
           type, id, label, protocol, data_channel_identifier, state,
           messages_sent, bytes_sent, messages_received, bytes_received
-        ) VALUES (to_timestamp(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+          to_timestamp($timestamp), $channel_id, $session_id, $connection_id, $rtc_timestamp,
+          $type, $id, $label, $protocol, $data_channel_identifier, $state,
+          $messages_sent, $bytes_sent, $messages_received, $bytes_received
+        )
       )";
 
       duckdb_utils::PreparedStatement stmt;
@@ -1088,22 +1128,22 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
         return false;
       }
 
-      int idx = 1;
-      duckdb_bind_double(stmt.get_raw(), idx++, timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, channel_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, session_id.c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, connection_id.c_str());
-      duckdb_bind_double(stmt.get_raw(), idx++, rtc_timestamp);
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "type").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "id").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "label").c_str());
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "protocol").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "dataChannelIdentifier"));
-      duckdb_bind_varchar(stmt.get_raw(), idx++, get_string(obj, "state").c_str());
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "messagesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "bytesSent"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "messagesReceived"));
-      duckdb_bind_int64(stmt.get_raw(), idx++, get_int64(obj, "bytesReceived"));
+      duckdb_utils::NamedBinder binder(stmt.get_raw());
+      binder.BindDouble("timestamp", timestamp);
+      binder.BindVarchar("channel_id", channel_id.c_str());
+      binder.BindVarchar("session_id", session_id.c_str());
+      binder.BindVarchar("connection_id", connection_id.c_str());
+      binder.BindDouble("rtc_timestamp", rtc_timestamp);
+      binder.BindVarchar("type", get_string(obj, "type").c_str());
+      binder.BindVarchar("id", get_string(obj, "id").c_str());
+      binder.BindVarchar("label", get_string(obj, "label").c_str());
+      binder.BindVarchar("protocol", get_string(obj, "protocol").c_str());
+      binder.BindInt64("data_channel_identifier", get_int64(obj, "dataChannelIdentifier"));
+      binder.BindVarchar("state", get_string(obj, "state").c_str());
+      binder.BindInt64("messages_sent", get_int64(obj, "messagesSent"));
+      binder.BindInt64("bytes_sent", get_int64(obj, "bytesSent"));
+      binder.BindInt64("messages_received", get_int64(obj, "messagesReceived"));
+      binder.BindInt64("bytes_received", get_int64(obj, "bytesReceived"));
 
       duckdb_utils::Result result;
       if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {

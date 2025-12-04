@@ -185,6 +185,50 @@ inline bool ExecutePrepared(duckdb_prepared_statement stmt, Result& result) {
   return duckdb_execute_prepared(stmt, result.get()) == DuckDBSuccess;
 }
 
+// 名前付きパラメータバインドヘルパー
+// SQL では $name 形式を使用し、バインド時は $ なしの name を渡す
+class NamedBinder {
+ public:
+  explicit NamedBinder(duckdb_prepared_statement stmt) : stmt_(stmt) {}
+
+  // パラメータ名からインデックスを取得してバインド
+  // name には $ プレフィックスなしの名前を渡す（例: "version"）
+  bool BindVarchar(const char* name, const char* value) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_varchar(stmt_, idx, value) == DuckDBSuccess;
+  }
+
+  bool BindInt64(const char* name, int64_t value) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_int64(stmt_, idx, value) == DuckDBSuccess;
+  }
+
+  bool BindDouble(const char* name, double value) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_double(stmt_, idx, value) == DuckDBSuccess;
+  }
+
+  bool BindBoolean(const char* name, bool value) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_boolean(stmt_, idx, value) == DuckDBSuccess;
+  }
+
+ private:
+  duckdb_prepared_statement stmt_;
+};
+
 }  // namespace duckdb_utils
 
 #endif  // DUCKDB_UTILS_H_
