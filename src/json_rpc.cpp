@@ -8,7 +8,7 @@
 
 namespace json = boost::json;
 
-json::object JsonRpcHandler::Process(const json::value& request) {
+std::optional<json::object> JsonRpcHandler::Process(const json::value& request) {
   json::object response;
   response["jsonrpc"] = "2.0";
 
@@ -21,8 +21,10 @@ json::object JsonRpcHandler::Process(const json::value& request) {
   const auto& obj = request.as_object();
 
   // id フィールドの取得と検証
+  // JSON-RPC 2.0 では id がない場合は Notification として扱い、レスポンスを返さない
+  bool is_notification = !obj.contains("id");
   json::value id = nullptr;
-  if (obj.contains("id")) {
+  if (!is_notification) {
     const auto& id_value = obj.at("id");
     // id は数値、文字列、またはnullのみ許可
     if (!id_value.is_null() && !id_value.is_number() && !id_value.is_string()) {
@@ -35,12 +37,19 @@ json::object JsonRpcHandler::Process(const json::value& request) {
   // jsonrpc フィールドの確認
   if (!obj.contains("jsonrpc") || !obj.at("jsonrpc").is_string() ||
       obj.at("jsonrpc").as_string() != "2.0") {
+    // Notification でもプロトコルエラーの場合はエラーを返す
+    if (is_notification) {
+      return std::nullopt;
+    }
     return CreateErrorResponse(id, -32600, "Invalid Request",
                                "Missing or invalid jsonrpc field");
   }
 
   // method フィールドの確認
   if (!obj.contains("method") || !obj.at("method").is_string()) {
+    if (is_notification) {
+      return std::nullopt;
+    }
     return CreateErrorResponse(id, -32600, "Invalid Request",
                                "Missing or invalid method field");
   }
@@ -50,14 +59,27 @@ json::object JsonRpcHandler::Process(const json::value& request) {
   // メソッドの処理
   try {
     if (method == "GetVersion") {
+      // Notification の場合はレスポンスを返さない
+      if (is_notification) {
+        return std::nullopt;
+      }
       return CreateSuccessResponse(id, HandleVersionMethod());
     } else {
+      if (is_notification) {
+        return std::nullopt;
+      }
       return CreateErrorResponse(id, -32601, "Method not found",
                                  "Unknown method: " + std::string(method));
     }
   } catch (const JsonRpcError& e) {
+    if (is_notification) {
+      return std::nullopt;
+    }
     return CreateErrorResponse(id, e.code, e.message, e.data);
   } catch (const std::exception& e) {
+    if (is_notification) {
+      return std::nullopt;
+    }
     return CreateErrorResponse(id, -32603, "Internal error", e.what());
   }
 }

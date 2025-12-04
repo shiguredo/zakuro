@@ -1,6 +1,8 @@
 #ifndef JSON_RPC_H_
 #define JSON_RPC_H_
 
+#include <optional>
+
 #include <boost/json/value.hpp>
 #include <string>
 
@@ -9,7 +11,8 @@ class JsonRpcHandler {
   JsonRpcHandler() = default;
 
   // JSON-RPC リクエストを処理して、レスポンスを返す
-  boost::json::object Process(const boost::json::value& request);
+  // Notification (id なし) の場合は std::nullopt を返す
+  std::optional<boost::json::object> Process(const boost::json::value& request);
 
  private:
   // エラーレスポンスを作成

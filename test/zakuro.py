@@ -264,6 +264,7 @@ class Zakuro:
                     raise RuntimeError(error_msg)
 
                 try:
+                    # ヘルスチェックエンドポイントで起動確認
                     url = f"http://{self._http_host}:{self._http_port}/.ok"
                     response = client.get(url, timeout=5)
                     if response.status_code == 200:

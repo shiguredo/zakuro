@@ -1,4 +1,3 @@
-import itertools
 import os
 import time
 import uuid
@@ -126,20 +125,14 @@ def sora_config() -> SoraConfig:
     )
 
 
-@pytest.fixture(scope="session")
-def port_allocator():
-    """セッション全体で共有されるポート番号アロケーター
-
-    エフェメラルポート開始の 55000 から始まるポート番号を順番に生成します。
-    複数のテストが並列実行されても、各テストに一意のポート番号が割り当てられます。
-    """
-    return itertools.count(55000)
-
-
 @pytest.fixture
-def free_port(port_allocator):
+def free_port():
     """利用可能なポート番号を提供するフィクスチャ
 
-    各テスト関数で使用すると、自動的に一意のポート番号が割り当てられます。
+    OS に空きポートを割り当ててもらうことで、ポート衝突を回避します。
     """
-    return next(port_allocator)
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
