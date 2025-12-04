@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import jwt
@@ -11,6 +12,26 @@ from dotenv import load_dotenv
 
 # .env ファイルを読み込む
 load_dotenv()
+
+# プロジェクトルートディレクトリ
+PROJECT_ROOT = Path(__file__).parent.parent
+
+
+def get_zakuro_version() -> str:
+    """VERSION ファイルから zakuro のバージョンを取得"""
+    version_file = PROJECT_ROOT / "VERSION"
+    return version_file.read_text().strip()
+
+
+def get_deps_versions() -> dict[str, str]:
+    """DEPS ファイルから依存ライブラリのバージョンを取得"""
+    deps_file = PROJECT_ROOT / "DEPS"
+    versions = {}
+    for line in deps_file.read_text().strip().split("\n"):
+        if "=" in line:
+            key, value = line.split("=", 1)
+            versions[key] = value
+    return versions
 
 
 @dataclass
