@@ -2,7 +2,10 @@
 
 #include <chrono>
 
+#include <boost/json.hpp>
 #include <rtc_base/logging.h>
+
+#include "json_rpc.h"
 
 // HTTP セッションのタイムアウト時間（秒）
 static constexpr int kHttpSessionTimeoutSeconds = 30;
@@ -67,12 +70,64 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
 
 http::response<http::string_body> HttpSession::HandleRequest(
     http::request<http::string_body>&& req) {
-  // すべてのリクエストに 404 Not Found を返す
+  // JSON-RPC エンドポイント
+  if (req.target() == "/rpc" && req.method() == http::verb::post) {
+    return HandleJsonRpcRequest(req);
+  }
+
+  // その他のリクエストには 404 Not Found を返す
   http::response<http::string_body> res{http::status::not_found, req.version()};
   res.set(http::field::server, "Zakuro");
   res.set(http::field::content_type, "text/plain");
   res.keep_alive(req.keep_alive());
   res.body() = "Not Found";
+  res.prepare_payload();
+  return res;
+}
+
+http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
+    const http::request<http::string_body>& req) {
+  http::response<http::string_body> res{http::status::ok, req.version()};
+  res.set(http::field::server, "Zakuro");
+  res.set(http::field::content_type, "application/json");
+  res.keep_alive(req.keep_alive());
+
+  try {
+    // リクエストボディをパース
+    boost::system::error_code ec;
+    auto json_request = boost::json::parse(req.body(), ec);
+    if (ec) {
+      // パースエラー
+      boost::json::object error_response;
+      error_response["jsonrpc"] = "2.0";
+      error_response["id"] = nullptr;
+      boost::json::object error;
+      error["code"] = -32700;
+      error["message"] = "Parse error";
+      error["data"] = ec.message();
+      error_response["error"] = error;
+      res.body() = boost::json::serialize(error_response);
+      res.prepare_payload();
+      return res;
+    }
+
+    // JSON-RPC ハンドラーで処理
+    JsonRpcHandler handler;
+    auto response = handler.Process(json_request);
+    res.body() = boost::json::serialize(response);
+  } catch (const std::exception& e) {
+    // 内部エラー
+    boost::json::object error_response;
+    error_response["jsonrpc"] = "2.0";
+    error_response["id"] = nullptr;
+    boost::json::object error;
+    error["code"] = -32603;
+    error["message"] = "Internal error";
+    error["data"] = e.what();
+    error_response["error"] = error;
+    res.body() = boost::json::serialize(error_response);
+  }
+
   res.prepare_payload();
   return res;
 }

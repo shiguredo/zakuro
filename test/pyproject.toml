@@ -1,0 +1,24 @@
+[project]
+name = "zakuro-e2e-test"
+version = "0.0.0"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-repeat",
+    "pytest-timeout",
+    "httpx",
+    "python-dotenv",
+    "ruff",
+    "pyjwt",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
