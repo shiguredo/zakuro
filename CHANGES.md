@@ -31,6 +31,9 @@
 - [ADD] JSON-RPC メソッド `GetVersion` を追加する
   - Zakuro のバージョン情報を取得する
   - @voluntas
+- [ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する
+  - Notification の場合は 204 No Content を返す
+  - @voluntas
 - [ADD] HTTP サーバー機能を追加する
   - `--http-port` オプションで HTTP サーバーを起動可能
   - `--http-host` オプションでバインドするアドレスを指定可能
