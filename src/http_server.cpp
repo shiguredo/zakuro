@@ -69,6 +69,17 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
 
 http::response<http::string_body> HttpSession::HandleRequest(
     http::request<http::string_body>&& req) {
+  // ヘルスチェックエンドポイント
+  if (req.target() == "/.ok" && req.method() == http::verb::get) {
+    http::response<http::string_body> res{http::status::ok, req.version()};
+    res.set(http::field::server, "Zakuro");
+    res.set(http::field::content_type, "text/plain");
+    res.keep_alive(req.keep_alive());
+    res.body() = "OK";
+    res.prepare_payload();
+    return res;
+  }
+
   // JSON-RPC エンドポイント
   if (req.target() == "/rpc" && req.method() == http::verb::post) {
     return HandleJsonRpcRequest(req);
