@@ -4,6 +4,9 @@
 
 #include <rtc_base/logging.h>
 
+// HTTP セッションのタイムアウト時間（秒）
+static constexpr int kHttpSessionTimeoutSeconds = 30;
+
 HttpServer::HttpServer(int port, const std::string& host)
     : port_(port), host_(host) {}
 
@@ -85,7 +88,7 @@ void HttpSession::Run() {
 void HttpSession::DoRead() {
   req_ = {};
 
-  stream_.expires_after(std::chrono::seconds(30));
+  stream_.expires_after(std::chrono::seconds(kHttpSessionTimeoutSeconds));
 
   http::async_read(
       stream_, buffer_, req_,
