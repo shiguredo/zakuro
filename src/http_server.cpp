@@ -14,6 +14,9 @@ namespace ssl = boost::asio::ssl;
 // HTTP セッションのタイムアウト時間（秒）
 static constexpr int kHttpSessionTimeoutSeconds = 30;
 
+// HTTP プロキシのタイムアウト時間（秒）
+static constexpr int kHttpProxyTimeoutSeconds = 30;
+
 // HTTPプロキシレスポンスボディの最大サイズ (10MB)
 static constexpr std::size_t MAX_PROXY_RESPONSE_SIZE = 10 * 1024 * 1024;
 
@@ -297,6 +300,7 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
       ssl::context ctx{ssl::context::tlsv12_client};
 
       // デフォルトの証明書検証を設定
+      // リモート UI サーバー専用のため、正規の証明書を持つサーバーを想定
       ctx.set_verify_mode(ssl::verify_peer);
       ctx.set_default_verify_paths();
 
@@ -312,6 +316,13 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
       tcp::resolver resolver(ioc);
       auto const results = resolver.resolve(host, port);
       boost::asio::connect(stream.lowest_layer(), results);
+
+      // タイムアウトを設定
+      stream.lowest_layer().set_option(
+          boost::asio::socket_base::receive_timeout(
+              std::chrono::seconds(kHttpProxyTimeoutSeconds)));
+      stream.lowest_layer().set_option(boost::asio::socket_base::send_timeout(
+          std::chrono::seconds(kHttpProxyTimeoutSeconds)));
 
       // SSL ハンドシェイク
       stream.handshake(ssl::stream_base::client);
