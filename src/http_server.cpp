@@ -114,7 +114,16 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
     // JSON-RPC ハンドラーで処理
     JsonRpcHandler handler;
     auto response = handler.Process(json_request);
-    res.body() = boost::json::serialize(response);
+
+    // Notification の場合はレスポンスを返さない（空のボディで 204 No Content）
+    if (!response) {
+      res.result(http::status::no_content);
+      res.body() = "";
+      res.prepare_payload();
+      return res;
+    }
+
+    res.body() = boost::json::serialize(*response);
   } catch (const std::exception& e) {
     // 内部エラー
     boost::json::object error_response;
