@@ -11,10 +11,6 @@
 
 ## develop
 
-- [ADD] HTTP サーバー機能を追加する
-  - `--http-port` オプションで HTTP サーバーを起動可能
-  - `--http-host` オプションでバインドするアドレスを指定可能
-  - @voluntas
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - @torikizi
@@ -30,6 +26,20 @@
   - @torikizi
 - [UPDATE] CLI11 を `2.6.1` に上げる
   - @torikizi
+- [ADD] JSON-RPC 2.0 エンドポイント `/rpc` を追加する
+  - @voluntas
+- [ADD] JSON-RPC メソッド `2025.2.0/GetVersion` を追加する
+  - Zakuro のバージョン情報を取得する
+  - @voluntas
+- [ADD] HTTP サーバー機能を追加する
+  - `--http-port` オプションで HTTP サーバーを起動可能
+  - `--http-host` オプションでバインドするアドレスを指定可能
+  - @voluntas
+
+### misc
+
+- [ADD] pytest を使った E2E テストを追加する
+  - @voluntas
 
 ## 2025.3.1
 
