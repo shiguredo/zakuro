@@ -4,13 +4,15 @@
 
 #include <openssl/ssl.h>
 #include <boost/asio/ssl.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/json.hpp>
 #include <rtc_base/logging.h>
 
 #include "json_rpc.h"
 
 namespace ssl = boost::asio::ssl;
+
+// HTTP セッションのタイムアウト時間（秒）
+static constexpr int kHttpSessionTimeoutSeconds = 30;
 
 // HTTPプロキシレスポンスボディの最大サイズ (10MB)
 static constexpr std::size_t MAX_PROXY_RESPONSE_SIZE = 10 * 1024 * 1024;
@@ -58,7 +60,6 @@ void HttpServer::Run() {
 
 void HttpServer::DoAccept() {
   acceptor_->async_accept(
-      net::strand<net::io_context::executor_type>(ioc_.get_executor()),
       beast::bind_front_handler(&HttpServer::OnAccept, this));
 }
 
@@ -136,7 +137,16 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
     // JSON-RPC ハンドラーで処理
     JsonRpcHandler handler;
     auto response = handler.Process(json_request);
-    res.body() = boost::json::serialize(response);
+
+    // Notification の場合はレスポンスを返さない（空のボディで 204 No Content）
+    if (!response) {
+      res.result(http::status::no_content);
+      res.body() = "";
+      res.prepare_payload();
+      return res;
+    }
+
+    res.body() = boost::json::serialize(*response);
   } catch (const std::exception& e) {
     // 内部エラー
     boost::json::object error_response;
@@ -165,7 +175,7 @@ void HttpSession::Run() {
 void HttpSession::DoRead() {
   req_ = {};
 
-  stream_.expires_after(std::chrono::seconds(30));
+  stream_.expires_after(std::chrono::seconds(kHttpSessionTimeoutSeconds));
 
   http::async_read(
       stream_, buffer_, req_,

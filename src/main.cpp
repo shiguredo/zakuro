@@ -73,8 +73,8 @@ int main(int argc, char* argv[]) {
 
   std::string config_file;
   int log_level = webrtc::LS_NONE;
-  std::string http_port = "none";
-  std::string http_host = "127.0.0.1";
+  std::optional<int> http_port;
+  std::optional<std::string> http_host;
   std::string ui_remote_url;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
@@ -213,15 +213,19 @@ int main(int argc, char* argv[]) {
 
   // HTTP サーバーの起動
   std::unique_ptr<HttpServer> http_server;
-  if (http_port != "none") {
-    int port = std::stoi(http_port);
-    http_server.reset(new HttpServer(port, http_host));
+  if (http_port && http_host) {
+    http_server.reset(new HttpServer(*http_port, *http_host));
     if (!ui_remote_url.empty()) {
       http_server->SetUIRemoteURL(ui_remote_url);
       RTC_LOG(LS_INFO) << "UI remote URL set to: " << ui_remote_url;
     }
     http_server->Start();
-    RTC_LOG(LS_INFO) << "HTTP server started on " << http_host << ":" << port;
+    RTC_LOG(LS_INFO) << "HTTP server started on " << *http_host << ":"
+                     << *http_port;
+  } else if (http_port || http_host) {
+    std::cerr << "--http-port と --http-host は両方指定する必要があります"
+              << std::endl;
+    return 1;
   }
 
   // 集めた stats を定期的にファイルに出力する
