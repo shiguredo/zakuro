@@ -40,6 +40,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& http_host,
                      bool& ui,
                      std::string& ui_remote_url,
+                     std::string& duckdb_dir,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
                      ZakuroConfig& config,
@@ -71,6 +72,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_flag("--ui", ui, "Enable UI reverse proxy");
   app.add_option("--ui-remote-url", ui_remote_url,
                  "Remote URL for UI reverse proxy");
+  app.add_option("--duckdb-dir", duckdb_dir,
+                 "Directory for DuckDB statistics output");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,

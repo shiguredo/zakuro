@@ -1,0 +1,193 @@
+#ifndef DUCKDB_UTILS_H_
+#define DUCKDB_UTILS_H_
+
+#include <duckdb.h>
+
+#include <functional>
+#include <memory>
+#include <string>
+
+namespace duckdb_utils {
+
+// DuckDB 結果の RAII ラッパー
+class Result {
+ public:
+  Result() : result_{}, valid_(false) {}
+  ~Result() {
+    if (valid_) {
+      duckdb_destroy_result(&result_);
+    }
+  }
+
+  // コピー・ムーブ禁止
+  Result(const Result&) = delete;
+  Result& operator=(const Result&) = delete;
+  Result(Result&&) = delete;
+  Result& operator=(Result&&) = delete;
+
+  duckdb_result* get() { return &result_; }
+  const duckdb_result* get() const { return &result_; }
+
+  void set_valid() { valid_ = true; }
+  bool is_valid() const { return valid_; }
+
+  std::string error() const {
+    if (!valid_) {
+      return "";
+    }
+    const char* err = duckdb_result_error(const_cast<duckdb_result*>(&result_));
+    return err ? err : "";
+  }
+
+  idx_t row_count() const {
+    return valid_ ? duckdb_row_count(const_cast<duckdb_result*>(&result_)) : 0;
+  }
+
+  idx_t column_count() const {
+    return valid_ ? duckdb_column_count(const_cast<duckdb_result*>(&result_))
+                  : 0;
+  }
+
+ private:
+  duckdb_result result_;
+  bool valid_;
+};
+
+// DuckDB トランザクションの RAII ラッパー
+class Transaction {
+ public:
+  explicit Transaction(duckdb_connection conn);
+  ~Transaction();
+
+  // コピー・ムーブ禁止
+  Transaction(const Transaction&) = delete;
+  Transaction& operator=(const Transaction&) = delete;
+  Transaction(Transaction&&) = delete;
+  Transaction& operator=(Transaction&&) = delete;
+
+  void Commit();
+  void Rollback();
+
+ private:
+  duckdb_connection conn_;
+  bool committed_;
+  bool active_;
+};
+
+// DuckDB プリペアドステートメントの RAII ラッパー
+class PreparedStatement {
+ public:
+  PreparedStatement() : stmt_(nullptr) {}
+  ~PreparedStatement() {
+    if (stmt_) {
+      duckdb_destroy_prepare(&stmt_);
+    }
+  }
+
+  // コピー禁止
+  PreparedStatement(const PreparedStatement&) = delete;
+  PreparedStatement& operator=(const PreparedStatement&) = delete;
+
+  // ムーブコンストラクタ
+  PreparedStatement(PreparedStatement&& other) noexcept : stmt_(other.stmt_) {
+    other.stmt_ = nullptr;
+  }
+
+  // ムーブ代入演算子
+  PreparedStatement& operator=(PreparedStatement&& other) noexcept {
+    if (this != &other) {
+      if (stmt_) {
+        duckdb_destroy_prepare(&stmt_);
+      }
+      stmt_ = other.stmt_;
+      other.stmt_ = nullptr;
+    }
+    return *this;
+  }
+
+  duckdb_prepared_statement* get() { return &stmt_; }
+  duckdb_prepared_statement get_raw() const { return stmt_; }
+
+  std::string error() const {
+    if (!stmt_) {
+      return "";
+    }
+    const char* err = duckdb_prepare_error(stmt_);
+    return err ? err : "";
+  }
+
+ private:
+  duckdb_prepared_statement stmt_;
+};
+
+// クエリ実行ヘルパー関数
+inline bool ExecuteQuery(duckdb_connection conn,
+                         const std::string& query,
+                         Result& result) {
+  result.set_valid();
+  return duckdb_query(conn, query.c_str(), result.get()) == DuckDBSuccess;
+}
+
+// クエリ実行ヘルパー関数（結果を破棄）
+inline bool ExecuteQuery(duckdb_connection conn, const std::string& query) {
+  Result result;
+  return ExecuteQuery(conn, query, result);
+}
+
+// プリペアドステートメント作成ヘルパー
+inline bool Prepare(duckdb_connection conn,
+                    const std::string& query,
+                    PreparedStatement& stmt) {
+  return duckdb_prepare(conn, query.c_str(), stmt.get()) == DuckDBSuccess;
+}
+
+// プリペアドステートメント実行ヘルパー
+inline bool ExecutePrepared(duckdb_prepared_statement stmt, Result& result) {
+  result.set_valid();
+  return duckdb_execute_prepared(stmt, result.get()) == DuckDBSuccess;
+}
+
+// 名前付きパラメータバインドヘルパークラス
+class NamedBinder {
+ public:
+  explicit NamedBinder(duckdb_prepared_statement stmt) : stmt_(stmt) {}
+
+  bool BindVarchar(const char* name, const char* val) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_varchar(stmt_, idx, val) == DuckDBSuccess;
+  }
+
+  bool BindInt64(const char* name, int64_t val) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_int64(stmt_, idx, val) == DuckDBSuccess;
+  }
+
+  bool BindDouble(const char* name, double val) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_double(stmt_, idx, val) == DuckDBSuccess;
+  }
+
+  bool BindBoolean(const char* name, bool val) {
+    idx_t idx;
+    if (duckdb_bind_parameter_index(stmt_, &idx, name) != DuckDBSuccess) {
+      return false;
+    }
+    return duckdb_bind_boolean(stmt_, idx, val) == DuckDBSuccess;
+  }
+
+ private:
+  duckdb_prepared_statement stmt_;
+};
+
+}  // namespace duckdb_utils
+
+#endif  // DUCKDB_UTILS_H_

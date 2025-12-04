@@ -7,13 +7,14 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+    "duckdb",
+    "httpx",
+    "pyjwt",
     "pytest",
     "pytest-repeat",
     "pytest-timeout",
-    "httpx",
     "python-dotenv",
     "ruff",
-    "pyjwt",
 ]
 
 [tool.pytest.ini_options]

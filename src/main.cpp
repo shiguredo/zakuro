@@ -16,6 +16,7 @@
 
 #include <blend2d/blend2d.h>
 
+#include "duckdb_stats_writer.h"
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "http_server.h"
@@ -77,12 +78,13 @@ int main(int argc, char* argv[]) {
   std::string http_host = "127.0.0.1";
   bool ui = false;
   std::string ui_remote_url;
+  std::string duckdb_dir;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
   Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui,
-                  ui_remote_url, connection_id_stats_file, instance_hatch_rate,
-                  config, false);
+                  ui_remote_url, duckdb_dir, connection_id_stats_file,
+                  instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -118,6 +120,11 @@ int main(int argc, char* argv[]) {
       common_args.push_back("--ui-remote-url");
       common_args.push_back(
           Util::PrimitiveValueToString(zakuro_obj.at("ui-remote-url")));
+    }
+    if (zakuro_obj.contains("duckdb-dir")) {
+      common_args.push_back("--duckdb-dir");
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("duckdb-dir")));
     }
     if (zakuro_obj.contains("output-file-connection-id")) {
       common_args.push_back("--output-file-connection-id");
@@ -168,7 +175,7 @@ int main(int argc, char* argv[]) {
         config_file = "";
         config = ZakuroConfig();
         Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui,
-                        ui_remote_url, connection_id_stats_file,
+                        ui_remote_url, duckdb_dir, connection_id_stats_file,
                         instance_hatch_rate, config, true);
         configs.push_back(config);
       }
@@ -215,6 +222,21 @@ int main(int argc, char* argv[]) {
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
     configs[i].id = i;
+  }
+
+  // DuckDB 統計ライターを初期化
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+  if (!duckdb_dir.empty()) {
+    duckdb_writer = std::make_shared<DuckDBStatsWriter>();
+    if (!duckdb_writer->Initialize(duckdb_dir)) {
+      std::cerr << "Failed to initialize DuckDB writer" << std::endl;
+      return 1;
+    }
+    RTC_LOG(LS_INFO) << "DuckDB output: " << duckdb_writer->GetDbFilename();
+    // 各 config に DuckDB ライターを設定
+    for (auto& config : configs) {
+      config.duckdb_writer = duckdb_writer;
+    }
   }
 
   // --ui-remote-url は --ui と併用必須

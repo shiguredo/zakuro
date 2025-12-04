@@ -45,6 +45,10 @@
   - `--http-port` オプションでポート番号を変更可能
   - `--http-host` オプションでバインドアドレスを変更可能
   - @voluntas
+- [ADD] DuckDB を使った統計出力機能を追加する
+  - `--duckdb-dir` オプションで出力ディレクトリを指定可能
+  - 接続統計と WebRTC 統計を DuckDB ファイルに保存
+  - @voluntas
 
 ### misc
 

@@ -18,6 +18,7 @@ class Util {
                         std::string& http_host,
                         bool& ui,
                         std::string& ui_remote_url,
+                        std::string& duckdb_dir,
                         std::string& connection_id_stats_file,
                         double& instance_hatch_rate,
                         ZakuroConfig& config,

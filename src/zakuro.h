@@ -18,6 +18,7 @@
 #include "game/game_key_core.h"
 
 class ZakuroStats;
+class DuckDBStatsWriter;
 
 struct ZakuroConfig {
   int id = 0;
@@ -91,6 +92,9 @@ struct ZakuroConfig {
   std::shared_ptr<GameKeyCore> key_core;
 
   std::shared_ptr<ZakuroStats> stats;
+
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+  int rtc_stats_interval = 1;
 
   struct Size {
     int width;
