@@ -28,7 +28,7 @@
   - @torikizi
 - [ADD] JSON-RPC 2.0 エンドポイント `/rpc` を追加する
   - @voluntas
-- [ADD] JSON-RPC メソッド `2025.2.0/GetVersion` を追加する
+- [ADD] JSON-RPC メソッド `GetVersion` を追加する
   - Zakuro のバージョン情報を取得する
   - @voluntas
 - [ADD] HTTP サーバー機能を追加する
