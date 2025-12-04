@@ -8,7 +8,8 @@
 
 namespace json = boost::json;
 
-std::optional<json::object> JsonRpcHandler::Process(const json::value& request) {
+std::optional<json::object> JsonRpcHandler::Process(
+    const json::value& request) {
   json::object response;
   response["jsonrpc"] = "2.0";
 

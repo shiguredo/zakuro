@@ -123,10 +123,10 @@ VirtualClientStats VirtualClient::GetStats() const {
 
   std::lock_guard<std::mutex> lock(stats_mutex_);
   VirtualClientStats st;
-  st.channel_id = channel_id_.empty() ? config_.sora_config.channel_id
-                                      : channel_id_;
-  st.connection_id = connection_id_.empty() ? signaling_->GetConnectionID()
-                                            : connection_id_;
+  st.channel_id =
+      channel_id_.empty() ? config_.sora_config.channel_id : channel_id_;
+  st.connection_id =
+      connection_id_.empty() ? signaling_->GetConnectionID() : connection_id_;
   st.session_id = session_id_;
   st.role = role_;
   st.connected_url = signaling_->GetConnectedSignalingURL();
@@ -251,13 +251,13 @@ void VirtualClient::StartRTCStatsTimer() {
 
   rtc_stats_timer_->expires_from_now(
       boost::posix_time::seconds(config_.rtc_stats_interval));
-  rtc_stats_timer_->async_wait([weak = weak_from_this()](
-                                   const boost::system::error_code& ec) {
-    auto self = weak.lock();
-    if (self) {
-      self->OnRTCStatsTimer(ec);
-    }
-  });
+  rtc_stats_timer_->async_wait(
+      [weak = weak_from_this()](const boost::system::error_code& ec) {
+        auto self = weak.lock();
+        if (self) {
+          self->OnRTCStatsTimer(ec);
+        }
+      });
 }
 
 void VirtualClient::OnRTCStatsTimer(const boost::system::error_code& ec) {

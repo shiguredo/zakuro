@@ -7,8 +7,8 @@
 #include <sstream>
 #include <unordered_map>
 
-#include <boost/json.hpp>
 #include <rtc_base/logging.h>
+#include <boost/json.hpp>
 
 #include "virtual_client.h"
 #include "zakuro_version.h"
@@ -744,8 +744,7 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
                         get_double("totalProcessingDelay"));
       binder.BindDouble("estimated_playout_timestamp",
                         get_double("estimatedPlayoutTimestamp"));
-      binder.BindDouble("jitter_buffer_delay",
-                        get_double("jitterBufferDelay"));
+      binder.BindDouble("jitter_buffer_delay", get_double("jitterBufferDelay"));
       binder.BindDouble("jitter_buffer_target_delay",
                         get_double("jitterBufferTargetDelay"));
       binder.BindInt64("jitter_buffer_emitted_count",
@@ -836,7 +835,8 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
       binder.BindInt64("packets_sent", get_int64("packetsSent"));
       binder.BindInt64("bytes_sent", get_int64("bytesSent"));
       binder.BindVarchar("mid", get_string("mid").c_str());
-      binder.BindVarchar("media_source_id", get_string("mediaSourceId").c_str());
+      binder.BindVarchar("media_source_id",
+                         get_string("mediaSourceId").c_str());
       binder.BindVarchar("remote_id", get_string("remoteId").c_str());
       binder.BindVarchar("rid", get_string("rid").c_str());
       binder.BindInt64("header_bytes_sent", get_int64("headerBytesSent"));
@@ -1106,7 +1106,8 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
 
     duckdb_utils::NamedBinder binder(stmt.get_raw());
     binder.BindVarchar("version", ZakuroVersion::GetVersion().c_str());
-    binder.BindVarchar("environment", ZakuroVersion::GetEnvironmentName().c_str());
+    binder.BindVarchar("environment",
+                       ZakuroVersion::GetEnvironmentName().c_str());
     binder.BindVarchar("webrtc_version",
                        ZakuroVersion::GetWebRTCVersion().c_str());
     binder.BindVarchar("sora_cpp_sdk_version",
