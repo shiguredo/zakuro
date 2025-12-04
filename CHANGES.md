@@ -49,6 +49,14 @@
   - `--duckdb-dir` オプションで出力ディレクトリを指定可能
   - 接続統計と WebRTC 統計を DuckDB ファイルに保存
   - @voluntas
+- [ADD] JSON-RPC メソッド `Query` を追加する
+  - DuckDB に対して SQL クエリを実行し結果を JSON で返す
+  - `--duckdb-dir` オプション指定時のみ使用可能
+  - @voluntas
+- [ADD] JSON-RPC メソッド `ListConnections` を追加する
+  - 接続一覧を取得する
+  - `--duckdb-dir` オプション指定時のみ使用可能
+  - @voluntas
 
 ### misc
 

@@ -9,6 +9,43 @@
 
 namespace duckdb_utils {
 
+// DuckDB 文字列値の RAII ラッパー
+class StringValue {
+ public:
+  explicit StringValue(char* value) : value_(value) {}
+  ~StringValue() {
+    if (value_) {
+      duckdb_free(value_);
+    }
+  }
+
+  // コピー禁止
+  StringValue(const StringValue&) = delete;
+  StringValue& operator=(const StringValue&) = delete;
+
+  // ムーブコンストラクタ
+  StringValue(StringValue&& other) noexcept : value_(other.value_) {
+    other.value_ = nullptr;
+  }
+
+  // ムーブ代入演算子
+  StringValue& operator=(StringValue&& other) noexcept {
+    if (this != &other) {
+      if (value_) {
+        duckdb_free(value_);
+      }
+      value_ = other.value_;
+      other.value_ = nullptr;
+    }
+    return *this;
+  }
+
+  const char* get() const { return value_ ? value_ : ""; }
+
+ private:
+  char* value_;
+};
+
 // DuckDB 結果の RAII ラッパー
 class Result {
  public:

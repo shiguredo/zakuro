@@ -249,6 +249,10 @@ int main(int argc, char* argv[]) {
   // HTTP サーバーの起動
   std::unique_ptr<HttpServer> http_server;
   http_server.reset(new HttpServer(http_port, http_host));
+  // DuckDB ライターを設定
+  if (duckdb_writer) {
+    http_server->SetDuckDBWriter(duckdb_writer);
+  }
   // --ui 指定時のみリバプロを有効化
   if (ui) {
     std::string remote_url = ui_remote_url.empty()

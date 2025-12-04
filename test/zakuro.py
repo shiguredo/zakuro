@@ -52,6 +52,14 @@ class RpcClient:
         """バージョン情報を取得"""
         return self._call("GetVersion")
 
+    def query(self, sql: str) -> dict[str, Any]:
+        """SQL クエリを実行"""
+        return self._call("Query", {"sql": sql})
+
+    def list_connections(self, limit: int = 100) -> dict[str, Any]:
+        """接続一覧を取得"""
+        return self._call("ListConnections", {"limit": limit})
+
 
 class Zakuro:
     """Zakuro プロセスを管理するクラス

@@ -44,6 +44,9 @@ class DuckDBStatsWriter {
   // クリーンアップ処理
   void Close();
 
+  // SQL クエリを実行して JSON 形式で結果を返す
+  std::string ExecuteQuery(const std::string& sql);
+
   // データベースファイル名を取得
   const std::string& GetDbFilename() const { return db_filename_; }
 

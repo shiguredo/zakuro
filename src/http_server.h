@@ -15,6 +15,8 @@ namespace http = beast::http;
 namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
+class DuckDBStatsWriter;
+
 class HttpServer {
  public:
   HttpServer(int port, const std::string& host = "127.0.0.1");
@@ -22,6 +24,10 @@ class HttpServer {
 
   void SetUIRemoteURL(const std::string& url) { ui_remote_url_ = url; }
   std::string GetUIRemoteURL() const { return ui_remote_url_; }
+
+  void SetDuckDBWriter(std::shared_ptr<DuckDBStatsWriter> writer) {
+    duckdb_writer_ = writer;
+  }
 
   void Start();
   void Stop();
@@ -38,6 +44,7 @@ class HttpServer {
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
   std::string ui_remote_url_;
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;
 
   net::io_context ioc_;
   std::unique_ptr<tcp::acceptor> acceptor_;
@@ -46,8 +53,12 @@ class HttpServer {
 // HTTP セッションを処理するクラス
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
-  explicit HttpSession(tcp::socket&& socket, const std::string& ui_remote_url)
-      : stream_(std::move(socket)), ui_remote_url_(ui_remote_url) {}
+  HttpSession(tcp::socket&& socket,
+              const std::string& ui_remote_url,
+              std::shared_ptr<DuckDBStatsWriter> duckdb_writer)
+      : stream_(std::move(socket)),
+        ui_remote_url_(ui_remote_url),
+        duckdb_writer_(duckdb_writer) {}
 
   void Run();
 
@@ -76,6 +87,7 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   http::request<http::string_body> req_;
   std::shared_ptr<http::response<http::string_body>> res_;
   std::string ui_remote_url_;
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;
 };
 
 #endif  // HTTP_SERVER_H_

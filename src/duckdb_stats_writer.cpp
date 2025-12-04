@@ -1134,3 +1134,88 @@ bool DuckDBStatsWriter::WriteZakuroInfo(const std::string& config_mode,
     return false;
   }
 }
+
+std::string DuckDBStatsWriter::ExecuteQuery(const std::string& sql) {
+  if (!initialized_ || !conn_) {
+    RTC_LOG(LS_ERROR)
+        << "DuckDBStatsWriter::ExecuteQuery - database not initialized"
+        << " query_length=" << sql.length();
+    boost::json::object error;
+    error["error"] = "Database not initialized";
+    return boost::json::serialize(error);
+  }
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  duckdb_utils::Result result;
+  if (!duckdb_utils::ExecuteQuery(conn_, sql, result)) {
+    boost::json::object error;
+    error["error"] = result.error();
+    return boost::json::serialize(error);
+  }
+
+  // 結果を JSON 形式に変換
+  boost::json::object response;
+  boost::json::array rows;
+
+  // カラム情報を取得
+  idx_t column_count = result.column_count();
+  idx_t row_count = result.row_count();
+
+  rows.reserve(row_count);
+
+  for (idx_t row = 0; row < row_count; row++) {
+    boost::json::object row_obj;
+
+    for (idx_t col = 0; col < column_count; col++) {
+      const char* col_name = duckdb_column_name(result.get(), col);
+
+      // NULL 値のチェック
+      if (duckdb_value_is_null(result.get(), col, row)) {
+        row_obj[col_name] = nullptr;
+        continue;
+      }
+
+      // 型に応じて値を取得
+      duckdb_type col_type = duckdb_column_type(result.get(), col);
+      switch (col_type) {
+        case DUCKDB_TYPE_BOOLEAN:
+          row_obj[col_name] = duckdb_value_boolean(result.get(), col, row);
+          break;
+        case DUCKDB_TYPE_TINYINT:
+          row_obj[col_name] = duckdb_value_int8(result.get(), col, row);
+          break;
+        case DUCKDB_TYPE_SMALLINT:
+          row_obj[col_name] = duckdb_value_int16(result.get(), col, row);
+          break;
+        case DUCKDB_TYPE_INTEGER:
+          row_obj[col_name] = duckdb_value_int32(result.get(), col, row);
+          break;
+        case DUCKDB_TYPE_BIGINT:
+          row_obj[col_name] =
+              static_cast<int64_t>(duckdb_value_int64(result.get(), col, row));
+          break;
+        case DUCKDB_TYPE_FLOAT:
+          row_obj[col_name] = duckdb_value_float(result.get(), col, row);
+          break;
+        case DUCKDB_TYPE_DOUBLE:
+          row_obj[col_name] = duckdb_value_double(result.get(), col, row);
+          break;
+        case DUCKDB_TYPE_VARCHAR:
+        case DUCKDB_TYPE_TIMESTAMP:
+        default: {
+          // 文字列として取得
+          duckdb_utils::StringValue str_val(
+              duckdb_value_varchar(result.get(), col, row));
+          row_obj[col_name] = str_val.get();
+          break;
+        }
+      }
+    }
+
+    rows.push_back(row_obj);
+  }
+
+  response["rows"] = rows;
+  return boost::json::serialize(response);
+}
