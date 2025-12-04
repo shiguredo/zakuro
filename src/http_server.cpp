@@ -3,7 +3,6 @@
 #include <chrono>
 
 #include <rtc_base/logging.h>
-#include <boost/asio/strand.hpp>
 
 HttpServer::HttpServer(int port, const std::string& host)
     : port_(port), host_(host) {}
@@ -48,7 +47,6 @@ void HttpServer::Run() {
 
 void HttpServer::DoAccept() {
   acceptor_->async_accept(
-      net::strand<net::io_context::executor_type>(ioc_.get_executor()),
       beast::bind_front_handler(&HttpServer::OnAccept, this));
 }
 
