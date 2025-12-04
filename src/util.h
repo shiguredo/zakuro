@@ -19,6 +19,7 @@ class Util {
                         int& log_level,
                         std::string& http_port,
                         std::string& http_host,
+                        std::string& ui_remote_url,
                         std::string& connection_id_stats_file,
                         double& instance_hatch_rate,
                         ZakuroConfig& config,

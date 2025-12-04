@@ -26,6 +26,10 @@
   - @torikizi
 - [UPDATE] CLI11 を `2.6.1` に上げる
   - @torikizi
+- [ADD] UI リバースプロキシ機能を追加する
+  - `--ui-remote-url` オプションでリモート URL を指定可能
+  - HTTP/HTTPS 両対応
+  - @voluntas
 - [ADD] ヘルスチェック用 HTTP API `/.ok` を追加する
   - GET リクエストで 200 OK を返す
   - @voluntas

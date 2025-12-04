@@ -38,6 +38,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      int& log_level,
                      std::string& http_port,
                      std::string& http_host,
+                     std::string& ui_remote_url,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
                      ZakuroConfig& config,
@@ -82,6 +83,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
           "PORT_OR_NONE"));
   app.add_option("--http-host", http_host,
                  "HTTP host address to bind (default: 127.0.0.1)");
+  app.add_option("--ui-remote-url", ui_remote_url,
+                 "Remote URL for UI reverse proxy (e.g. http://localhost:5173)");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,
