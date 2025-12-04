@@ -138,12 +138,3 @@ def free_port():
         return s.getsockname()[1]
 
 
-@pytest.fixture
-def tmp_duckdb_dir(tmp_path: Path) -> Path:
-    """DuckDB ファイル出力用の一時ディレクトリを提供するフィクスチャ
-
-    テスト終了後に自動的にクリーンアップされます。
-    """
-    duckdb_dir = tmp_path / "duckdb"
-    duckdb_dir.mkdir(parents=True, exist_ok=True)
-    return duckdb_dir
