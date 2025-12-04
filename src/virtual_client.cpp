@@ -3,7 +3,10 @@
 #include <chrono>
 #include <iostream>
 
+#include "duckdb_stats_writer.h"
+
 // Sora C++ SDK
+#include <sora/rtc_stats.h>
 #include <sora/sora_video_encoder_factory.h>
 
 // WebRTC
@@ -23,7 +26,9 @@ std::shared_ptr<VirtualClient> VirtualClient::Create(
   return std::shared_ptr<VirtualClient>(new VirtualClient(config));
 }
 VirtualClient::VirtualClient(const VirtualClientConfig& config)
-    : config_(config), retry_timer_(*config.sora_config.io_context) {}
+    : config_(config),
+      retry_timer_(*config.sora_config.io_context),
+      rtc_stats_timer_(*config.sora_config.io_context) {}
 
 void VirtualClient::Connect() {
   if (closing_) {
@@ -102,6 +107,7 @@ void VirtualClient::Close(std::function<void(std::string)> on_close) {
 }
 
 void VirtualClient::Clear() {
+  StopRTCStatsTimer();
   retry_timer_.cancel();
   signaling_.reset();
 }
@@ -121,7 +127,11 @@ VirtualClientStats VirtualClient::GetStats() const {
   VirtualClientStats st;
   st.channel_id = config_.sora_config.channel_id;
   st.connection_id = signaling_->GetConnectionID();
+  st.session_id = session_id_;
   st.connected_url = signaling_->GetConnectedSignalingURL();
+  st.role = config_.sora_config.role;
+  st.has_audio_track = audio_track_ != nullptr;
+  st.has_video_track = video_track_ != nullptr;
   st.datachannel_connected = signaling_->IsConnectedDataChannel();
   st.websocket_connected = signaling_->IsConnectedWebsocket();
   return st;
@@ -164,6 +174,7 @@ void VirtualClient::OnSetOffer(std::string offer) {
 }
 void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
                                  std::string message) {
+  StopRTCStatsTimer();
   signaling_.reset();
   retry_timer_.cancel();
 
@@ -206,5 +217,82 @@ void VirtualClient::OnNotify(std::string text) {
     // 他人が接続された時もリセットされることになるけど、
     // その時は 0 のままになってるはずなので問題ない
     retry_count_ = 0;
+
+    // 自分の接続の場合のみ、session_id を取得して RTC 統計タイマーを開始
+    auto connection_id = json.at("connection_id").as_string();
+    if (signaling_ != nullptr &&
+        connection_id == signaling_->GetConnectionID()) {
+      // session_id を取得
+      if (json.as_object().contains("session_id")) {
+        session_id_ = std::string(json.at("session_id").as_string());
+      }
+      // DuckDB 有効時に RTC 統計収集タイマーを開始
+      StartRTCStatsTimer();
+    }
   }
+}
+
+void VirtualClient::StartRTCStatsTimer() {
+  // DuckDB writer がない場合は何もしない
+  if (!config_.duckdb_writer) {
+    return;
+  }
+
+  auto self = shared_from_this();
+  rtc_stats_timer_.expires_after(
+      std::chrono::milliseconds((int)(config_.duckdb_interval * 1000)));
+  rtc_stats_timer_.async_wait([self](boost::system::error_code ec) {
+    if (ec) {
+      return;
+    }
+    self->CollectAndWriteRTCStats();
+    // 次のタイマーをセット
+    self->StartRTCStatsTimer();
+  });
+}
+
+void VirtualClient::StopRTCStatsTimer() {
+  rtc_stats_timer_.cancel();
+}
+
+void VirtualClient::CollectAndWriteRTCStats() {
+  if (!config_.duckdb_writer || !signaling_) {
+    return;
+  }
+
+  auto pc = signaling_->GetPeerConnection();
+  if (!pc) {
+    return;
+  }
+
+  std::string channel_id = config_.sora_config.channel_id;
+  std::string connection_id = signaling_->GetConnectionID();
+  std::string session_id = session_id_;
+  auto writer = config_.duckdb_writer;
+
+  pc->GetStats(sora::RTCStatsCallback::Create(
+                   [channel_id, session_id, connection_id,
+                    writer](const webrtc::scoped_refptr<
+                            const webrtc::RTCStatsReport>& report) {
+                     if (!writer) {
+                       return;
+                     }
+
+                     double timestamp =
+                         std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::system_clock::now().time_since_epoch())
+                             .count() /
+                         1000.0;
+
+                     for (const auto& stat : *report) {
+                       std::string type = stat.type();
+                       std::string json_data = stat.ToJson();
+                       double rtc_timestamp = stat.timestamp().us() / 1000000.0;
+
+                       writer->WriteRTCStats(channel_id, session_id,
+                                             connection_id, type, rtc_timestamp,
+                                             json_data, timestamp);
+                     }
+                   })
+                   .get());
 }

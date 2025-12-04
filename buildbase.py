@@ -1596,6 +1596,49 @@ def install_openh264(version, source_dir, install_dir, is_windows):
             cmd(["make", f"PREFIX={os.path.join(install_dir, 'openh264')}", "install-headers"])
 
 
+def install_duckdb(version, source_dir, install_dir, platform):
+    duckdb_install_dir = os.path.join(install_dir, "duckdb")
+    rm_rf(duckdb_install_dir)
+    mkdir_p(duckdb_install_dir)
+
+    # プラットフォーム別のダウンロード URL（ダイナミックライブラリ）
+    if platform == "macos_arm64":
+        # macOS 用の universal バイナリを使用
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-osx-universal.zip"
+    elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        url = f"https://github.com/duckdb/duckdb/releases/download/{version}/libduckdb-linux-amd64.zip"
+    else:
+        raise Exception(f"Unsupported platform for DuckDB: {platform}")
+
+    # ダウンロードと展開
+    path = download(url, source_dir)
+    with cd(duckdb_install_dir):
+        cmd(["unzip", "-q", path])
+
+    # ディレクトリ構造を整理
+    # include ディレクトリを作成してヘッダーファイルを移動
+    include_dir = os.path.join(duckdb_install_dir, "include")
+    mkdir_p(include_dir)
+
+    # ヘッダーファイルを移動（C API のヘッダーのみ）
+    if os.path.exists(os.path.join(duckdb_install_dir, "duckdb.h")):
+        shutil.move(os.path.join(duckdb_install_dir, "duckdb.h"), include_dir)
+
+    # lib ディレクトリを作成してライブラリファイルを移動
+    lib_dir = os.path.join(duckdb_install_dir, "lib")
+    mkdir_p(lib_dir)
+
+    # ダイナミックライブラリファイルを移動
+    if platform == "macos_arm64":
+        # macOS の場合は .dylib ファイル
+        for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.dylib")):
+            shutil.move(lib_file, lib_dir)
+    elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        # Linux の場合は .so ファイル
+        for lib_file in glob.glob(os.path.join(duckdb_install_dir, "*.so")):
+            shutil.move(lib_file, lib_dir)
+
+
 @versioned
 def install_yaml(version, source_dir, build_dir, install_dir, cmake_args):
     rm_rf(os.path.join(source_dir, "yaml"))

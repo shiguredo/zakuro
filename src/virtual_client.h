@@ -12,10 +12,17 @@
 
 #include "zakuro_audio_device_module.h"
 
+// 前方宣言
+class DuckDBStatsWriter;
+
 struct VirtualClientStats {
   std::string channel_id;
   std::string connection_id;
+  std::string session_id;
   std::string connected_url;
+  std::string role;
+  bool has_audio_track = false;
+  bool has_video_track = false;
   bool websocket_connected = false;
   bool datachannel_connected = false;
 };
@@ -56,6 +63,10 @@ struct VirtualClientConfig {
   std::string openh264;
 
   std::shared_ptr<sora::SoraClientContext> context;
+
+  // DuckDB 統計出力
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+  double duckdb_interval = 1.0;
 };
 
 class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
@@ -87,15 +98,24 @@ class VirtualClient : public std::enable_shared_from_this<VirtualClient>,
  private:
   VirtualClient(const VirtualClientConfig& config);
 
+  // RTC 統計収集タイマーの開始
+  void StartRTCStatsTimer();
+  // RTC 統計収集タイマーの停止
+  void StopRTCStatsTimer();
+  // RTC 統計の収集と DuckDB への書き込み
+  void CollectAndWriteRTCStats();
+
   VirtualClientConfig config_;
   bool closing_ = false;
   bool need_reconnect_ = false;
   int retry_count_ = 0;
   std::function<void(std::string)> on_close_;
   boost::asio::steady_timer retry_timer_;
+  boost::asio::steady_timer rtc_stats_timer_;
   std::shared_ptr<sora::SoraSignaling> signaling_;
   webrtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   webrtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
+  std::string session_id_;
 };
 
 #endif

@@ -85,6 +85,9 @@ class Zakuro:
         http_host: str = "127.0.0.1",
         # ログ設定
         log_level: Literal["verbose", "info", "warning", "error", "none"] | None = None,
+        # DuckDB 設定
+        duckdb_dir: str | None = None,
+        duckdb_interval: float | None = None,
         # 起動待機設定
         startup_timeout: int = 30,
     ) -> None:
@@ -97,6 +100,8 @@ class Zakuro:
         self._http_port = http_port
         self._http_host = http_host
         self._log_level = log_level
+        self._duckdb_dir = duckdb_dir
+        self._duckdb_interval = duckdb_interval
         self._startup_timeout = startup_timeout
 
         # HTTP クライアントと RPC クライアント
@@ -230,6 +235,12 @@ class Zakuro:
         # ログレベル
         if self._log_level:
             args.extend(["--log-level", self._log_level])
+
+        # DuckDB 設定
+        if self._duckdb_dir:
+            args.extend(["--duckdb-dir", self._duckdb_dir])
+        if self._duckdb_interval is not None:
+            args.extend(["--duckdb-interval", str(self._duckdb_interval)])
 
         # config を一時ファイルに書き出し
         fd, temp_path = tempfile.mkstemp(suffix=".jsonc", prefix="zakuro_config_")

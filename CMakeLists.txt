@@ -32,8 +32,21 @@ target_include_directories(zakuro PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 # OpenH264
 target_include_directories(zakuro PRIVATE ${OPENH264_ROOT_DIR}/include)
 
+# DuckDB
+set(DuckDB_INCLUDE_DIRS ${DUCKDB_ROOT_DIR}/include)
+if(ZAKURO_PLATFORM STREQUAL "macos_arm64")
+  set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb.dylib)
+elseif(ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+  set(DuckDB_LIBRARIES ${DUCKDB_ROOT_DIR}/lib/libduckdb.so)
+else()
+  message(FATAL_ERROR "Unsupported platform for DuckDB: ${ZAKURO_PLATFORM}")
+endif()
+target_include_directories(zakuro PRIVATE ${DuckDB_INCLUDE_DIRS})
+
 target_sources(zakuro
   PRIVATE
+    src/duckdb_stats_writer.cpp
+    src/duckdb_utils.cpp
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
     src/http_server.cpp
@@ -58,6 +71,7 @@ target_link_libraries(zakuro
     Boost::filesystem
     CLI11::CLI11
     Blend2D::Blend2D
+    ${DuckDB_LIBRARIES}
 )
 
 target_compile_definitions(zakuro
@@ -179,6 +193,17 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
-
+  # DuckDB ダイナミックライブラリの RPATH 設定
+  set_target_properties(zakuro PROPERTIES
+    BUILD_RPATH_USE_ORIGIN ON
+    INSTALL_RPATH "@executable_path"
+    BUILD_WITH_INSTALL_RPATH TRUE
+  )
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+  # Linux での RPATH 設定
+  set_target_properties(zakuro PROPERTIES
+    BUILD_RPATH_USE_ORIGIN ON
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_WITH_INSTALL_RPATH TRUE
+  )
 endif()

@@ -24,6 +24,7 @@ from buildbase import (
     install_blend2d_official,
     install_cli11,
     install_cmake,
+    install_duckdb,
     install_llvm,
     install_openh264,
     install_sora_and_deps,
@@ -227,6 +228,14 @@ def install_deps(
         }
         install_openh264(**install_openh264_args)
 
+        # DuckDB
+        install_duckdb(
+            version=deps["DUCKDB_VERSION"],
+            source_dir=source_dir,
+            install_dir=install_dir,
+            platform=platform,
+        )
+
 
 def _find_clang_binary(name: str) -> Optional[str]:
     if shutil.which(name) is not None:
@@ -315,6 +324,9 @@ def _build(args):
         cmake_args.append(f"-DBLEND2D_ROOT_DIR={cmake_path(os.path.join(install_dir, 'blend2d'))}")
         cmake_args.append(
             f"-DOPENH264_ROOT_DIR={cmake_path(os.path.join(install_dir, 'openh264'))}"
+        )
+        cmake_args.append(
+            f"-DDUCKDB_ROOT_DIR={cmake_path(os.path.join(install_dir, 'duckdb'))}"
         )
         cmake_args += get_common_cmake_args(install_dir, args.target, webrtc_info)
 

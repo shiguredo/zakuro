@@ -42,6 +42,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& ui_remote_url,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
+                     std::string& duckdb_dir,
+                     double& duckdb_interval,
                      ZakuroConfig& config,
                      bool ignore_config) {
   std::vector<std::string> args = cargs;
@@ -76,6 +78,13 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--instance-hatch-rate", instance_hatch_rate,
                  "Spawned instance per seconds (default: 1.0)")
       ->check(CLI::Range(0.1, 100.0));
+
+  app.add_option("--duckdb-dir", duckdb_dir,
+                 "DuckDB output directory (enables DuckDB output when "
+                 "specified)");
+  app.add_option("--duckdb-interval", duckdb_interval,
+                 "DuckDB stats collection interval in seconds (default: 1.0)")
+      ->check(CLI::Range(0.1, 60.0));
 
   // インスタンス毎のオプション
   auto is_valid_resolution = CLI::Validator(

@@ -16,6 +16,7 @@
 
 #include <blend2d/blend2d.h>
 
+#include "duckdb_stats_writer.h"
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
 #include "http_server.h"
@@ -79,10 +80,12 @@ int main(int argc, char* argv[]) {
   std::string ui_remote_url;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
+  std::string duckdb_dir;
+  double duckdb_interval = 1.0;
   ZakuroConfig config;
   Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui,
                   ui_remote_url, connection_id_stats_file, instance_hatch_rate,
-                  config, false);
+                  duckdb_dir, duckdb_interval, config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -129,6 +132,16 @@ int main(int argc, char* argv[]) {
       common_args.push_back(
           Util::PrimitiveValueToString(zakuro_obj.at("instance-hatch-rate")));
     }
+    if (zakuro_obj.contains("duckdb-dir")) {
+      common_args.push_back("--duckdb-dir");
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("duckdb-dir")));
+    }
+    if (zakuro_obj.contains("duckdb-interval")) {
+      common_args.push_back("--duckdb-interval");
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("duckdb-interval")));
+    }
 
     std::vector<std::string> post_args;
     // args の --config を取り除きつつ post_args に追加
@@ -169,7 +182,8 @@ int main(int argc, char* argv[]) {
         config = ZakuroConfig();
         Util::ParseArgs(args, config_file, log_level, http_port, http_host, ui,
                         ui_remote_url, connection_id_stats_file,
-                        instance_hatch_rate, config, true);
+                        instance_hatch_rate, duckdb_dir, duckdb_interval,
+                        config, true);
         configs.push_back(config);
       }
     }
@@ -215,6 +229,49 @@ int main(int argc, char* argv[]) {
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
     configs[i].id = i;
+  }
+
+  // DuckDB の初期化
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer;
+  if (!duckdb_dir.empty()) {
+    duckdb_writer = std::make_shared<DuckDBStatsWriter>();
+    if (!duckdb_writer->Initialize(duckdb_dir)) {
+      std::cerr << "DuckDB の初期化に失敗しました" << std::endl;
+      return 1;
+    }
+    RTC_LOG(LS_INFO) << "DuckDB initialized in directory: " << duckdb_dir;
+
+    // zakuro 起動情報を書き込む
+    // instances_json を構築
+    boost::json::array instances_json;
+    for (const auto& c : configs) {
+      boost::json::object inst;
+      inst["id"] = c.id;
+      inst["name"] = c.name;
+      inst["vcs"] = c.vcs;
+      inst["channel_id"] = c.sora_channel_id;
+      inst["role"] = c.sora_role;
+      instances_json.push_back(inst);
+    }
+    // global_config_json を構築
+    boost::json::object global_config;
+    global_config["log_level"] = log_level;
+    global_config["http_port"] = http_port;
+    global_config["http_host"] = http_host;
+    global_config["duckdb_dir"] = duckdb_dir;
+    global_config["duckdb_interval"] = duckdb_interval;
+
+    if (!duckdb_writer->WriteZakuroInfo(
+            config_file, boost::json::serialize(global_config),
+            boost::json::serialize(instances_json))) {
+      RTC_LOG(LS_ERROR) << "Failed to write zakuro info to DuckDB";
+    }
+
+    // 各 config に duckdb_writer を設定
+    for (auto& config : configs) {
+      config.duckdb_writer = duckdb_writer;
+      config.duckdb_interval = duckdb_interval;
+    }
   }
 
   // --ui-remote-url は --ui と併用必須
@@ -325,6 +382,12 @@ int main(int argc, char* argv[]) {
   }
   if (stats_th) {
     stats_th->join();
+  }
+
+  // DuckDB のクローズ
+  if (duckdb_writer) {
+    duckdb_writer->Close();
+    RTC_LOG(LS_INFO) << "DuckDB closed";
   }
 
   return 0;

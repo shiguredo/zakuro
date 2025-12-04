@@ -20,6 +20,8 @@ class Util {
                         std::string& ui_remote_url,
                         std::string& connection_id_stats_file,
                         double& instance_hatch_rate,
+                        std::string& duckdb_dir,
+                        double& duckdb_interval,
                         ZakuroConfig& config,
                         bool ignore_config);
   static std::vector<std::vector<std::string>> ParseInstanceToArgs(
