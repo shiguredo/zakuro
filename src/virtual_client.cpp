@@ -226,6 +226,11 @@ void VirtualClient::OnNotify(std::string text) {
       if (json.as_object().contains("session_id")) {
         session_id_ = std::string(json.at("session_id").as_string());
       }
+      // DuckDB 有効時に接続情報を書き込み
+      if (config_.duckdb_writer) {
+        std::vector<VirtualClientStats> stats = {GetStats()};
+        config_.duckdb_writer->WriteStats(stats);
+      }
       // DuckDB 有効時に RTC 統計収集タイマーを開始
       StartRTCStatsTimer();
     }

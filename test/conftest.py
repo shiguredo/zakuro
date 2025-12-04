@@ -60,8 +60,9 @@ class SoraConfig:
         channel_name: str,
         role: str,
         vcs: int = 1,
-        no_video_device: bool = True,
-        no_audio_device: bool = True,
+        audio: bool = True,
+        video: bool = True,
+        fake_capture_device: bool = True,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """zakuro インスタンス設定を構築する
@@ -70,8 +71,9 @@ class SoraConfig:
             channel_name: チャンネル名（channel_id の生成に使用）
             role: Sora のロール (sendonly, recvonly, sendrecv)
             vcs: 仮想クライアント数
-            no_video_device: ビデオデバイスを無効化
-            no_audio_device: オーディオデバイスを無効化
+            audio: 音声を有効化
+            video: 映像を有効化
+            fake_capture_device: フェイクキャプチャデバイスを使用
             **kwargs: インスタンス設定に追加するその他のオプション
 
         Returns:
@@ -84,14 +86,12 @@ class SoraConfig:
                 "channel-id": channel_id,
                 "role": role,
                 "metadata": self.build_metadata(channel_id),
+                "audio": audio,
+                "video": video,
             },
             "vcs": vcs,
+            "fake-capture-device": fake_capture_device,
         }
-
-        if no_video_device:
-            instance["no-video-device"] = True
-        if no_audio_device:
-            instance["no-audio-device"] = True
 
         # 追加のオプションをマージ
         instance.update(kwargs)

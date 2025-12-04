@@ -131,9 +131,16 @@ def test_connection_table_exists(
 
             # connection テーブルにレコードがあることを確認
             result = conn.execute("SELECT * FROM connection").fetchall()
-            # 接続が成功していればレコードがあるはず
-            # 接続に失敗することもあるので、テーブル存在確認のみ
-            print(f"connection table has {len(result)} records")
+            assert len(result) >= 1, "No records in connection table"
+
+            # 必須カラムに値が入っていることを確認
+            row = conn.execute(
+                "SELECT channel_id, session_id, role FROM connection LIMIT 1"
+            ).fetchone()
+            assert row is not None
+            assert row[0] is not None and len(row[0]) > 0, "channel_id is empty"
+            assert row[1] is not None and len(row[1]) > 0, "session_id is empty"
+            assert row[2] is not None and len(row[2]) > 0, "role is empty"
         finally:
             conn.close()
 
@@ -182,7 +189,23 @@ def test_rtc_stats_tables_exist(
                     f"SELECT table_name FROM information_schema.tables WHERE table_name = '{table_name}'"
                 ).fetchall()
                 assert len(tables) == 1, f"{table_name} table not found"
-                print(f"Found table: {table_name}")
+
+            # 少なくとも outbound_rtp にはレコードがあることを確認（送信側統計）
+            result = conn.execute(
+                "SELECT COUNT(*) FROM rtc_stats_outbound_rtp"
+            ).fetchone()
+            assert result is not None
+            assert result[0] >= 1, "No records in rtc_stats_outbound_rtp table"
+
+            # outbound_rtp の必須カラムに値が入っていることを確認
+            row = conn.execute(
+                "SELECT channel_id, session_id, ssrc, kind FROM rtc_stats_outbound_rtp LIMIT 1"
+            ).fetchone()
+            assert row is not None
+            assert row[0] is not None and len(row[0]) > 0, "channel_id is empty"
+            assert row[1] is not None and len(row[1]) > 0, "session_id is empty"
+            assert row[2] is not None, "ssrc is empty"
+            assert row[3] is not None and len(row[3]) > 0, "kind is empty"
         finally:
             conn.close()
 
@@ -219,12 +242,16 @@ def test_duckdb_interval(
         conn = duckdb.connect(str(db_file), read_only=True)
         try:
             # rtc_stats_outbound_rtp テーブルのレコード数を確認
-            # interval=2秒、wait=10秒なら、最大5レコード程度
+            # interval=2秒、wait=10秒なら、最低でも数レコードはあるはず
             result = conn.execute(
                 "SELECT COUNT(*) FROM rtc_stats_outbound_rtp"
             ).fetchone()
-            count = result[0] if result else 0
-            print(f"rtc_stats_outbound_rtp has {count} records")
-            # レコードがあればOK（接続成功時のみ）
+            assert result is not None
+            count = result[0]
+            assert count >= 1, "No records in rtc_stats_outbound_rtp table"
+
+            # 複数回の統計収集が行われていることを確認
+            # interval=2秒、wait=10秒なので、少なくとも2回以上は収集されているはず
+            assert count >= 2, f"Expected at least 2 records, but got {count}"
         finally:
             conn.close()
