@@ -2,8 +2,8 @@
 
 #include <chrono>
 
-#include <boost/asio/strand.hpp>
 #include <rtc_base/logging.h>
+#include <boost/asio/strand.hpp>
 
 HttpServer::HttpServer(int port, const std::string& host)
     : port_(port), host_(host) {}

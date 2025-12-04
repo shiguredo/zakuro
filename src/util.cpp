@@ -63,8 +63,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
-  app.add_option("--http-port", http_port,
-                 "HTTP port number (default: none)")
+  app.add_option("--http-port", http_port, "HTTP port number (default: none)")
       ->check(CLI::Validator(
           [](std::string input) -> std::string {
             if (input == "none") {
