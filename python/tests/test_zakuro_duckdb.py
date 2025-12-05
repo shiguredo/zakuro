@@ -191,9 +191,7 @@ def test_rtc_stats_tables_exist(
                 assert len(tables) == 1, f"{table_name} table not found"
 
             # 少なくとも outbound_rtp にはレコードがあることを確認（送信側統計）
-            result = conn.execute(
-                "SELECT COUNT(*) FROM rtc_stats_outbound_rtp"
-            ).fetchone()
+            result = conn.execute("SELECT COUNT(*) FROM rtc_stats_outbound_rtp").fetchone()
             assert result is not None
             assert result[0] >= 1, "No records in rtc_stats_outbound_rtp table"
 
@@ -243,9 +241,7 @@ def test_duckdb_interval(
         try:
             # rtc_stats_outbound_rtp テーブルのレコード数を確認
             # interval=2秒、wait=10秒なら、最低でも数レコードはあるはず
-            result = conn.execute(
-                "SELECT COUNT(*) FROM rtc_stats_outbound_rtp"
-            ).fetchone()
+            result = conn.execute("SELECT COUNT(*) FROM rtc_stats_outbound_rtp").fetchone()
             assert result is not None
             count = result[0]
             assert count >= 1, "No records in rtc_stats_outbound_rtp table"
