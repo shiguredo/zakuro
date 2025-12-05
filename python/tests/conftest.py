@@ -105,18 +105,18 @@ def sora_config() -> SoraConfig:
     # 環境変数から設定を取得（必須）
     signaling_urls_str = os.environ.get("TEST_SIGNALING_URLS")
     if not signaling_urls_str:
-        pytest.skip("TEST_SIGNALING_URLS environment variable is required")
+        pytest.fail("TEST_SIGNALING_URLS environment variable is required")
 
     # カンマ区切りをリストに変換
     signaling_urls = [url.strip() for url in signaling_urls_str.split(",")]
 
     channel_id_prefix = os.environ.get("TEST_CHANNEL_ID_PREFIX")
     if not channel_id_prefix:
-        pytest.skip("TEST_CHANNEL_ID_PREFIX environment variable is required")
+        pytest.fail("TEST_CHANNEL_ID_PREFIX environment variable is required")
 
     secret_key = os.environ.get("TEST_SECRET_KEY")
     if not secret_key:
-        pytest.skip("TEST_SECRET_KEY environment variable is required")
+        pytest.fail("TEST_SECRET_KEY environment variable is required")
 
     return SoraConfig(
         signaling_urls=signaling_urls,
