@@ -52,6 +52,10 @@ class RpcClient:
         """バージョン情報を取得"""
         return self._call("GetVersion")
 
+    def query(self, query: str) -> dict[str, Any]:
+        """DuckDB に対して SELECT クエリを実行"""
+        return self._call("Query", {"query": query})
+
 
 class Zakuro:
     """Zakuro プロセスを管理するクラス

@@ -5,7 +5,10 @@
 
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
+
+#include <boost/json/value.hpp>
 
 #include "duckdb_utils.h"
 
@@ -39,6 +42,9 @@ class DuckDBStatsWriter {
 
   // クリーンアップ処理
   void Close();
+
+  // SQL クエリを実行して結果を JSON で返す
+  std::pair<bool, boost::json::value> ExecuteQuery(const std::string& query);
 
  private:
   duckdb_database db_{nullptr};

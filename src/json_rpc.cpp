@@ -4,6 +4,7 @@
 #include <boost/json.hpp>
 #include <boost/version.hpp>
 
+#include "duckdb_stats_writer.h"
 #include "zakuro_version.h"
 
 namespace json = boost::json;
@@ -56,6 +57,14 @@ std::optional<json::object> JsonRpcHandler::Process(const json::value& request) 
 
   auto method = obj.at("method").as_string();
 
+  // params フィールドを取得（オプション）
+  json::object params;
+  if (obj.contains("params")) {
+    if (obj.at("params").is_object()) {
+      params = obj.at("params").as_object();
+    }
+  }
+
   // メソッドの処理
   try {
     if (method == "GetVersion") {
@@ -64,6 +73,11 @@ std::optional<json::object> JsonRpcHandler::Process(const json::value& request) 
         return std::nullopt;
       }
       return CreateSuccessResponse(id, HandleVersionMethod());
+    } else if (method == "Query") {
+      if (is_notification) {
+        return std::nullopt;
+      }
+      return CreateSuccessResponse(id, HandleQueryMethod(params));
     } else {
       if (is_notification) {
         return std::nullopt;
@@ -128,6 +142,42 @@ json::value JsonRpcHandler::HandleVersionMethod() {
   result["boost"] = std::to_string(BOOST_VERSION / 100000) + "." +
                     std::to_string((BOOST_VERSION / 100) % 1000) + "." +
                     std::to_string(BOOST_VERSION % 100);
+
+  return result;
+}
+
+json::value JsonRpcHandler::HandleQueryMethod(const json::object& params) {
+  // DuckDB が設定されていない場合はエラー
+  if (!duckdb_writer_) {
+    throw JsonRpcError{-32603, "Internal error", "DuckDB not available"};
+  }
+
+  // query パラメータを取得
+  auto it = params.find("query");
+  if (it == params.end()) {
+    throw JsonRpcError{-32602, "Invalid params", "Missing 'query' parameter"};
+  }
+
+  if (!it->value().is_string()) {
+    throw JsonRpcError{-32602, "Invalid params",
+                       "'query' parameter must be a string"};
+  }
+
+  std::string query = std::string(it->value().as_string());
+
+  // クエリを実行
+  auto [success, result] = duckdb_writer_->ExecuteQuery(query);
+  if (!success) {
+    // エラーメッセージを取得
+    std::string error_msg = "Query execution failed";
+    if (result.is_object()) {
+      auto& obj = result.as_object();
+      if (obj.contains("error") && obj.at("error").is_string()) {
+        error_msg = std::string(obj.at("error").as_string());
+      }
+    }
+    throw JsonRpcError{-32603, "Internal error", error_msg};
+  }
 
   return result;
 }

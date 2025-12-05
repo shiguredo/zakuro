@@ -292,6 +292,10 @@ int main(int argc, char* argv[]) {
     http_server->SetUIRemoteURL(remote_url);
     RTC_LOG(LS_INFO) << "UI remote URL set to: " << remote_url;
   }
+  // DuckDB ライターを設定（Query RPC 用）
+  if (duckdb_writer) {
+    http_server->SetDuckDBWriter(duckdb_writer);
+  }
   http_server->Start();
   RTC_LOG(LS_INFO) << "HTTP server started on " << http_host << ":"
                    << http_port;

@@ -71,7 +71,9 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
   if (ec) {
     RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
   } else {
-    std::make_shared<HttpSession>(std::move(socket), ui_remote_url_)->Run();
+    std::make_shared<HttpSession>(std::move(socket), ui_remote_url_,
+                                  duckdb_writer_)
+        ->Run();
   }
 
   if (running_) {
@@ -139,7 +141,7 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
     }
 
     // JSON-RPC ハンドラーで処理
-    JsonRpcHandler handler;
+    JsonRpcHandler handler(duckdb_writer_);
     auto response = handler.Process(json_request);
 
     // Notification の場合はレスポンスを返さない（空のボディで 204 No Content）

@@ -1,14 +1,19 @@
 #ifndef JSON_RPC_H_
 #define JSON_RPC_H_
 
+#include <memory>
 #include <optional>
 
 #include <boost/json/value.hpp>
 #include <string>
 
+class DuckDBStatsWriter;
+
 class JsonRpcHandler {
  public:
   JsonRpcHandler() = default;
+  explicit JsonRpcHandler(std::shared_ptr<DuckDBStatsWriter> duckdb_writer)
+      : duckdb_writer_(duckdb_writer) {}
 
   // JSON-RPC リクエストを処理して、レスポンスを返す
   // Notification (id なし) の場合は std::nullopt を返す
@@ -27,6 +32,7 @@ class JsonRpcHandler {
 
   // 各メソッドのハンドラー
   boost::json::value HandleVersionMethod();
+  boost::json::value HandleQueryMethod(const boost::json::object& params);
 
   // カスタムエラー型
   struct JsonRpcError {
@@ -34,6 +40,8 @@ class JsonRpcHandler {
     std::string message;
     std::string data;
   };
+
+  std::shared_ptr<DuckDBStatsWriter> duckdb_writer_;
 };
 
 #endif  // JSON_RPC_H_

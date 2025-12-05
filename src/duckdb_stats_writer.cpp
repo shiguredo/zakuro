@@ -1160,6 +1160,145 @@ bool DuckDBStatsWriter::WriteRTCStats(const std::string& channel_id,
   }
 }
 
+std::pair<bool, boost::json::value> DuckDBStatsWriter::ExecuteQuery(
+    const std::string& query) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (!initialized_) {
+    boost::json::object error;
+    error["error"] = "DuckDB not initialized";
+    return {false, error};
+  }
+
+  // プリペアドステートメントを使用してクエリの種類を検証
+  duckdb_utils::PreparedStatement stmt;
+  if (!duckdb_utils::Prepare(conn_, query, stmt)) {
+    boost::json::object error;
+    error["error"] = stmt.error();
+    return {false, error};
+  }
+
+  // ステートメントの種類を確認（SELECT のみ許可）
+  duckdb_statement_type stmt_type = duckdb_prepared_statement_type(stmt.get_raw());
+  if (stmt_type != DUCKDB_STATEMENT_TYPE_SELECT) {
+    boost::json::object error;
+    error["error"] = "Only SELECT queries are allowed";
+    return {false, error};
+  }
+
+  // プリペアドステートメントを実行
+  duckdb_utils::Result result;
+  if (!duckdb_utils::ExecutePrepared(stmt.get_raw(), result)) {
+    boost::json::object error;
+    error["error"] = result.error();
+    return {false, error};
+  }
+
+  // 結果を JSON に変換
+  boost::json::array rows;
+  idx_t row_count = result.row_count();
+  idx_t col_count = result.column_count();
+
+  // カラム名を取得
+  std::vector<std::string> column_names;
+  for (idx_t col = 0; col < col_count; col++) {
+    const char* name = duckdb_column_name(result.get(), col);
+    column_names.push_back(name ? name : "");
+  }
+
+  // 各行を処理
+  for (idx_t row = 0; row < row_count; row++) {
+    boost::json::object row_obj;
+    for (idx_t col = 0; col < col_count; col++) {
+      duckdb_type col_type = duckdb_column_type(result.get(), col);
+      bool is_null =
+          duckdb_value_is_null(result.get(), col, row);
+
+      if (is_null) {
+        row_obj[column_names[col]] = nullptr;
+        continue;
+      }
+
+      switch (col_type) {
+        case DUCKDB_TYPE_BOOLEAN: {
+          bool val = duckdb_value_boolean(result.get(), col, row);
+          row_obj[column_names[col]] = val;
+          break;
+        }
+        case DUCKDB_TYPE_TINYINT: {
+          int8_t val = duckdb_value_int8(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<int64_t>(val);
+          break;
+        }
+        case DUCKDB_TYPE_SMALLINT: {
+          int16_t val = duckdb_value_int16(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<int64_t>(val);
+          break;
+        }
+        case DUCKDB_TYPE_INTEGER: {
+          int32_t val = duckdb_value_int32(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<int64_t>(val);
+          break;
+        }
+        case DUCKDB_TYPE_BIGINT: {
+          int64_t val = duckdb_value_int64(result.get(), col, row);
+          row_obj[column_names[col]] = val;
+          break;
+        }
+        case DUCKDB_TYPE_UTINYINT: {
+          uint8_t val = duckdb_value_uint8(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<int64_t>(val);
+          break;
+        }
+        case DUCKDB_TYPE_USMALLINT: {
+          uint16_t val = duckdb_value_uint16(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<int64_t>(val);
+          break;
+        }
+        case DUCKDB_TYPE_UINTEGER: {
+          uint32_t val = duckdb_value_uint32(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<int64_t>(val);
+          break;
+        }
+        case DUCKDB_TYPE_UBIGINT: {
+          uint64_t val = duckdb_value_uint64(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<uint64_t>(val);
+          break;
+        }
+        case DUCKDB_TYPE_FLOAT: {
+          float val = duckdb_value_float(result.get(), col, row);
+          row_obj[column_names[col]] = static_cast<double>(val);
+          break;
+        }
+        case DUCKDB_TYPE_DOUBLE: {
+          double val = duckdb_value_double(result.get(), col, row);
+          row_obj[column_names[col]] = val;
+          break;
+        }
+        case DUCKDB_TYPE_VARCHAR:
+        case DUCKDB_TYPE_TIMESTAMP:
+        case DUCKDB_TYPE_DATE:
+        case DUCKDB_TYPE_TIME:
+        case DUCKDB_TYPE_INTERVAL:
+        default: {
+          // 文字列として取得
+          duckdb_utils::StringValue str_val(
+              duckdb_value_varchar(result.get(), col, row));
+          if (str_val.get()) {
+            row_obj[column_names[col]] = str_val.get();
+          } else {
+            row_obj[column_names[col]] = nullptr;
+          }
+          break;
+        }
+      }
+    }
+    rows.push_back(row_obj);
+  }
+
+  return {true, rows};
+}
+
 void DuckDBStatsWriter::Close() {
   std::lock_guard<std::mutex> lock(mutex_);
 

@@ -255,3 +255,114 @@ def test_duckdb_interval(
             assert count >= 2, f"Expected at least 2 records, but got {count}"
         finally:
             conn.close()
+
+
+def test_query_rpc(
+    sora_config: SoraConfig,
+    free_port: int,
+):
+    """Query RPC で DuckDB にクエリを実行できることを確認"""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_duckdb_dir = Path(tmp_dir)
+        with Zakuro(
+            instances=[
+                sora_config.build_instance(
+                    channel_name="query_rpc_test",
+                    role="sendrecv",
+                    vcs=1,
+                ),
+            ],
+            http_port=free_port,
+            duckdb_dir=str(tmp_duckdb_dir),
+            duckdb_interval=1.0,
+            startup_timeout=60,
+        ) as z:
+            # zakuro テーブルにデータが入るまで待機
+            time.sleep(3)
+
+            # 単純な SELECT クエリを実行
+            rows = z.rpc.query("SELECT version FROM zakuro")
+            assert isinstance(rows, list)
+            assert len(rows) >= 1
+
+            # バージョン情報が取得できることを確認
+            assert rows[0]["version"] is not None
+
+
+def test_query_rpc_with_cte(
+    sora_config: SoraConfig,
+    free_port: int,
+):
+    """Query RPC で WITH 句（CTE）を含むクエリを実行できることを確認"""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_duckdb_dir = Path(tmp_dir)
+        with Zakuro(
+            instances=[
+                sora_config.build_instance(
+                    channel_name="query_rpc_cte_test",
+                    role="sendrecv",
+                    vcs=1,
+                ),
+            ],
+            http_port=free_port,
+            duckdb_dir=str(tmp_duckdb_dir),
+            duckdb_interval=1.0,
+            startup_timeout=60,
+        ) as z:
+            # zakuro テーブルにデータが入るまで待機
+            time.sleep(3)
+
+            # WITH 句を使ったクエリを実行
+            rows = z.rpc.query("""
+                WITH zakuro_versions AS (
+                    SELECT version, webrtc_version
+                    FROM zakuro
+                )
+                SELECT * FROM zakuro_versions
+            """)
+            assert isinstance(rows, list)
+            assert len(rows) >= 1
+
+            # カラムが期待通りであることを確認
+            assert "version" in rows[0]
+            assert "webrtc_version" in rows[0]
+
+
+def test_query_rpc_reject_non_select(
+    sora_config: SoraConfig,
+    free_port: int,
+):
+    """Query RPC で SELECT 以外のクエリが拒否されることを確認"""
+    import pytest
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_duckdb_dir = Path(tmp_dir)
+        with Zakuro(
+            instances=[
+                sora_config.build_instance(
+                    channel_name="query_rpc_reject_test",
+                    role="sendrecv",
+                    vcs=1,
+                ),
+            ],
+            http_port=free_port,
+            duckdb_dir=str(tmp_duckdb_dir),
+            duckdb_interval=1.0,
+            startup_timeout=60,
+        ) as z:
+            time.sleep(3)
+
+            # INSERT クエリは拒否されるべき
+            with pytest.raises(RuntimeError) as excinfo:
+                z.rpc.query("INSERT INTO zakuro (version) VALUES ('test')")
+            assert "Only SELECT queries are allowed" in str(excinfo.value)
+
+            # DELETE クエリは拒否されるべき
+            with pytest.raises(RuntimeError) as excinfo:
+                z.rpc.query("DELETE FROM zakuro")
+            assert "Only SELECT queries are allowed" in str(excinfo.value)
+
+            # DROP クエリは拒否されるべき
+            with pytest.raises(RuntimeError) as excinfo:
+                z.rpc.query("DROP TABLE zakuro")
+            assert "Only SELECT queries are allowed" in str(excinfo.value)
