@@ -45,3 +45,7 @@ webrtc_logs_0
 /_build
 /_install
 /__pycache__
+
+# env
+.env*
+!.env.template

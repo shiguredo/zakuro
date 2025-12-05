@@ -1,0 +1,45 @@
+[project]
+name = "zakuro-py"
+authors = [{ name = "Shiguredo Inc.", email = "contact+pypi@shiguredo.jp" }]
+dynamic = ["version"]
+description = "CLI package for using WebRTC Load Testing Tool Zakuro from Python"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: C++",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/shiguredo/zakuro"
+Repository = "https://github.com/shiguredo/zakuro"
+
+[dependency-groups]
+dev = [{ include-group = "test" }, { include-group = "lint" }]
+test = [
+    "pytest",
+    "pytest-repeat",
+    "pytest-timeout",
+    "python-dotenv",
+    "httpx",
+    "pyjwt",
+    "duckdb",
+]
+lint = ["ruff", "ty"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+
+[tool.ruff]
+line-length = 100

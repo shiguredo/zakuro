@@ -335,6 +335,20 @@ def _build(args):
             ["cmake", "--build", ".", f"-j{multiprocessing.cpu_count()}", "--config", configuration]
         )
 
+    # DuckDB 共有ライブラリをビルドディレクトリにコピー
+    duckdb_lib_dir = os.path.join(install_dir, "duckdb", "lib")
+    zakuro_build_dir = os.path.join(build_dir, "zakuro")
+    if platform == "macos_arm64":
+        shutil.copyfile(
+            os.path.join(duckdb_lib_dir, "libduckdb.dylib"),
+            os.path.join(zakuro_build_dir, "libduckdb.dylib"),
+        )
+    elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        shutil.copyfile(
+            os.path.join(duckdb_lib_dir, "libduckdb.so"),
+            os.path.join(zakuro_build_dir, "libduckdb.so"),
+        )
+
     if args.package:
         mkdir_p(package_dir)
         zakuro_package_dir = os.path.join(package_dir, f"zakuro-{zakuro_version}")
@@ -347,6 +361,17 @@ def _build(args):
         mkdir_p(zakuro_package_dir)
         with cd(zakuro_package_dir):
             shutil.copyfile(os.path.join(build_dir, "zakuro", "zakuro"), "zakuro")
+            # DuckDB 共有ライブラリもコピー
+            if platform == "macos_arm64":
+                shutil.copyfile(
+                    os.path.join(build_dir, "zakuro", "libduckdb.dylib"),
+                    "libduckdb.dylib",
+                )
+            elif platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+                shutil.copyfile(
+                    os.path.join(build_dir, "zakuro", "libduckdb.so"),
+                    "libduckdb.so",
+                )
             shutil.copyfile(os.path.join(BASE_DIR, "LICENSE"), "LICENSE")
             with open("NOTICE", "w") as f:
                 f.write(open(os.path.join(BASE_DIR, "NOTICE")).read())

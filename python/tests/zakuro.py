@@ -120,7 +120,8 @@ class Zakuro:
 
     def _get_zakuro_executable_path(self) -> str:
         """ビルド済みの zakuro 実行ファイルのパスを自動検出"""
-        project_root = Path(__file__).parent.parent
+        # python/tests/zakuro.py -> python/tests -> python -> project_root
+        project_root = Path(__file__).parent.parent.parent
         build_dir = project_root / "_build"
 
         if not build_dir.exists():
