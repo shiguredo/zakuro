@@ -1,8 +1,12 @@
-"""Zakuro プロセスを管理するためのクラス"""
+"""Zakuro - WebRTC Load Testing Tool Python bindings."""
+
+from __future__ import annotations
 
 import json
+import os
 import platform
 import shlex
+import shutil
 import subprocess
 import tempfile
 import time
@@ -10,13 +14,93 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Literal, Self
 
-import httpx
+try:
+    import httpx
+
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+
+
+def get_binary_path() -> str:
+    """zakuro バイナリのパスを取得する。
+
+    以下の順序で検索:
+    1. 環境変数 ZAKURO_BINARY_PATH
+    2. PATH 上の zakuro コマンド
+    3. 開発用: _build/ ディレクトリ内のバイナリ
+    """
+    # 環境変数で明示的に指定されている場合
+    env_path = os.environ.get("ZAKURO_BINARY_PATH")
+    if env_path:
+        path = Path(env_path)
+        if path.exists():
+            return str(path)
+        raise RuntimeError(f"ZAKURO_BINARY_PATH is set but file not found: {env_path}")
+
+    # PATH 上の zakuro コマンドを検索
+    which_path = shutil.which("zakuro")
+    if which_path:
+        return which_path
+
+    # 開発用: _build/ ディレクトリ内のバイナリを検索
+    dev_path = _find_dev_binary()
+    if dev_path:
+        return dev_path
+
+    raise RuntimeError(
+        "zakuro binary not found. Either:\n"
+        "  1. Install via pip (pip install zakuro-py)\n"
+        "  2. Set ZAKURO_BINARY_PATH environment variable\n"
+        "  3. Build with: python3 run.py build <target>"
+    )
+
+
+def _find_dev_binary() -> str | None:
+    """開発用: _build/ ディレクトリからバイナリを検索"""
+    # このファイルの位置から project root を推定
+    # python/zakuro/__init__.py -> python/zakuro -> python -> project_root
+    project_root = Path(__file__).parent.parent.parent
+    build_dir = project_root / "_build"
+
+    if not build_dir.exists():
+        return None
+
+    available_targets = [
+        d.name
+        for d in build_dir.iterdir()
+        if d.is_dir() and (d / "release" / "zakuro" / "zakuro").exists()
+    ]
+
+    if not available_targets:
+        return None
+
+    if len(available_targets) == 1:
+        target = available_targets[0]
+    else:
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+
+        if system == "darwin":
+            preferred = ["macos_arm64"] if machine in ("arm64", "aarch64") else ["macos_x86_64"]
+        elif system == "linux":
+            preferred = (
+                ["ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
+                if machine == "x86_64"
+                else ["ubuntu-24.04_arm64", "ubuntu-22.04_arm64"]
+            )
+        else:
+            preferred = []
+
+        target = next((p for p in preferred if p in available_targets), available_targets[0])
+
+    return str(project_root / "_build" / target / "release" / "zakuro" / "zakuro")
 
 
 class RpcClient:
     """JSON-RPC クライアント"""
 
-    def __init__(self, http_client: httpx.Client, host: str, port: int) -> None:
+    def __init__(self, http_client: Any, host: str, port: int) -> None:
         self._http_client = http_client
         self._host = host
         self._port = port
@@ -95,8 +179,10 @@ class Zakuro:
         # 起動待機設定
         startup_timeout: int = 30,
     ) -> None:
-        # 実行ファイルのパスを自動検出
-        self._executable_path = self._get_zakuro_executable_path()
+        if not HTTPX_AVAILABLE:
+            raise RuntimeError("httpx is required for Zakuro class. Install with: pip install httpx")
+
+        self._executable_path = get_binary_path()
         self._process: subprocess.Popen[Any] | None = None
 
         # 設定
@@ -109,7 +195,7 @@ class Zakuro:
         self._startup_timeout = startup_timeout
 
         # HTTP クライアントと RPC クライアント
-        self._http_client: httpx.Client | None = None
+        self._http_client: Any | None = None
         self._rpc: RpcClient | None = None
 
         # 一時ファイル
@@ -121,69 +207,6 @@ class Zakuro:
         if self._rpc is None:
             raise RuntimeError("RPC client not initialized. Use 'with Zakuro(...) as z:'")
         return self._rpc
-
-    def _get_zakuro_executable_path(self) -> str:
-        """ビルド済みの zakuro 実行ファイルのパスを自動検出"""
-        # python/tests/zakuro.py -> python/tests -> python -> project_root
-        project_root = Path(__file__).parent.parent.parent
-        build_dir = project_root / "_build"
-
-        if not build_dir.exists():
-            raise RuntimeError(
-                f"Build directory {build_dir} does not exist. "
-                f"Please build with: python3 run.py build <target>"
-            )
-
-        available_targets = [
-            d.name
-            for d in build_dir.iterdir()
-            if d.is_dir() and (d / "release" / "zakuro" / "zakuro").exists()
-        ]
-
-        if not available_targets:
-            raise RuntimeError(
-                f"No built zakuro executables found in {build_dir}. "
-                f"Please build with: python3 run.py build <target>"
-            )
-
-        if len(available_targets) == 1:
-            target = available_targets[0]
-        else:
-            # 複数ビルドがある場合は、プラットフォームに応じて優先順位を決める
-            system = platform.system().lower()
-            machine = platform.machine().lower()
-
-            if system == "darwin":
-                if machine == "arm64" or machine == "aarch64":
-                    preferred = ["macos_arm64", "macos_x86_64"]
-                else:
-                    preferred = ["macos_x86_64", "macos_arm64"]
-            elif system == "linux":
-                if machine == "aarch64":
-                    preferred = ["ubuntu-24.04_arm64", "ubuntu-22.04_arm64"]
-                else:
-                    preferred = ["ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
-            else:
-                preferred = []
-
-            target = None
-            for pref in preferred:
-                if pref in available_targets:
-                    target = pref
-                    break
-
-            if not target:
-                target = available_targets[0]
-
-        zakuro_path = project_root / "_build" / target / "release" / "zakuro" / "zakuro"
-
-        if not zakuro_path.exists():
-            raise RuntimeError(
-                f"zakuro executable not found at {zakuro_path}. "
-                f"Please build with: python3 run.py build {target}"
-            )
-
-        return str(zakuro_path)
 
     def __enter__(self) -> Self:
         """コンテキストマネージャーの開始"""
@@ -287,10 +310,12 @@ class Zakuro:
                         elapsed = time.time() - start_time
                         print(f"Zakuro started successfully ({elapsed:.1f}s)")
                         return
-                except (httpx.ConnectError, httpx.ConnectTimeout) as e:
-                    print(f"  Connection error: {e}")
-                except httpx.HTTPStatusError as e:
-                    print(f"  HTTP error: {e}")
+                except httpx.ConnectError:
+                    pass
+                except httpx.ConnectTimeout:
+                    pass
+                except httpx.HTTPStatusError:
+                    pass
 
                 time.sleep(0.5)
 
@@ -320,3 +345,6 @@ class Zakuro:
             except OSError:
                 pass
             self._temp_config_file = None
+
+
+__all__ = ["Zakuro", "RpcClient", "get_binary_path"]

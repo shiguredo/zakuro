@@ -11,6 +11,10 @@
 
 ## develop
 
+- [ADD] PyPI パッケージとして配布可能にする
+  - hatchling を使用した wheel ビルドに対応
+  - `pip install zakuro` で CLI とライブラリをインストール可能
+  - @voluntas
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - @torikizi

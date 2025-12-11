@@ -1,5 +1,9 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "zakuro-py"
+name = "zakuro"
 authors = [{ name = "Shiguredo Inc.", email = "contact+pypi@shiguredo.jp" }]
 dynamic = ["version"]
 description = "CLI package for using WebRTC Load Testing Tool Zakuro from Python"
@@ -40,6 +44,19 @@ lint = ["ruff", "ty"]
 
 [tool.pytest.ini_options]
 testpaths = ["python/tests"]
+pythonpath = ["python"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.hatch.version]
+path = "VERSION"
+pattern = "^(?P<version>.+)$"
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/zakuro"]
+# バイナリを含むためプラットフォーム固有の wheel を生成
+strict-naming = false
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
