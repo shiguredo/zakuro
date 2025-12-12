@@ -32,6 +32,7 @@ struct ScenarioData {
     std::string label;
     int min_size;
     int max_size;
+    std::shared_ptr<std::string> data;  // nullptr の場合は BinaryPool で自動生成
   };
   struct OpDisconnect {};
   struct OpReconnect {};
@@ -67,9 +68,12 @@ struct ScenarioData {
         loop_op_index});
   }
   void PlayVoiceNumberClient() { ops.push_back(OpPlayVoiceNumberClient()); }
-  void SendDataChannelMessage(std::string label, int min_size, int max_size) {
+  void SendDataChannelMessage(std::string label,
+                              int min_size,
+                              int max_size,
+                              std::shared_ptr<std::string> data = nullptr) {
     ops.push_back(
-        OpSendDataChannelMessage{std::move(label), min_size, max_size});
+        OpSendDataChannelMessage{std::move(label), min_size, max_size, data});
   }
   void Disconnect() { ops.push_back(OpDisconnect()); }
   void Reconnect() { ops.push_back(OpReconnect()); }
@@ -172,40 +176,52 @@ class ScenarioPlayer {
       }
       case ScenarioData::OP_SEND_DATA_CHANNEL_MESSAGE: {
         auto& op = boost::get<ScenarioData::OpSendDataChannelMessage>(opv);
-        std::string data =
-            config_.binary_pool->Get(op.min_size - 48, op.max_size - 48);
 
-        // 0-5 (6 bytes): ZAKURO
-        // 6-13 (8 bytes): 現在時刻（マイクロ秒単位の UNIX Time）
-        // 14-21 (8 bytes): ラベルごとに一意に増えていくカウンター
-        // 22-47 (26 bytes): Connection ID
-        char buf[48] = "ZAKURO";
-        char* p = buf + 6;
+        std::string payload;
+        if (op.data && !op.data->empty()) {
+          // カスタムデータをそのまま使用（ヘッダーなし）
+          payload = *op.data;
+          RTC_LOG(LS_INFO) << "Send DataChannel custom data size="
+                           << payload.size();
+        } else {
+          // 従来通り BinaryPool + 48バイトヘッダー
+          payload =
+              config_.binary_pool->Get(op.min_size - 48, op.max_size - 48);
 
-        uint64_t time = std::chrono::duration_cast<std::chrono::microseconds>(
-                            std::chrono::system_clock::now().time_since_epoch())
-                            .count();
-        for (int i = 0; i < 8; i++) {
-          p[i] = (char)((time >> ((7 - i) * 8)) & 0xff);
+          // 0-5 (6 bytes): ZAKURO
+          // 6-13 (8 bytes): 現在時刻（マイクロ秒単位の UNIX Time）
+          // 14-21 (8 bytes): ラベルごとに一意に増えていくカウンター
+          // 22-47 (26 bytes): Connection ID
+          char buf[48] = "ZAKURO";
+          char* p = buf + 6;
+
+          uint64_t time =
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
+          for (int i = 0; i < 8; i++) {
+            p[i] = (char)((time >> ((7 - i) * 8)) & 0xff);
+          }
+          p += 8;
+
+          auto& counter = dc_counter_[op.label];
+          for (int i = 0; i < 8; i++) {
+            p[i] = (char)((counter >> ((7 - i) * 8)) & 0xff);
+          }
+          p += 8;
+
+          auto conn_id = (*config_.vcs)[client_id]->GetStats().connection_id;
+          memcpy(p, conn_id.c_str(), std::min<int>(conn_id.size(), 26));
+
+          payload.insert(payload.begin(), buf, buf + sizeof(buf));
+
+          RTC_LOG(LS_INFO) << "Send DataChannel unixtime(us)=" << time
+                           << " counter=" << counter
+                           << " connection_id=" << conn_id;
+          counter += 1;
         }
-        p += 8;
 
-        auto& counter = dc_counter_[op.label];
-        for (int i = 0; i < 8; i++) {
-          p[i] = (char)((counter >> ((7 - i) * 8)) & 0xff);
-        }
-        p += 8;
-
-        auto conn_id = (*config_.vcs)[client_id]->GetStats().connection_id;
-        memcpy(p, conn_id.c_str(), std::min<int>(conn_id.size(), 26));
-
-        data.insert(data.begin(), buf, buf + sizeof(buf));
-
-        RTC_LOG(LS_INFO) << "Send DataChannel unixtime(us)=" << time
-                         << " counter=" << counter
-                         << " connection_id=" << conn_id;
-        (*config_.vcs)[client_id]->SendMessage(op.label, data);
-        counter += 1;
+        (*config_.vcs)[client_id]->SendMessage(op.label, payload);
         break;
       }
       case ScenarioData::OP_DISCONNECT: {
