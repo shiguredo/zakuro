@@ -3,7 +3,10 @@
 #include <chrono>
 #include <string>
 
+// OpenSSL
 #include <openssl/ssl.h>
+
+// Boost
 #include <boost/asio/ssl.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/json.hpp>
