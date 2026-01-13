@@ -38,8 +38,9 @@ void HttpServer::Stop() {
 
 void HttpServer::Run() {
   try {
-    auto const address = net::ip::make_address(host_);
-    acceptor_.reset(new tcp::acceptor(ioc_, tcp::endpoint(address, port_)));
+    auto const address = boost::asio::ip::make_address(host_);
+    acceptor_.reset(new boost::asio::ip::tcp::acceptor(
+        ioc_, boost::asio::ip::tcp::endpoint(address, port_)));
     DoAccept();
 
     ioc_.run();
@@ -50,10 +51,11 @@ void HttpServer::Run() {
 
 void HttpServer::DoAccept() {
   acceptor_->async_accept(
-      beast::bind_front_handler(&HttpServer::OnAccept, this));
+      boost::beast::bind_front_handler(&HttpServer::OnAccept, this));
 }
 
-void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
+void HttpServer::OnAccept(boost::beast::error_code ec,
+                          boost::asio::ip::tcp::socket socket) {
   if (ec) {
     RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
   } else {
@@ -65,12 +67,14 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
   }
 }
 
-http::response<http::string_body> HttpSession::HandleRequest(
-    http::request<http::string_body>&& req) {
+boost::beast::http::response<boost::beast::http::string_body>
+HttpSession::HandleRequest(
+    boost::beast::http::request<boost::beast::http::string_body>&& req) {
   // すべてのリクエストに 404 Not Found を返す
-  http::response<http::string_body> res{http::status::not_found, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "text/plain");
+  boost::beast::http::response<boost::beast::http::string_body> res{
+      boost::beast::http::status::not_found, req.version()};
+  res.set(boost::beast::http::field::server, "Zakuro");
+  res.set(boost::beast::http::field::content_type, "text/plain");
   res.keep_alive(req.keep_alive());
   res.body() = "Not Found";
   res.prepare_payload();
@@ -80,9 +84,9 @@ http::response<http::string_body> HttpSession::HandleRequest(
 // HttpSession の実装
 
 void HttpSession::Run() {
-  net::dispatch(
-      stream_.get_executor(),
-      beast::bind_front_handler(&HttpSession::DoRead, shared_from_this()));
+  boost::asio::dispatch(stream_.get_executor(),
+                        boost::beast::bind_front_handler(&HttpSession::DoRead,
+                                                         shared_from_this()));
 }
 
 void HttpSession::DoRead() {
@@ -90,15 +94,16 @@ void HttpSession::DoRead() {
 
   stream_.expires_after(std::chrono::seconds(kHttpSessionTimeoutSeconds));
 
-  http::async_read(
-      stream_, buffer_, req_,
-      beast::bind_front_handler(&HttpSession::OnRead, shared_from_this()));
+  boost::beast::http::async_read(stream_, buffer_, req_,
+                                 boost::beast::bind_front_handler(
+                                     &HttpSession::OnRead, shared_from_this()));
 }
 
-void HttpSession::OnRead(beast::error_code ec, std::size_t bytes_transferred) {
+void HttpSession::OnRead(boost::beast::error_code ec,
+                         std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec == http::error::end_of_stream) {
+  if (ec == boost::beast::http::error::end_of_stream) {
     return DoClose();
   }
 
@@ -111,17 +116,20 @@ void HttpSession::OnRead(beast::error_code ec, std::size_t bytes_transferred) {
   SendResponse(HttpSession::HandleRequest(std::move(req_)));
 }
 
-void HttpSession::SendResponse(http::response<http::string_body>&& res) {
-  res_ = std::make_shared<http::response<http::string_body>>(std::move(res));
+void HttpSession::SendResponse(
+    boost::beast::http::response<boost::beast::http::string_body>&& res) {
+  res_ = std::make_shared<
+      boost::beast::http::response<boost::beast::http::string_body>>(
+      std::move(res));
 
-  http::async_write(
+  boost::beast::http::async_write(
       stream_, *res_,
-      beast::bind_front_handler(&HttpSession::OnWrite, shared_from_this(),
-                                res_->keep_alive()));
+      boost::beast::bind_front_handler(&HttpSession::OnWrite,
+                                       shared_from_this(), res_->keep_alive()));
 }
 
 void HttpSession::OnWrite(bool keep_alive,
-                          beast::error_code ec,
+                          boost::beast::error_code ec,
                           std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
@@ -139,6 +147,6 @@ void HttpSession::OnWrite(bool keep_alive,
 }
 
 void HttpSession::DoClose() {
-  beast::error_code ec;
-  stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+  boost::beast::error_code ec;
+  stream_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
 }

@@ -10,11 +10,6 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace net = boost::asio;
-using tcp = net::ip::tcp;
-
 class HttpServer {
  public:
   HttpServer(int port, const std::string& host = "127.0.0.1");
@@ -23,45 +18,49 @@ class HttpServer {
   void Start();
   void Stop();
 
-  net::io_context& GetIOContext() { return ioc_; }
+  boost::asio::io_context& GetIOContext() { return ioc_; }
 
  private:
   void Run();
   void DoAccept();
-  void OnAccept(beast::error_code ec, tcp::socket socket);
+  void OnAccept(boost::beast::error_code ec,
+                boost::asio::ip::tcp::socket socket);
 
   int port_;
   std::string host_;
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
 
-  net::io_context ioc_;
-  std::unique_ptr<tcp::acceptor> acceptor_;
+  boost::asio::io_context ioc_;
+  std::unique_ptr<boost::asio::ip::tcp::acceptor> acceptor_;
 };
 
 // HTTP セッションを処理するクラス
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
-  explicit HttpSession(tcp::socket&& socket) : stream_(std::move(socket)) {}
+  explicit HttpSession(boost::asio::ip::tcp::socket&& socket)
+      : stream_(std::move(socket)) {}
 
   void Run();
 
-  http::response<http::string_body> HandleRequest(
-      http::request<http::string_body>&& req);
+  boost::beast::http::response<boost::beast::http::string_body> HandleRequest(
+      boost::beast::http::request<boost::beast::http::string_body>&& req);
 
  private:
   void DoRead();
-  void OnRead(beast::error_code ec, std::size_t bytes_transferred);
-  void SendResponse(http::response<http::string_body>&& res);
+  void OnRead(boost::beast::error_code ec, std::size_t bytes_transferred);
+  void SendResponse(
+      boost::beast::http::response<boost::beast::http::string_body>&& res);
   void OnWrite(bool keep_alive,
-               beast::error_code ec,
+               boost::beast::error_code ec,
                std::size_t bytes_transferred);
   void DoClose();
 
-  beast::tcp_stream stream_;
-  beast::flat_buffer buffer_;
-  http::request<http::string_body> req_;
-  std::shared_ptr<http::response<http::string_body>> res_;
+  boost::beast::tcp_stream stream_;
+  boost::beast::flat_buffer buffer_;
+  boost::beast::http::request<boost::beast::http::string_body> req_;
+  std::shared_ptr<boost::beast::http::response<boost::beast::http::string_body>>
+      res_;
 };
 
 #endif  // HTTP_SERVER_H_
