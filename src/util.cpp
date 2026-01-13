@@ -36,8 +36,8 @@ std::string to_string(std::string str) {
 void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& config_file,
                      int& log_level,
-                     int& http_port,
-                     std::string& http_host,
+                     std::optional<std::string>& http_host,
+                     std::optional<int>& http_port,
                      bool& ui,
                      std::string& ui_remote_url,
                      std::string& connection_id_stats_file,
@@ -65,9 +65,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
+  app.add_option("--http-host", http_host, "HTTP host address to bind");
   app.add_option("--http-port", http_port, "HTTP port number")
       ->check(CLI::Range(1, 65535));
-  app.add_option("--http-host", http_host, "HTTP host address to bind");
   app.add_flag("--ui", ui, "Enable UI reverse proxy");
   app.add_option("--ui-remote-url", ui_remote_url,
                  "Remote URL for UI reverse proxy");

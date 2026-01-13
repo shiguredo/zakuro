@@ -67,20 +67,10 @@ std::string ZakuroVersion::GetSoraCppSdkVersion() {
 
 std::string ZakuroVersion::GetWebRTCVersion() {
   // WEBRTC_BUILD_VERSION が定義されていればそれを返す
+  // 定義されていない場合は LIBWEBRTC_NAME を返す
 #ifdef WEBRTC_BUILD_VERSION
   return WEBRTC_BUILD_VERSION;
 #else
-  // 定義されていない場合は GetLibwebrtcName() から抽出を試みる
-  std::string full_version = GetLibwebrtcName();
-  // "Shiguredo-Build M136.7103@{#0} (136.7103.0.0 2c8f5be6)" から "136.7103.0.0" を抽出
-  size_t start = full_version.find("(");
-  if (start != std::string::npos) {
-    start += 1;
-    size_t end = full_version.find(" ", start);
-    if (end != std::string::npos) {
-      return full_version.substr(start, end - start);
-    }
-  }
-  return full_version;  // 抽出に失敗した場合は元の文字列を返す
+  return LIBWEBRTC_NAME;
 #endif
 }

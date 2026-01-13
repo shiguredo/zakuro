@@ -10,14 +10,9 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace net = boost::asio;
-using tcp = net::ip::tcp;
-
 class HttpServer {
  public:
-  HttpServer(int port, const std::string& host = "127.0.0.1");
+  HttpServer(const std::string& host, int port);
   ~HttpServer();
 
   void SetUIRemoteURL(const std::string& url) { ui_remote_url_ = url; }
@@ -26,55 +21,61 @@ class HttpServer {
   void Start();
   void Stop();
 
-  net::io_context& GetIOContext() { return ioc_; }
-
  private:
   void Run();
+  void OnResolve(boost::beast::error_code ec,
+                 boost::asio::ip::tcp::resolver::results_type results);
   void DoAccept();
-  void OnAccept(beast::error_code ec, tcp::socket socket);
+  void OnAccept(boost::beast::error_code ec,
+                boost::asio::ip::tcp::socket socket);
 
-  int port_;
   std::string host_;
+  int port_;
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
   std::string ui_remote_url_;
 
-  net::io_context ioc_;
-  std::unique_ptr<tcp::acceptor> acceptor_;
+  boost::asio::io_context ioc_;
+  boost::asio::ip::tcp::resolver resolver_;
+  std::unique_ptr<boost::asio::ip::tcp::acceptor> acceptor_;
 };
 
 // HTTP セッションを処理するクラス
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
-  explicit HttpSession(tcp::socket&& socket, const std::string& ui_remote_url)
-      : stream_(std::move(socket)), ui_remote_url_(ui_remote_url) {}
+  explicit HttpSession(boost::asio::ip::tcp::socket socket,
+                       const std::string& ui_remote_url);
 
   void Run();
 
-  http::response<http::string_body> HandleRequest(
-      http::request<http::string_body>&& req);
-
  private:
+  boost::beast::http::response<boost::beast::http::string_body> HandleRequest(
+      boost::beast::http::request<boost::beast::http::string_body> req);
+  void SendResponse(
+      boost::beast::http::response<boost::beast::http::string_body> res);
+
   void DoRead();
-  void OnRead(beast::error_code ec, std::size_t bytes_transferred);
-  void SendResponse(http::response<http::string_body>&& res);
+  void OnRead(boost::beast::error_code ec, std::size_t bytes_transferred);
   void OnWrite(bool keep_alive,
-               beast::error_code ec,
+               boost::beast::error_code ec,
                std::size_t bytes_transferred);
   void DoClose();
 
   // JSON-RPC リクエストを処理する
-  http::response<http::string_body> HandleJsonRpcRequest(
-      const http::request<http::string_body>& req);
+  boost::beast::http::response<boost::beast::http::string_body>
+  HandleJsonRpcRequest(
+      const boost::beast::http::request<boost::beast::http::string_body>& req);
 
   // リバースプロキシ
-  http::response<http::string_body> SimpleProxyRequest(
-      const http::request<http::string_body>& req);
+  boost::beast::http::response<boost::beast::http::string_body>
+  SimpleProxyRequest(
+      const boost::beast::http::request<boost::beast::http::string_body>& req);
 
-  beast::tcp_stream stream_;
-  beast::flat_buffer buffer_;
-  http::request<http::string_body> req_;
-  std::shared_ptr<http::response<http::string_body>> res_;
+  boost::beast::tcp_stream stream_;
+  boost::beast::flat_buffer buffer_;
+  boost::beast::http::request<boost::beast::http::string_body> req_;
+  std::shared_ptr<boost::beast::http::response<boost::beast::http::string_body>>
+      res_;
   std::string ui_remote_url_;
 };
 

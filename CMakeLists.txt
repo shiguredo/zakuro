@@ -63,7 +63,7 @@ target_link_libraries(zakuro
 target_compile_definitions(zakuro
   PRIVATE
     # CLI11 は C++17 でのビルドにおいて std::filesystem を利用するが、これを clang で解決するには c++fs のリンクが必要になる。
-    # しかし、 libwebrtc の libc++ では std::filesystem が提供されていないため下記のオプションを追加して利用しないようにする。 
+    # しかし、 libwebrtc の libc++ では std::filesystem が提供されていないため下記のオプションを追加して利用しないようにする。
     CLI11_HAS_FILESYSTEM=0
     OPENSSL_IS_BORINGSSL
     # https://github.com/boostorg/container_hash/issues/22 と同じ問題が clang-15 でも起きるので、これを手動で定義して回避する

@@ -1,16 +1,17 @@
 #include "http_server.h"
 
 #include <chrono>
+#include <string>
 
 #include <openssl/ssl.h>
 #include <boost/asio/ssl.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/json.hpp>
+
+// WebRTC
 #include <rtc_base/logging.h>
 
 #include "json_rpc.h"
-
-namespace ssl = boost::asio::ssl;
 
 // HTTP セッションのタイムアウト時間（秒）
 static constexpr int kHttpSessionTimeoutSeconds = 30;
@@ -21,8 +22,12 @@ static constexpr int kHttpProxyTimeoutSeconds = 30;
 // HTTPプロキシレスポンスボディの最大サイズ (10MB)
 static constexpr std::size_t MAX_PROXY_RESPONSE_SIZE = 10 * 1024 * 1024;
 
-HttpServer::HttpServer(int port, const std::string& host)
-    : port_(port), host_(host) {}
+// ----------------------------
+// HttpServer
+// ----------------------------
+
+HttpServer::HttpServer(const std::string& host, int port)
+    : host_(host), port_(port), resolver_(ioc_) {}
 
 HttpServer::~HttpServer() {
   Stop();
@@ -41,20 +46,23 @@ void HttpServer::Stop() {
   if (!running_) {
     return;
   }
+  assert(thread_ != nullptr);
 
   running_ = false;
   ioc_.stop();
 
-  if (thread_ && thread_->joinable()) {
-    thread_->join();
-  }
+  thread_->join();
+  thread_ = nullptr;
 }
 
 void HttpServer::Run() {
   try {
-    auto const address = net::ip::make_address(host_);
-    acceptor_.reset(new tcp::acceptor(ioc_, tcp::endpoint(address, port_)));
-    DoAccept();
+    resolver_.async_resolve(
+        host_, std::to_string(port_),
+        [this](boost::beast::error_code ec,
+               boost::asio::ip::tcp::resolver::results_type results) {
+          OnResolve(ec, std::move(results));
+        });
 
     ioc_.run();
   } catch (const std::exception& e) {
@@ -62,12 +70,33 @@ void HttpServer::Run() {
   }
 }
 
-void HttpServer::DoAccept() {
-  acceptor_->async_accept(
-      beast::bind_front_handler(&HttpServer::OnAccept, this));
+void HttpServer::OnResolve(
+    boost::beast::error_code ec,
+    boost::asio::ip::tcp::resolver::results_type results) {
+  if (ec) {
+    RTC_LOG(LS_ERROR) << "Resolve error: " << ec.message();
+    return;
+  }
+
+  if (results.empty()) {
+    RTC_LOG(LS_ERROR) << "Resolve error: no endpoints found";
+    return;
+  }
+
+  const auto endpoint = results.begin()->endpoint();
+  acceptor_.reset(new boost::asio::ip::tcp::acceptor(ioc_, endpoint));
+  DoAccept();
 }
 
-void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
+void HttpServer::DoAccept() {
+  acceptor_->async_accept(
+      [this](boost::beast::error_code ec, boost::asio::ip::tcp::socket socket) {
+        OnAccept(ec, std::move(socket));
+      });
+}
+
+void HttpServer::OnAccept(boost::beast::error_code ec,
+                          boost::asio::ip::tcp::socket socket) {
   if (ec) {
     RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
   } else {
@@ -79,13 +108,24 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
   }
 }
 
-http::response<http::string_body> HttpSession::HandleRequest(
-    http::request<http::string_body>&& req) {
+// ----------------------------
+// HttpSession
+// ----------------------------
+
+HttpSession::HttpSession(boost::asio::ip::tcp::socket socket,
+                         const std::string& ui_remote_url)
+    : stream_(std::move(socket)), ui_remote_url_(ui_remote_url) {}
+
+boost::beast::http::response<boost::beast::http::string_body>
+HttpSession::HandleRequest(
+    boost::beast::http::request<boost::beast::http::string_body> req) {
   // ヘルスチェックエンドポイント
-  if (req.target() == "/.ok" && req.method() == http::verb::get) {
-    http::response<http::string_body> res{http::status::ok, req.version()};
-    res.set(http::field::server, "Zakuro");
-    res.set(http::field::content_type, "text/plain");
+  if (req.target() == "/.ok" &&
+      req.method() == boost::beast::http::verb::get) {
+    boost::beast::http::response<boost::beast::http::string_body> res{
+        boost::beast::http::status::ok, req.version()};
+    res.set(boost::beast::http::field::server, "Zakuro");
+    res.set(boost::beast::http::field::content_type, "text/plain");
     res.keep_alive(req.keep_alive());
     res.body() = "OK";
     res.prepare_payload();
@@ -93,7 +133,8 @@ http::response<http::string_body> HttpSession::HandleRequest(
   }
 
   // JSON-RPC エンドポイント
-  if (req.target() == "/rpc" && req.method() == http::verb::post) {
+  if (req.target() == "/rpc" &&
+      req.method() == boost::beast::http::verb::post) {
     return HandleJsonRpcRequest(req);
   }
 
@@ -103,20 +144,23 @@ http::response<http::string_body> HttpSession::HandleRequest(
   }
 
   // その他のリクエストには 404 Not Found を返す
-  http::response<http::string_body> res{http::status::not_found, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "text/plain");
+  boost::beast::http::response<boost::beast::http::string_body> res{
+      boost::beast::http::status::not_found, req.version()};
+  res.set(boost::beast::http::field::server, "Zakuro");
+  res.set(boost::beast::http::field::content_type, "text/plain");
   res.keep_alive(req.keep_alive());
   res.body() = "Not Found";
   res.prepare_payload();
   return res;
 }
 
-http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
-    const http::request<http::string_body>& req) {
-  http::response<http::string_body> res{http::status::ok, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "application/json");
+boost::beast::http::response<boost::beast::http::string_body>
+HttpSession::HandleJsonRpcRequest(
+    const boost::beast::http::request<boost::beast::http::string_body>& req) {
+  boost::beast::http::response<boost::beast::http::string_body> res{
+      boost::beast::http::status::ok, req.version()};
+  res.set(boost::beast::http::field::server, "Zakuro");
+  res.set(boost::beast::http::field::content_type, "application/json");
   res.keep_alive(req.keep_alive());
 
   try {
@@ -125,14 +169,8 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
     auto json_request = boost::json::parse(req.body(), ec);
     if (ec) {
       // パースエラー
-      boost::json::object error_response;
-      error_response["jsonrpc"] = "2.0";
-      error_response["id"] = nullptr;
-      boost::json::object error;
-      error["code"] = -32700;
-      error["message"] = "Parse error";
-      error["data"] = ec.message();
-      error_response["error"] = error;
+      auto error_response = JsonRpcHandler::CreateErrorResponse(
+          nullptr, -32700, "Parse error", ec.message());
       res.body() = boost::json::serialize(error_response);
       res.prepare_payload();
       return res;
@@ -144,7 +182,7 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
 
     // Notification の場合はレスポンスを返さない（空のボディで 204 No Content）
     if (!response) {
-      res.result(http::status::no_content);
+      res.result(boost::beast::http::status::no_content);
       res.body() = "";
       res.prepare_payload();
       return res;
@@ -152,15 +190,21 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
 
     res.body() = boost::json::serialize(*response);
   } catch (const std::exception& e) {
-    // 内部エラー
-    boost::json::object error_response;
-    error_response["jsonrpc"] = "2.0";
-    error_response["id"] = nullptr;
-    boost::json::object error;
-    error["code"] = -32603;
-    error["message"] = "Internal error";
-    error["data"] = e.what();
-    error_response["error"] = error;
+    // handler.Process() ではほぼ全部のエラーをキャッチしているが、
+    // ここでは念のために最終的なキャッチを行う。
+    //
+    // JSON-RPC の仕様上、id を抽出する時以外で id == null のエラーレスポンスを返すのは許可されていない。
+    // そのため、ここに来た場合 JSON-RPC の仕様に準拠したレスポンスを返すことができない。
+    //
+    // あくまでこのキャッチはサーバーをクラッシュさせないための保険として用意している。
+    RTC_LOG(LS_ERROR) << "JSON-RPC request handling error: " << e.what();
+    auto error_response = JsonRpcHandler::CreateErrorResponse(
+        nullptr, -32603, "Internal error", e.what());
+    res.body() = boost::json::serialize(error_response);
+  } catch (...) {
+    RTC_LOG(LS_ERROR) << "JSON-RPC request handling error: unknown error";
+    auto error_response = JsonRpcHandler::CreateErrorResponse(
+        nullptr, -32603, "Internal error", "unknown error");
     res.body() = boost::json::serialize(error_response);
   }
 
@@ -168,12 +212,9 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
   return res;
 }
 
-// HttpSession の実装
-
 void HttpSession::Run() {
-  net::dispatch(
-      stream_.get_executor(),
-      beast::bind_front_handler(&HttpSession::DoRead, shared_from_this()));
+  boost::asio::post(stream_.get_executor(),
+                    [self = shared_from_this()]() { self->DoRead(); });
 }
 
 void HttpSession::DoRead() {
@@ -181,15 +222,19 @@ void HttpSession::DoRead() {
 
   stream_.expires_after(std::chrono::seconds(kHttpSessionTimeoutSeconds));
 
-  http::async_read(
+  boost::beast::http::async_read(
       stream_, buffer_, req_,
-      beast::bind_front_handler(&HttpSession::OnRead, shared_from_this()));
+      [self = shared_from_this()](boost::beast::error_code ec,
+                                  std::size_t bytes_transferred) {
+        self->OnRead(ec, bytes_transferred);
+      });
 }
 
-void HttpSession::OnRead(beast::error_code ec, std::size_t bytes_transferred) {
+void HttpSession::OnRead(boost::beast::error_code ec,
+                         std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec == http::error::end_of_stream) {
+  if (ec == boost::beast::http::error::end_of_stream) {
     return DoClose();
   }
 
@@ -202,17 +247,22 @@ void HttpSession::OnRead(beast::error_code ec, std::size_t bytes_transferred) {
   SendResponse(HttpSession::HandleRequest(std::move(req_)));
 }
 
-void HttpSession::SendResponse(http::response<http::string_body>&& res) {
-  res_ = std::make_shared<http::response<http::string_body>>(std::move(res));
+void HttpSession::SendResponse(
+    boost::beast::http::response<boost::beast::http::string_body> res) {
+  res_ = std::make_shared<
+      boost::beast::http::response<boost::beast::http::string_body>>(
+      std::move(res));
 
-  http::async_write(
+  boost::beast::http::async_write(
       stream_, *res_,
-      beast::bind_front_handler(&HttpSession::OnWrite, shared_from_this(),
-                                res_->keep_alive()));
+      [self = shared_from_this()](boost::beast::error_code ec,
+                                  std::size_t bytes_transferred) {
+        self->OnWrite(self->res_->keep_alive(), ec, bytes_transferred);
+      });
 }
 
 void HttpSession::OnWrite(bool keep_alive,
-                          beast::error_code ec,
+                          boost::beast::error_code ec,
                           std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
@@ -230,12 +280,19 @@ void HttpSession::OnWrite(bool keep_alive,
 }
 
 void HttpSession::DoClose() {
-  beast::error_code ec;
-  stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+  boost::beast::error_code ec;
+  stream_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
 }
 
-http::response<http::string_body> HttpSession::SimpleProxyRequest(
-    const http::request<http::string_body>& req) {
+boost::beast::http::response<boost::beast::http::string_body>
+HttpSession::SimpleProxyRequest(
+    const boost::beast::http::request<boost::beast::http::string_body>& req) {
+  namespace net = boost::asio;
+  namespace ssl = boost::asio::ssl;
+  namespace http = boost::beast::http;
+  namespace beast = boost::beast;
+  using tcp = boost::asio::ip::tcp;
+
   try {
     // 簡易URLパース実装
     std::string url_str = ui_remote_url_;
@@ -450,10 +507,10 @@ http::response<http::string_body> HttpSession::SimpleProxyRequest(
     RTC_LOG(LS_ERROR) << "Proxy error: " << e.what();
 
     // エラーレスポンス
-    http::response<http::string_body> res{http::status::bad_gateway,
-                                          req.version()};
-    res.set(http::field::server, "Zakuro");
-    res.set(http::field::content_type, "text/plain");
+    boost::beast::http::response<boost::beast::http::string_body> res{
+        boost::beast::http::status::bad_gateway, req.version()};
+    res.set(boost::beast::http::field::server, "Zakuro");
+    res.set(boost::beast::http::field::content_type, "text/plain");
     res.keep_alive(req.keep_alive());
     res.body() = "Proxy Error: " + std::string(e.what());
     res.prepare_payload();

@@ -8,7 +8,8 @@
 
 namespace json = boost::json;
 
-std::optional<json::object> JsonRpcHandler::Process(const json::value& request) {
+std::optional<json::object> JsonRpcHandler::Process(
+    const json::value& request) {
   json::object response;
   response["jsonrpc"] = "2.0";
 
@@ -34,30 +35,30 @@ std::optional<json::object> JsonRpcHandler::Process(const json::value& request) 
     id = id_value;
   }
 
-  // jsonrpc フィールドの確認
-  if (!obj.contains("jsonrpc") || !obj.at("jsonrpc").is_string() ||
-      obj.at("jsonrpc").as_string() != "2.0") {
-    // Notification でもプロトコルエラーの場合はエラーを返す
-    if (is_notification) {
-      return std::nullopt;
-    }
-    return CreateErrorResponse(id, -32600, "Invalid Request",
-                               "Missing or invalid jsonrpc field");
-  }
-
-  // method フィールドの確認
-  if (!obj.contains("method") || !obj.at("method").is_string()) {
-    if (is_notification) {
-      return std::nullopt;
-    }
-    return CreateErrorResponse(id, -32600, "Invalid Request",
-                               "Missing or invalid method field");
-  }
-
-  auto method = obj.at("method").as_string();
-
-  // メソッドの処理
+  // 以降はどんな問題が起きても id を付与する必要があるので try-catch で囲む
   try {
+    // jsonrpc フィールドの確認
+    if (!obj.contains("jsonrpc") || !obj.at("jsonrpc").is_string() ||
+        obj.at("jsonrpc").as_string() != "2.0") {
+      if (is_notification) {
+        return std::nullopt;
+      }
+      return CreateErrorResponse(id, -32600, "Invalid Request",
+                                 "Missing or invalid jsonrpc field");
+    }
+
+    // method フィールドの確認
+    if (!obj.contains("method") || !obj.at("method").is_string()) {
+      if (is_notification) {
+        return std::nullopt;
+      }
+      return CreateErrorResponse(id, -32600, "Invalid Request",
+                                 "Missing or invalid method field");
+    }
+
+    auto method = obj.at("method").as_string();
+
+    // メソッドの処理
     if (method == "GetVersion") {
       // Notification の場合はレスポンスを返さない
       if (is_notification) {
