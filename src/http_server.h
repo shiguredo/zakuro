@@ -56,6 +56,11 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
                std::size_t bytes_transferred);
   void DoClose();
 
+  // JSON-RPC リクエストを処理する
+  boost::beast::http::response<boost::beast::http::string_body>
+  HandleJsonRpcRequest(
+      const boost::beast::http::request<boost::beast::http::string_body>& req);
+
   boost::beast::tcp_stream stream_;
   boost::beast::flat_buffer buffer_;
   boost::beast::http::request<boost::beast::http::string_body> req_;

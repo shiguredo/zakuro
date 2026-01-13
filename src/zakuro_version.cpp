@@ -46,3 +46,31 @@ std::string ZakuroVersion::GetLibwebrtcName() {
 std::string ZakuroVersion::GetEnvironmentName() {
   return sora::Version::GetEnvironmentName();
 }
+
+std::string ZakuroVersion::GetVersion() {
+  return ZAKURO_VERSION;
+}
+
+std::string ZakuroVersion::GetSoraCppSdkVersion() {
+  std::string full_version = sora::Version::GetClientName();
+  // "Sora C++ SDK 2025.3.1 (7e86e6e5)" から "2025.3.1" を抽出
+  size_t start = full_version.find("SDK ");
+  if (start != std::string::npos) {
+    start += 4;  // "SDK " の長さ
+    size_t end = full_version.find(" ", start);
+    if (end != std::string::npos) {
+      return full_version.substr(start, end - start);
+    }
+  }
+  return full_version;  // 抽出に失敗した場合は元の文字列を返す
+}
+
+std::string ZakuroVersion::GetWebRTCVersion() {
+  // WEBRTC_BUILD_VERSION が定義されていればそれを返す
+  // 定義されていない場合は LIBWEBRTC_NAME を返す
+#ifdef WEBRTC_BUILD_VERSION
+  return WEBRTC_BUILD_VERSION;
+#else
+  return LIBWEBRTC_NAME;
+#endif
+}

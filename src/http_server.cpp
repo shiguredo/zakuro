@@ -3,7 +3,13 @@
 #include <chrono>
 #include <string>
 
+// Boost
+#include <boost/json.hpp>
+
+// WebRTC
 #include <rtc_base/logging.h>
+
+#include "json_rpc.h"
 
 // HTTP セッションのタイムアウト時間（秒）
 static constexpr int kHttpSessionTimeoutSeconds = 30;
@@ -76,7 +82,9 @@ void HttpServer::OnResolve(
 
 void HttpServer::DoAccept() {
   acceptor_->async_accept(
-      boost::beast::bind_front_handler(&HttpServer::OnAccept, this));
+      [this](boost::beast::error_code ec, boost::asio::ip::tcp::socket socket) {
+        OnAccept(ec, std::move(socket));
+      });
 }
 
 void HttpServer::OnAccept(boost::beast::error_code ec,
@@ -102,13 +110,77 @@ HttpSession::HttpSession(boost::asio::ip::tcp::socket socket)
 boost::beast::http::response<boost::beast::http::string_body>
 HttpSession::HandleRequest(
     boost::beast::http::request<boost::beast::http::string_body> req) {
-  // すべてのリクエストに 404 Not Found を返す
+  // JSON-RPC エンドポイント
+  if (req.target() == "/rpc" &&
+      req.method() == boost::beast::http::verb::post) {
+    return HandleJsonRpcRequest(req);
+  }
+
+  // その他のリクエストには 404 Not Found を返す
   boost::beast::http::response<boost::beast::http::string_body> res{
       boost::beast::http::status::not_found, req.version()};
   res.set(boost::beast::http::field::server, "Zakuro");
   res.set(boost::beast::http::field::content_type, "text/plain");
   res.keep_alive(req.keep_alive());
   res.body() = "Not Found";
+  res.prepare_payload();
+  return res;
+}
+
+boost::beast::http::response<boost::beast::http::string_body>
+HttpSession::HandleJsonRpcRequest(
+    const boost::beast::http::request<boost::beast::http::string_body>& req) {
+  boost::beast::http::response<boost::beast::http::string_body> res{
+      boost::beast::http::status::ok, req.version()};
+  res.set(boost::beast::http::field::server, "Zakuro");
+  res.set(boost::beast::http::field::content_type, "application/json");
+  res.keep_alive(req.keep_alive());
+
+  try {
+    // リクエストボディをパース
+    boost::system::error_code ec;
+    auto json_request = boost::json::parse(req.body(), ec);
+    if (ec) {
+      // パースエラー
+      auto error_response = JsonRpcHandler::CreateErrorResponse(
+          nullptr, -32700, "Parse error", ec.message());
+      res.body() = boost::json::serialize(error_response);
+      res.prepare_payload();
+      return res;
+    }
+
+    // JSON-RPC ハンドラーで処理
+    JsonRpcHandler handler;
+    auto response = handler.Process(json_request);
+
+    // Notification の場合はレスポンスを返さない（空のボディで 204 No Content）
+    if (!response) {
+      res.result(boost::beast::http::status::no_content);
+      res.body() = "";
+      res.prepare_payload();
+      return res;
+    }
+
+    res.body() = boost::json::serialize(*response);
+  } catch (const std::exception& e) {
+    // handler.Process() ではほぼ全部のエラーをキャッチしているが、
+    // ここでは念のために最終的なキャッチを行う。
+    //
+    // JSON-RPC の仕様上、id を抽出する時以外で id == null のエラーレスポンスを返すのは許可されていない。
+    // そのため、ここに来た場合 JSON-RPC の仕様に準拠したレスポンスを返すことができない。
+    //
+    // あくまでこのキャッチはサーバーをクラッシュさせないための保険として用意している。
+    RTC_LOG(LS_ERROR) << "JSON-RPC request handling error: " << e.what();
+    auto error_response = JsonRpcHandler::CreateErrorResponse(
+        nullptr, -32603, "Internal error", e.what());
+    res.body() = boost::json::serialize(error_response);
+  } catch (...) {
+    RTC_LOG(LS_ERROR) << "JSON-RPC request handling error: unknown error";
+    auto error_response = JsonRpcHandler::CreateErrorResponse(
+        nullptr, -32603, "Internal error", "unknown error");
+    res.body() = boost::json::serialize(error_response);
+  }
+
   res.prepare_payload();
   return res;
 }
