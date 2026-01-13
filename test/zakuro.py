@@ -250,7 +250,6 @@ class Zakuro:
 
         print(f"Waiting for HTTP server on port {self._http_port}...")
         start_time = time.time()
-        health_check_id = 0
 
         with httpx.Client() as client:
             while time.time() - start_time < self._startup_timeout:
@@ -265,24 +264,13 @@ class Zakuro:
                     raise RuntimeError(error_msg)
 
                 try:
-                    url = f"http://{self._http_host}:{self._http_port}/rpc"
-                    health_check_id += 1
-                    response = client.post(
-                        url,
-                        json={"jsonrpc": "2.0", "method": "GetVersion", "id": health_check_id},
-                        timeout=5,
-                    )
+                    # ヘルスチェックエンドポイントで起動確認
+                    url = f"http://{self._http_host}:{self._http_port}/.ok"
+                    response = client.get(url, timeout=5)
                     if response.status_code == 200:
-                        data = response.json()
-                        if "result" in data:
-                            if data.get("id") != health_check_id:
-                                raise RuntimeError(
-                                    f"JSON-RPC id mismatch: expected {health_check_id}, "
-                                    f"got {data.get('id')}"
-                                )
-                            elapsed = time.time() - start_time
-                            print(f"Zakuro started successfully ({elapsed:.1f}s)")
-                            return
+                        elapsed = time.time() - start_time
+                        print(f"Zakuro started successfully ({elapsed:.1f}s)")
+                        return
                 except (httpx.ConnectError, httpx.ConnectTimeout) as e:
                     print(f"  Connection error: {e}")
                 except httpx.HTTPStatusError as e:

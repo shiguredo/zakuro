@@ -30,6 +30,9 @@
   - @torikizi
 - [UPDATE] CLI11 を `2.6.1` に上げる
   - @torikizi
+- [ADD] ヘルスチェック用 HTTP API `/.ok` を追加する
+  - GET リクエストで 200 OK を返す
+  - @voluntas
 - [ADD] JSON-RPC 2.0 エンドポイント `/rpc` を追加する
   - @voluntas
 - [ADD] JSON-RPC メソッド `GetVersion` を追加する

@@ -110,6 +110,19 @@ HttpSession::HttpSession(boost::asio::ip::tcp::socket socket)
 boost::beast::http::response<boost::beast::http::string_body>
 HttpSession::HandleRequest(
     boost::beast::http::request<boost::beast::http::string_body> req) {
+  // ヘルスチェックエンドポイント
+  if (req.target() == "/.ok" &&
+      req.method() == boost::beast::http::verb::get) {
+    boost::beast::http::response<boost::beast::http::string_body> res{
+        boost::beast::http::status::ok, req.version()};
+    res.set(boost::beast::http::field::server, "Zakuro");
+    res.set(boost::beast::http::field::content_type, "text/plain");
+    res.keep_alive(req.keep_alive());
+    res.body() = "OK";
+    res.prepare_payload();
+    return res;
+  }
+
   // JSON-RPC エンドポイント
   if (req.target() == "/rpc" &&
       req.method() == boost::beast::http::verb::post) {
@@ -184,8 +197,6 @@ HttpSession::HandleJsonRpcRequest(
   res.prepare_payload();
   return res;
 }
-
-// HttpSession の実装
 
 void HttpSession::Run() {
   boost::asio::post(stream_.get_executor(),
