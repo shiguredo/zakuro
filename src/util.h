@@ -1,10 +1,9 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
+#include <optional>
+
 // Boost
-#include <boost/beast/core/string.hpp>
-#include <boost/beast/http/message.hpp>
-#include <boost/beast/http/string_body.hpp>
 #include <boost/json.hpp>
 
 // WebRTC
@@ -17,7 +16,8 @@ class Util {
   static void ParseArgs(const std::vector<std::string>& args,
                         std::string& config_file,
                         int& log_level,
-                        int& port,
+                        std::optional<std::string>& http_host,
+                        std::optional<int>& http_port,
                         std::string& connection_id_stats_file,
                         double& instance_hatch_rate,
                         ZakuroConfig& config,
@@ -32,22 +32,6 @@ class Util {
       webrtc::PeerConnectionInterface::IceConnectionState state);
   // JSON値から文字列を取得するヘルパー関数
   static std::string PrimitiveValueToString(const boost::json::value& value);
-
-  // MIME type をファイル名の拡張子から調べる
-  static boost::beast::string_view MimeType(boost::beast::string_view path);
-
-  // エラーレスポンスをいい感じに作る便利関数
-  static boost::beast::http::response<boost::beast::http::string_body>
-  BadRequest(
-      const boost::beast::http::request<boost::beast::http::string_body>& req,
-      boost::beast::string_view why);
-  static boost::beast::http::response<boost::beast::http::string_body> NotFound(
-      const boost::beast::http::request<boost::beast::http::string_body>& req,
-      boost::beast::string_view target);
-  static boost::beast::http::response<boost::beast::http::string_body>
-  ServerError(
-      const boost::beast::http::request<boost::beast::http::string_body>& req,
-      boost::beast::string_view what);
 };
 
 // boost::system::error_code のエラーをいい感じに出力するマクロ

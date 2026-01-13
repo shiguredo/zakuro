@@ -36,6 +36,7 @@ target_sources(zakuro
   PRIVATE
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
+    src/http_server.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
     src/util.cpp
@@ -52,6 +53,7 @@ target_sources(zakuro
 target_link_libraries(zakuro
   PRIVATE
     Sora::sora
+    Boost::json
     Boost::filesystem
     CLI11::CLI11
     Blend2D::Blend2D

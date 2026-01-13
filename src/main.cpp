@@ -18,6 +18,7 @@
 
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
+#include "http_server.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -72,12 +73,13 @@ int main(int argc, char* argv[]) {
 
   std::string config_file;
   int log_level = webrtc::LS_NONE;
-  int port = -1;
+  std::optional<std::string> http_host;
+  std::optional<int> http_port;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, connection_id_stats_file,
-                  instance_hatch_rate, config, false);
+  Util::ParseArgs(args, config_file, log_level, http_host, http_port,
+                  connection_id_stats_file, instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -94,10 +96,15 @@ int main(int argc, char* argv[]) {
       common_args.push_back(
           Util::PrimitiveValueToString(zakuro_obj.at("log-level")));
     }
-    if (zakuro_obj.contains("port")) {
-      common_args.push_back("--port");
+    if (zakuro_obj.contains("http-port")) {
+      common_args.push_back("--http-port");
       common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("port")));
+          Util::PrimitiveValueToString(zakuro_obj.at("http-port")));
+    }
+    if (zakuro_obj.contains("http-host")) {
+      common_args.push_back("--http-host");
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("http-host")));
     }
     if (zakuro_obj.contains("output-file-connection-id")) {
       common_args.push_back("--output-file-connection-id");
@@ -147,7 +154,7 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, port,
+        Util::ParseArgs(args, config_file, log_level, http_host, http_port,
                         connection_id_stats_file, instance_hatch_rate, config,
                         true);
         configs.push_back(config);
@@ -169,16 +176,6 @@ int main(int argc, char* argv[]) {
   }
   webrtc::LogMessage::AddLogToStream(log_sink.get(), webrtc::LS_INFO);
 
-  // TODO: サーバの起動については別途考える
-  //if (config_.sora_port >= 0) {
-  //  SoraServerConfig config;
-  //  const boost::asio::ip::tcp::endpoint endpoint{
-  //      boost::asio::ip::make_address("127.0.0.1"),
-  //      static_cast<unsigned short>(config_.sora_port)};
-  //  // TODO: vcs をスレッドセーフにする（VC 生成スレッドと競合するので）
-  //  SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
-  //}
-
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();
   // 各 config に GameKeyCore の設定を入れていく
@@ -195,6 +192,19 @@ int main(int argc, char* argv[]) {
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
     configs[i].id = i;
+  }
+
+  // HTTP サーバーの起動
+  std::unique_ptr<HttpServer> http_server;
+  if (http_host && http_port) {
+    http_server.reset(new HttpServer(*http_host, *http_port));
+    http_server->Start();
+    RTC_LOG(LS_INFO) << "HTTP server started on " << *http_host << ":"
+                     << *http_port;
+  } else if (http_host || http_port) {
+    std::cerr << "--http-host と --http-port は両方指定する必要があります"
+              << std::endl;
+    return 1;
   }
 
   // 集めた stats を定期的にファイルに出力する
