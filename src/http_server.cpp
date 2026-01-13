@@ -1,6 +1,7 @@
 #include "http_server.h"
 
 #include <chrono>
+#include <string>
 
 #include <rtc_base/logging.h>
 
@@ -12,7 +13,7 @@ static constexpr int kHttpSessionTimeoutSeconds = 30;
 // ----------------------------
 
 HttpServer::HttpServer(const std::string& host, int port)
-    : port_(port), host_(host) {}
+    : host_(host), port_(port), resolver_(ioc_) {}
 
 HttpServer::~HttpServer() {
   Stop();
@@ -42,15 +43,35 @@ void HttpServer::Stop() {
 
 void HttpServer::Run() {
   try {
-    auto const address = boost::asio::ip::make_address(host_);
-    acceptor_.reset(new boost::asio::ip::tcp::acceptor(
-        ioc_, boost::asio::ip::tcp::endpoint(address, port_)));
-    DoAccept();
+    resolver_.async_resolve(
+        host_, std::to_string(port_),
+        [this](boost::beast::error_code ec,
+               boost::asio::ip::tcp::resolver::results_type results) {
+          OnResolve(ec, std::move(results));
+        });
 
     ioc_.run();
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "HTTP server error: " << e.what();
   }
+}
+
+void HttpServer::OnResolve(
+    boost::beast::error_code ec,
+    boost::asio::ip::tcp::resolver::results_type results) {
+  if (ec) {
+    RTC_LOG(LS_ERROR) << "Resolve error: " << ec.message();
+    return;
+  }
+
+  if (results.empty()) {
+    RTC_LOG(LS_ERROR) << "Resolve error: no endpoints found";
+    return;
+  }
+
+  const auto endpoint = results.begin()->endpoint();
+  acceptor_.reset(new boost::asio::ip::tcp::acceptor(ioc_, endpoint));
+  DoAccept();
 }
 
 void HttpServer::DoAccept() {

@@ -20,6 +20,8 @@ class HttpServer {
 
  private:
   void Run();
+  void OnResolve(boost::beast::error_code ec,
+                 boost::asio::ip::tcp::resolver::results_type results);
   void DoAccept();
   void OnAccept(boost::beast::error_code ec,
                 boost::asio::ip::tcp::socket socket);
@@ -30,6 +32,7 @@ class HttpServer {
   std::atomic<bool> running_{false};
 
   boost::asio::io_context ioc_;
+  boost::asio::ip::tcp::resolver resolver_;
   std::unique_ptr<boost::asio::ip::tcp::acceptor> acceptor_;
 };
 
