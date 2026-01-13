@@ -4,11 +4,14 @@
 #include <string>
 #include <utility>
 
+// OpenSSL
 #include <openssl/ssl.h>
 
+// Boost
 #include <boost/asio/ssl.hpp>
 #include <boost/beast/http.hpp>
 
+// WebRTC
 #include <rtc_base/logging.h>
 
 namespace {
@@ -275,17 +278,19 @@ void HttpProxy::SendErrorResponse(const std::string& message) {
 }
 
 bool HttpProxy::ParseUrl(const std::string& url) {
-  std::string url_str = url;
-  std::string scheme = "http";
+  std::string url_str;
+  std::string scheme;
   std::string host;
-  std::string port = "80";
+  std::string port;
 
   if (url_str.rfind("https://", 0) == 0) {
     scheme = "https";
-    port = "443";
-    url_str = url_str.substr(8);
+    url_str = url.substr(8);
   } else if (url_str.rfind("http://", 0) == 0) {
-    url_str = url_str.substr(7);
+    scheme = "http";
+    url_str = url.substr(7);
+  } else {
+    return false;
   }
 
   const std::size_t port_pos = url_str.find(':');
@@ -305,8 +310,8 @@ bool HttpProxy::ParseUrl(const std::string& url) {
     host = url_str;
   }
 
-  if (host.empty() || port.empty()) {
-    return false;
+  if (port.empty()) {
+    port = (scheme == "https") ? "443" : "80";
   }
 
   host_ = host;

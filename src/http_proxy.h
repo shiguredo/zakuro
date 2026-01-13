@@ -57,9 +57,9 @@ class HttpProxy : public std::enable_shared_from_this<HttpProxy> {
   std::string host_;
   std::string port_;
   std::string host_header_;
-  int req_version_;
-  bool keep_alive_;
-  bool use_ssl_;
+  int req_version_ = 11;
+  bool keep_alive_ = false;
+  bool use_ssl_ = false;
 };
 
 #endif  // HTTP_PROXY_H_
