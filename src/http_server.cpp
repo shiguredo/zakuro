@@ -7,7 +7,7 @@
 // HTTP セッションのタイムアウト時間（秒）
 static constexpr int kHttpSessionTimeoutSeconds = 30;
 
-HttpServer::HttpServer(int port, const std::string& host)
+HttpServer::HttpServer(const std::string& host, int port)
     : port_(port), host_(host) {}
 
 HttpServer::~HttpServer() {

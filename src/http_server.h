@@ -12,7 +12,7 @@
 
 class HttpServer {
  public:
-  HttpServer(int port, const std::string& host = "127.0.0.1");
+  HttpServer(const std::string& host, int port);
   ~HttpServer();
 
   void Start();

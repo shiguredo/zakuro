@@ -73,12 +73,12 @@ int main(int argc, char* argv[]) {
 
   std::string config_file;
   int log_level = webrtc::LS_NONE;
-  std::optional<int> http_port;
   std::optional<std::string> http_host;
+  std::optional<int> http_port;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, http_port, http_host,
+  Util::ParseArgs(args, config_file, log_level, http_host, http_port,
                   connection_id_stats_file, instance_hatch_rate, config, false);
 
   if (config_file.empty()) {
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, http_port, http_host,
+        Util::ParseArgs(args, config_file, log_level, http_host, http_port,
                         connection_id_stats_file, instance_hatch_rate, config,
                         true);
         configs.push_back(config);
@@ -196,13 +196,13 @@ int main(int argc, char* argv[]) {
 
   // HTTP サーバーの起動
   std::unique_ptr<HttpServer> http_server;
-  if (http_port && http_host) {
-    http_server.reset(new HttpServer(*http_port, *http_host));
+  if (http_host && http_port) {
+    http_server.reset(new HttpServer(*http_host, *http_port));
     http_server->Start();
     RTC_LOG(LS_INFO) << "HTTP server started on " << *http_host << ":"
                      << *http_port;
-  } else if (http_port || http_host) {
-    std::cerr << "--http-port と --http-host は両方指定する必要があります"
+  } else if (http_host || http_port) {
+    std::cerr << "--http-host と --http-port は両方指定する必要があります"
               << std::endl;
     return 1;
   }
