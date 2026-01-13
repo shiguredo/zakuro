@@ -164,10 +164,20 @@ HttpSession::HandleJsonRpcRequest(
     res.body() = boost::json::serialize(*response);
   } catch (const std::exception& e) {
     // handler.Process() ではほぼ全部のエラーをキャッチしているが、
-    // ここでは念のために最終的なキャッチを行う
+    // ここでは念のために最終的なキャッチを行う。
+    //
+    // JSON-RPC の仕様上、id を抽出する時以外で id == null のエラーレスポンスを返すのは許可されていない。
+    // そのため、ここに来た場合 JSON-RPC の仕様に準拠したレスポンスを返すことができない。
+    //
+    // あくまでこのキャッチはサーバーをクラッシュさせないための保険として用意している。
     RTC_LOG(LS_ERROR) << "JSON-RPC request handling error: " << e.what();
     auto error_response = JsonRpcHandler::CreateErrorResponse(
         nullptr, -32603, "Internal error", e.what());
+    res.body() = boost::json::serialize(error_response);
+  } catch (...) {
+    RTC_LOG(LS_ERROR) << "JSON-RPC request handling error: unknown error";
+    auto error_response = JsonRpcHandler::CreateErrorResponse(
+        nullptr, -32603, "Internal error", "unknown error");
     res.body() = boost::json::serialize(error_response);
   }
 
