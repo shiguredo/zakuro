@@ -49,8 +49,11 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   void Run();
 
  private:
-  boost::beast::http::response<boost::beast::http::string_body> HandleRequest(
-      boost::beast::http::request<boost::beast::http::string_body> req);
+  void AsyncHandleRequest(
+      boost::beast::http::request<boost::beast::http::string_body> req,
+      std::function<
+          void(boost::beast::http::response<boost::beast::http::string_body>)>
+          on_response);
   void SendResponse(
       boost::beast::http::response<boost::beast::http::string_body> res);
 
@@ -67,9 +70,11 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
       const boost::beast::http::request<boost::beast::http::string_body>& req);
 
   // リバースプロキシ
-  boost::beast::http::response<boost::beast::http::string_body>
-  SimpleProxyRequest(
-      const boost::beast::http::request<boost::beast::http::string_body>& req);
+  void AsyncHandleSimpleProxyRequest(
+      const boost::beast::http::request<boost::beast::http::string_body>& req,
+      std::function<
+          void(boost::beast::http::response<boost::beast::http::string_body>)>
+          on_response);
 
   boost::beast::tcp_stream stream_;
   boost::beast::flat_buffer buffer_;
