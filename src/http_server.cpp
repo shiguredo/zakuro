@@ -84,8 +84,8 @@ HttpSession::HandleRequest(
 // HttpSession の実装
 
 void HttpSession::Run() {
-  boost::asio::dispatch(stream_.get_executor(),
-                        [self = shared_from_this()]() { self->DoRead(); });
+  boost::asio::post(stream_.get_executor(),
+                    [self = shared_from_this()]() { self->DoRead(); });
 }
 
 void HttpSession::DoRead() {
