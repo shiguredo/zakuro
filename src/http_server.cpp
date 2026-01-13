@@ -7,6 +7,10 @@
 // HTTP セッションのタイムアウト時間（秒）
 static constexpr int kHttpSessionTimeoutSeconds = 30;
 
+// ----------------------------
+// HttpServer
+// ----------------------------
+
 HttpServer::HttpServer(const std::string& host, int port)
     : port_(port), host_(host) {}
 
@@ -66,6 +70,13 @@ void HttpServer::OnAccept(boost::beast::error_code ec,
     DoAccept();
   }
 }
+
+// ----------------------------
+// HttpSession
+// ----------------------------
+
+HttpSession::HttpSession(boost::asio::ip::tcp::socket socket)
+    : stream_(std::move(socket)) {}
 
 boost::beast::http::response<boost::beast::http::string_body>
 HttpSession::HandleRequest(
