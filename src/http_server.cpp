@@ -27,13 +27,13 @@ void HttpServer::Stop() {
   if (!running_) {
     return;
   }
+  assert(thread_ != nullptr);
 
   running_ = false;
   ioc_.stop();
 
-  if (thread_ && thread_->joinable()) {
-    thread_->join();
-  }
+  thread_->join();
+  thread_ = nullptr;
 }
 
 void HttpServer::Run() {
@@ -85,8 +85,7 @@ HttpSession::HandleRequest(
 
 void HttpSession::Run() {
   boost::asio::dispatch(stream_.get_executor(),
-                        boost::beast::bind_front_handler(&HttpSession::DoRead,
-                                                         shared_from_this()));
+                        [self = shared_from_this()]() { self->DoRead(); });
 }
 
 void HttpSession::DoRead() {
@@ -94,9 +93,12 @@ void HttpSession::DoRead() {
 
   stream_.expires_after(std::chrono::seconds(kHttpSessionTimeoutSeconds));
 
-  boost::beast::http::async_read(stream_, buffer_, req_,
-                                 boost::beast::bind_front_handler(
-                                     &HttpSession::OnRead, shared_from_this()));
+  boost::beast::http::async_read(
+      stream_, buffer_, req_,
+      [self = shared_from_this()](boost::beast::error_code ec,
+                                  std::size_t bytes_transferred) {
+        self->OnRead(ec, bytes_transferred);
+      });
 }
 
 void HttpSession::OnRead(boost::beast::error_code ec,
@@ -124,8 +126,10 @@ void HttpSession::SendResponse(
 
   boost::beast::http::async_write(
       stream_, *res_,
-      boost::beast::bind_front_handler(&HttpSession::OnWrite,
-                                       shared_from_this(), res_->keep_alive()));
+      [self = shared_from_this()](boost::beast::error_code ec,
+                                  std::size_t bytes_transferred) {
+        self->OnWrite(self->res_->keep_alive(), ec, bytes_transferred);
+      });
 }
 
 void HttpSession::OnWrite(bool keep_alive,
