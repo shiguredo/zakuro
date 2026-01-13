@@ -3,7 +3,10 @@
 #include <chrono>
 #include <string>
 
+// Boost
 #include <boost/json.hpp>
+
+// WebRTC
 #include <rtc_base/logging.h>
 
 #include "json_rpc.h"
@@ -79,7 +82,9 @@ void HttpServer::OnResolve(
 
 void HttpServer::DoAccept() {
   acceptor_->async_accept(
-      boost::beast::bind_front_handler(&HttpServer::OnAccept, this));
+      [this](boost::beast::error_code ec, boost::asio::ip::tcp::socket socket) {
+        OnAccept(ec, std::move(socket));
+      });
 }
 
 void HttpServer::OnAccept(boost::beast::error_code ec,
@@ -137,14 +142,8 @@ HttpSession::HandleJsonRpcRequest(
     auto json_request = boost::json::parse(req.body(), ec);
     if (ec) {
       // パースエラー
-      boost::json::object error_response;
-      error_response["jsonrpc"] = "2.0";
-      error_response["id"] = nullptr;
-      boost::json::object error;
-      error["code"] = -32700;
-      error["message"] = "Parse error";
-      error["data"] = ec.message();
-      error_response["error"] = error;
+      auto error_response = JsonRpcHandler::CreateErrorResponse(
+          nullptr, -32700, "Parse error", ec.message());
       res.body() = boost::json::serialize(error_response);
       res.prepare_payload();
       return res;
@@ -164,15 +163,11 @@ HttpSession::HandleJsonRpcRequest(
 
     res.body() = boost::json::serialize(*response);
   } catch (const std::exception& e) {
-    // 内部エラー
-    boost::json::object error_response;
-    error_response["jsonrpc"] = "2.0";
-    error_response["id"] = nullptr;
-    boost::json::object error;
-    error["code"] = -32603;
-    error["message"] = "Internal error";
-    error["data"] = e.what();
-    error_response["error"] = error;
+    // handler.Process() ではほぼ全部のエラーをキャッチしているが、
+    // ここでは念のために最終的なキャッチを行う
+    RTC_LOG(LS_ERROR) << "JSON-RPC request handling error: " << e.what();
+    auto error_response = JsonRpcHandler::CreateErrorResponse(
+        nullptr, -32603, "Internal error", e.what());
     res.body() = boost::json::serialize(error_response);
   }
 

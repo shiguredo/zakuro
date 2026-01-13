@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
     const auto& config = configs[i];
     ths.push_back(std::unique_ptr<std::thread>(
         new std::thread([i, config, &stats_cv, &stats_mut, &stats_countdown,
-                          instance_hatch_rate]() {
+                         instance_hatch_rate]() {
           int wait_ms = (int)(1000 * i / instance_hatch_rate);
           std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
           Zakuro zakuro(config);
