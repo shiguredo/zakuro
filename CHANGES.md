@@ -11,12 +11,16 @@
 
 ## develop
 
+- [ADD] HTTP サーバー機能を追加する
+  - `--http-port` オプションで HTTP サーバーを起動可能
+  - `--http-host` オプションでバインドするアドレスを指定可能
+  - @voluntas
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - @torikizi
-- [UPDATE] Sora C++ SDK を `2025.6.0` に上げる
-  - WEBRTC_BUILD_VERSION を `m143.7499.1.0` に上げる
-  - CMAKE_VERSION を `4.1.3` に上げる
+- [UPDATE] Sora C++ SDK を `2025.7.0-canary.3` に上げる
+  - WEBRTC_BUILD_VERSION を `m144.7559.2.1` に上げる
+  - CMAKE_VERSION を `4.2.1` に上げる
   - @torikizi
 - [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
   - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため

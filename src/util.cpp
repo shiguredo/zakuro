@@ -36,8 +36,8 @@ std::string to_string(std::string str) {
 void Util::ParseArgs(const std::vector<std::string>& cargs,
                      std::string& config_file,
                      int& log_level,
-                     std::optional<int>& http_port,
                      std::optional<std::string>& http_host,
+                     std::optional<int>& http_port,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
                      ZakuroConfig& config,
@@ -63,9 +63,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       {{"verbose", 0}, {"info", 1}, {"warning", 2}, {"error", 3}, {"none", 4}});
   app.add_option("--log-level", log_level, "Log severity level threshold")
       ->transform(CLI::CheckedTransformer(log_level_map, CLI::ignore_case));
+  app.add_option("--http-host", http_host, "HTTP host address to bind");
   app.add_option("--http-port", http_port, "HTTP port number")
       ->check(CLI::Range(1, 65535));
-  app.add_option("--http-host", http_host, "HTTP host address to bind");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,

@@ -1,6 +1,7 @@
 #include "http_server.h"
 
 #include <chrono>
+#include <string>
 
 #include <boost/json.hpp>
 #include <rtc_base/logging.h>
@@ -10,8 +11,12 @@
 // HTTP セッションのタイムアウト時間（秒）
 static constexpr int kHttpSessionTimeoutSeconds = 30;
 
-HttpServer::HttpServer(int port, const std::string& host)
-    : port_(port), host_(host) {}
+// ----------------------------
+// HttpServer
+// ----------------------------
+
+HttpServer::HttpServer(const std::string& host, int port)
+    : host_(host), port_(port), resolver_(ioc_) {}
 
 HttpServer::~HttpServer() {
   Stop();
@@ -30,20 +35,23 @@ void HttpServer::Stop() {
   if (!running_) {
     return;
   }
+  assert(thread_ != nullptr);
 
   running_ = false;
   ioc_.stop();
 
-  if (thread_ && thread_->joinable()) {
-    thread_->join();
-  }
+  thread_->join();
+  thread_ = nullptr;
 }
 
 void HttpServer::Run() {
   try {
-    auto const address = net::ip::make_address(host_);
-    acceptor_.reset(new tcp::acceptor(ioc_, tcp::endpoint(address, port_)));
-    DoAccept();
+    resolver_.async_resolve(
+        host_, std::to_string(port_),
+        [this](boost::beast::error_code ec,
+               boost::asio::ip::tcp::resolver::results_type results) {
+          OnResolve(ec, std::move(results));
+        });
 
     ioc_.run();
   } catch (const std::exception& e) {
@@ -51,12 +59,31 @@ void HttpServer::Run() {
   }
 }
 
-void HttpServer::DoAccept() {
-  acceptor_->async_accept(
-      beast::bind_front_handler(&HttpServer::OnAccept, this));
+void HttpServer::OnResolve(
+    boost::beast::error_code ec,
+    boost::asio::ip::tcp::resolver::results_type results) {
+  if (ec) {
+    RTC_LOG(LS_ERROR) << "Resolve error: " << ec.message();
+    return;
+  }
+
+  if (results.empty()) {
+    RTC_LOG(LS_ERROR) << "Resolve error: no endpoints found";
+    return;
+  }
+
+  const auto endpoint = results.begin()->endpoint();
+  acceptor_.reset(new boost::asio::ip::tcp::acceptor(ioc_, endpoint));
+  DoAccept();
 }
 
-void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
+void HttpServer::DoAccept() {
+  acceptor_->async_accept(
+      boost::beast::bind_front_handler(&HttpServer::OnAccept, this));
+}
+
+void HttpServer::OnAccept(boost::beast::error_code ec,
+                          boost::asio::ip::tcp::socket socket) {
   if (ec) {
     RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
   } else {
@@ -68,28 +95,40 @@ void HttpServer::OnAccept(beast::error_code ec, tcp::socket socket) {
   }
 }
 
-http::response<http::string_body> HttpSession::HandleRequest(
-    http::request<http::string_body>&& req) {
+// ----------------------------
+// HttpSession
+// ----------------------------
+
+HttpSession::HttpSession(boost::asio::ip::tcp::socket socket)
+    : stream_(std::move(socket)) {}
+
+boost::beast::http::response<boost::beast::http::string_body>
+HttpSession::HandleRequest(
+    boost::beast::http::request<boost::beast::http::string_body> req) {
   // JSON-RPC エンドポイント
-  if (req.target() == "/rpc" && req.method() == http::verb::post) {
+  if (req.target() == "/rpc" &&
+      req.method() == boost::beast::http::verb::post) {
     return HandleJsonRpcRequest(req);
   }
 
   // その他のリクエストには 404 Not Found を返す
-  http::response<http::string_body> res{http::status::not_found, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "text/plain");
+  boost::beast::http::response<boost::beast::http::string_body> res{
+      boost::beast::http::status::not_found, req.version()};
+  res.set(boost::beast::http::field::server, "Zakuro");
+  res.set(boost::beast::http::field::content_type, "text/plain");
   res.keep_alive(req.keep_alive());
   res.body() = "Not Found";
   res.prepare_payload();
   return res;
 }
 
-http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
-    const http::request<http::string_body>& req) {
-  http::response<http::string_body> res{http::status::ok, req.version()};
-  res.set(http::field::server, "Zakuro");
-  res.set(http::field::content_type, "application/json");
+boost::beast::http::response<boost::beast::http::string_body>
+HttpSession::HandleJsonRpcRequest(
+    const boost::beast::http::request<boost::beast::http::string_body>& req) {
+  boost::beast::http::response<boost::beast::http::string_body> res{
+      boost::beast::http::status::ok, req.version()};
+  res.set(boost::beast::http::field::server, "Zakuro");
+  res.set(boost::beast::http::field::content_type, "application/json");
   res.keep_alive(req.keep_alive());
 
   try {
@@ -117,7 +156,7 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
 
     // Notification の場合はレスポンスを返さない（空のボディで 204 No Content）
     if (!response) {
-      res.result(http::status::no_content);
+      res.result(boost::beast::http::status::no_content);
       res.body() = "";
       res.prepare_payload();
       return res;
@@ -144,9 +183,8 @@ http::response<http::string_body> HttpSession::HandleJsonRpcRequest(
 // HttpSession の実装
 
 void HttpSession::Run() {
-  net::dispatch(
-      stream_.get_executor(),
-      beast::bind_front_handler(&HttpSession::DoRead, shared_from_this()));
+  boost::asio::post(stream_.get_executor(),
+                    [self = shared_from_this()]() { self->DoRead(); });
 }
 
 void HttpSession::DoRead() {
@@ -154,15 +192,19 @@ void HttpSession::DoRead() {
 
   stream_.expires_after(std::chrono::seconds(kHttpSessionTimeoutSeconds));
 
-  http::async_read(
+  boost::beast::http::async_read(
       stream_, buffer_, req_,
-      beast::bind_front_handler(&HttpSession::OnRead, shared_from_this()));
+      [self = shared_from_this()](boost::beast::error_code ec,
+                                  std::size_t bytes_transferred) {
+        self->OnRead(ec, bytes_transferred);
+      });
 }
 
-void HttpSession::OnRead(beast::error_code ec, std::size_t bytes_transferred) {
+void HttpSession::OnRead(boost::beast::error_code ec,
+                         std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec == http::error::end_of_stream) {
+  if (ec == boost::beast::http::error::end_of_stream) {
     return DoClose();
   }
 
@@ -175,17 +217,22 @@ void HttpSession::OnRead(beast::error_code ec, std::size_t bytes_transferred) {
   SendResponse(HttpSession::HandleRequest(std::move(req_)));
 }
 
-void HttpSession::SendResponse(http::response<http::string_body>&& res) {
-  res_ = std::make_shared<http::response<http::string_body>>(std::move(res));
+void HttpSession::SendResponse(
+    boost::beast::http::response<boost::beast::http::string_body> res) {
+  res_ = std::make_shared<
+      boost::beast::http::response<boost::beast::http::string_body>>(
+      std::move(res));
 
-  http::async_write(
+  boost::beast::http::async_write(
       stream_, *res_,
-      beast::bind_front_handler(&HttpSession::OnWrite, shared_from_this(),
-                                res_->keep_alive()));
+      [self = shared_from_this()](boost::beast::error_code ec,
+                                  std::size_t bytes_transferred) {
+        self->OnWrite(self->res_->keep_alive(), ec, bytes_transferred);
+      });
 }
 
 void HttpSession::OnWrite(bool keep_alive,
-                          beast::error_code ec,
+                          boost::beast::error_code ec,
                           std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
@@ -203,6 +250,6 @@ void HttpSession::OnWrite(bool keep_alive,
 }
 
 void HttpSession::DoClose() {
-  beast::error_code ec;
-  stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+  boost::beast::error_code ec;
+  stream_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
 }
