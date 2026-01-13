@@ -18,16 +18,14 @@ class HttpServer {
   void Start();
   void Stop();
 
-  boost::asio::io_context& GetIOContext() { return ioc_; }
-
  private:
   void Run();
   void DoAccept();
   void OnAccept(boost::beast::error_code ec,
                 boost::asio::ip::tcp::socket socket);
 
-  int port_;
   std::string host_;
+  int port_;
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
 
@@ -38,19 +36,18 @@ class HttpServer {
 // HTTP セッションを処理するクラス
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
-  explicit HttpSession(boost::asio::ip::tcp::socket&& socket)
-      : stream_(std::move(socket)) {}
+  explicit HttpSession(boost::asio::ip::tcp::socket socket);
 
   void Run();
 
-  boost::beast::http::response<boost::beast::http::string_body> HandleRequest(
-      boost::beast::http::request<boost::beast::http::string_body>&& req);
-
  private:
+  boost::beast::http::response<boost::beast::http::string_body> HandleRequest(
+      boost::beast::http::request<boost::beast::http::string_body> req);
+  void SendResponse(
+      boost::beast::http::response<boost::beast::http::string_body> res);
+
   void DoRead();
   void OnRead(boost::beast::error_code ec, std::size_t bytes_transferred);
-  void SendResponse(
-      boost::beast::http::response<boost::beast::http::string_body>&& res);
   void OnWrite(bool keep_alive,
                boost::beast::error_code ec,
                std::size_t bytes_transferred);

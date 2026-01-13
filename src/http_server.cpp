@@ -69,7 +69,7 @@ void HttpServer::OnAccept(boost::beast::error_code ec,
 
 boost::beast::http::response<boost::beast::http::string_body>
 HttpSession::HandleRequest(
-    boost::beast::http::request<boost::beast::http::string_body>&& req) {
+    boost::beast::http::request<boost::beast::http::string_body> req) {
   // すべてのリクエストに 404 Not Found を返す
   boost::beast::http::response<boost::beast::http::string_body> res{
       boost::beast::http::status::not_found, req.version()};
@@ -119,7 +119,7 @@ void HttpSession::OnRead(boost::beast::error_code ec,
 }
 
 void HttpSession::SendResponse(
-    boost::beast::http::response<boost::beast::http::string_body>&& res) {
+    boost::beast::http::response<boost::beast::http::string_body> res) {
   res_ = std::make_shared<
       boost::beast::http::response<boost::beast::http::string_body>>(
       std::move(res));
