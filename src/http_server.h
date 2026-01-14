@@ -12,7 +12,9 @@
 
 class HttpServer {
  public:
-  HttpServer(const std::string& host, int port);
+  HttpServer(const std::string& host,
+             int port,
+             std::optional<std::string> ui_remote_url);
   ~HttpServer();
 
   void Start();
@@ -30,6 +32,7 @@ class HttpServer {
   int port_;
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
+  std::optional<std::string> ui_remote_url_;
 
   boost::asio::io_context ioc_;
   boost::asio::ip::tcp::resolver resolver_;
@@ -39,13 +42,17 @@ class HttpServer {
 // HTTP セッションを処理するクラス
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
-  explicit HttpSession(boost::asio::ip::tcp::socket socket);
+  explicit HttpSession(boost::asio::ip::tcp::socket socket,
+                       std::optional<std::string> ui_remote_url);
 
   void Run();
 
  private:
-  boost::beast::http::response<boost::beast::http::string_body> HandleRequest(
-      boost::beast::http::request<boost::beast::http::string_body> req);
+  void AsyncHandleRequest(
+      boost::beast::http::request<boost::beast::http::string_body> req,
+      std::function<
+          void(boost::beast::http::response<boost::beast::http::string_body>)>
+          on_response);
   void SendResponse(
       boost::beast::http::response<boost::beast::http::string_body> res);
 
@@ -61,11 +68,19 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   HandleJsonRpcRequest(
       const boost::beast::http::request<boost::beast::http::string_body>& req);
 
+  // リバースプロキシ
+  void AsyncHandleSimpleProxyRequest(
+      const boost::beast::http::request<boost::beast::http::string_body>& req,
+      std::function<
+          void(boost::beast::http::response<boost::beast::http::string_body>)>
+          on_response);
+
   boost::beast::tcp_stream stream_;
   boost::beast::flat_buffer buffer_;
   boost::beast::http::request<boost::beast::http::string_body> req_;
   std::shared_ptr<boost::beast::http::response<boost::beast::http::string_body>>
       res_;
+  std::optional<std::string> ui_remote_url_;
 };
 
 #endif  // HTTP_SERVER_H_

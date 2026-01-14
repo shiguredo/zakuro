@@ -38,6 +38,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      int& log_level,
                      std::optional<std::string>& http_host,
                      std::optional<int>& http_port,
+                     bool& ui,
+                     std::optional<std::string>& ui_remote_url,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
                      ZakuroConfig& config,
@@ -66,6 +68,9 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--http-host", http_host, "HTTP host address to bind");
   app.add_option("--http-port", http_port, "HTTP port number")
       ->check(CLI::Range(1, 65535));
+  app.add_flag("--ui", ui, "Enable UI reverse proxy");
+  app.add_option("--ui-remote-url", ui_remote_url,
+                 "Remote URL for UI reverse proxy");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,

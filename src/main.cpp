@@ -75,11 +75,14 @@ int main(int argc, char* argv[]) {
   int log_level = webrtc::LS_NONE;
   std::optional<std::string> http_host;
   std::optional<int> http_port;
+  bool ui = false;
+  std::optional<std::string> ui_remote_url;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, http_host, http_port,
-                  connection_id_stats_file, instance_hatch_rate, config, false);
+  Util::ParseArgs(args, config_file, log_level, http_host, http_port, ui,
+                  ui_remote_url, connection_id_stats_file, instance_hatch_rate,
+                  config, false);
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
@@ -105,6 +108,16 @@ int main(int argc, char* argv[]) {
       common_args.push_back("--http-host");
       common_args.push_back(
           Util::PrimitiveValueToString(zakuro_obj.at("http-host")));
+    }
+    if (zakuro_obj.contains("ui")) {
+      if (zakuro_obj.at("ui").as_bool()) {
+        common_args.push_back("--ui");
+      }
+    }
+    if (zakuro_obj.contains("ui-remote-url")) {
+      common_args.push_back("--ui-remote-url");
+      common_args.push_back(
+          Util::PrimitiveValueToString(zakuro_obj.at("ui-remote-url")));
     }
     if (zakuro_obj.contains("output-file-connection-id")) {
       common_args.push_back("--output-file-connection-id");
@@ -154,9 +167,9 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, http_host, http_port,
-                        connection_id_stats_file, instance_hatch_rate, config,
-                        true);
+        Util::ParseArgs(args, config_file, log_level, http_host, http_port, ui,
+                        ui_remote_url, connection_id_stats_file,
+                        instance_hatch_rate, config, true);
         configs.push_back(config);
       }
     }
@@ -194,10 +207,25 @@ int main(int argc, char* argv[]) {
     configs[i].id = i;
   }
 
+  // --ui-remote-url は --ui と併用必須
+  if (ui_remote_url && !ui) {
+    std::cerr << "--ui-remote-url を指定する場合は --ui も指定してください"
+              << std::endl;
+    return 1;
+  }
+
   // HTTP サーバーの起動
   std::unique_ptr<HttpServer> http_server;
   if (http_host && http_port) {
-    http_server.reset(new HttpServer(*http_host, *http_port));
+    // --ui 指定時のみリバプロを有効化
+    std::optional<std::string> remote_url;
+    if (ui) {
+      std::string url =
+          ui_remote_url ? *ui_remote_url : "https://zakuro-ui.shiguredo.app/";
+      RTC_LOG(LS_INFO) << "UI remote URL set to: " << url;
+      remote_url = url;
+    }
+    http_server.reset(new HttpServer(*http_host, *http_port, remote_url));
     http_server->Start();
     RTC_LOG(LS_INFO) << "HTTP server started on " << *http_host << ":"
                      << *http_port;

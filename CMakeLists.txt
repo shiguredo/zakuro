@@ -36,6 +36,7 @@ target_sources(zakuro
   PRIVATE
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
+    src/http_proxy.cpp
     src/http_server.cpp
     src/json_rpc.cpp
     src/main.cpp

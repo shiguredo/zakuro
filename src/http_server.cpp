@@ -9,6 +9,7 @@
 // WebRTC
 #include <rtc_base/logging.h>
 
+#include "http_proxy.h"
 #include "json_rpc.h"
 
 // HTTP セッションのタイムアウト時間（秒）
@@ -18,8 +19,13 @@ static constexpr int kHttpSessionTimeoutSeconds = 30;
 // HttpServer
 // ----------------------------
 
-HttpServer::HttpServer(const std::string& host, int port)
-    : host_(host), port_(port), resolver_(ioc_) {}
+HttpServer::HttpServer(const std::string& host,
+                       int port,
+                       std::optional<std::string> ui_remote_url)
+    : host_(host),
+      port_(port),
+      ui_remote_url_(std::move(ui_remote_url)),
+      resolver_(ioc_) {}
 
 HttpServer::~HttpServer() {
   Stop();
@@ -92,7 +98,7 @@ void HttpServer::OnAccept(boost::beast::error_code ec,
   if (ec) {
     RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
   } else {
-    std::make_shared<HttpSession>(std::move(socket))->Run();
+    std::make_shared<HttpSession>(std::move(socket), ui_remote_url_)->Run();
   }
 
   if (running_) {
@@ -104,15 +110,17 @@ void HttpServer::OnAccept(boost::beast::error_code ec,
 // HttpSession
 // ----------------------------
 
-HttpSession::HttpSession(boost::asio::ip::tcp::socket socket)
-    : stream_(std::move(socket)) {}
+HttpSession::HttpSession(boost::asio::ip::tcp::socket socket,
+                         std::optional<std::string> ui_remote_url)
+    : stream_(std::move(socket)), ui_remote_url_(std::move(ui_remote_url)) {}
 
-boost::beast::http::response<boost::beast::http::string_body>
-HttpSession::HandleRequest(
-    boost::beast::http::request<boost::beast::http::string_body> req) {
+void HttpSession::AsyncHandleRequest(
+    boost::beast::http::request<boost::beast::http::string_body> req,
+    std::function<
+        void(boost::beast::http::response<boost::beast::http::string_body>)>
+        on_response) {
   // ヘルスチェックエンドポイント
-  if (req.target() == "/.ok" &&
-      req.method() == boost::beast::http::verb::get) {
+  if (req.target() == "/.ok" && req.method() == boost::beast::http::verb::get) {
     boost::beast::http::response<boost::beast::http::string_body> res{
         boost::beast::http::status::ok, req.version()};
     res.set(boost::beast::http::field::server, "Zakuro");
@@ -120,13 +128,21 @@ HttpSession::HandleRequest(
     res.keep_alive(req.keep_alive());
     res.body() = "OK";
     res.prepare_payload();
-    return res;
+    on_response(std::move(res));
+    return;
   }
 
   // JSON-RPC エンドポイント
   if (req.target() == "/rpc" &&
       req.method() == boost::beast::http::verb::post) {
-    return HandleJsonRpcRequest(req);
+    on_response(HandleJsonRpcRequest(req));
+    return;
+  }
+
+  // UI リモート URL が設定されている場合はリバースプロキシ
+  if (ui_remote_url_) {
+    AsyncHandleSimpleProxyRequest(req, std::move(on_response));
+    return;
   }
 
   // その他のリクエストには 404 Not Found を返す
@@ -137,7 +153,7 @@ HttpSession::HandleRequest(
   res.keep_alive(req.keep_alive());
   res.body() = "Not Found";
   res.prepare_payload();
-  return res;
+  on_response(std::move(res));
 }
 
 boost::beast::http::response<boost::beast::http::string_body>
@@ -230,7 +246,12 @@ void HttpSession::OnRead(boost::beast::error_code ec,
   }
 
   // リクエストを処理
-  SendResponse(HttpSession::HandleRequest(std::move(req_)));
+  AsyncHandleRequest(
+      std::move(req_),
+      [self = shared_from_this()](
+          boost::beast::http::response<boost::beast::http::string_body> res) {
+        self->SendResponse(std::move(res));
+      });
 }
 
 void HttpSession::SendResponse(
@@ -268,4 +289,15 @@ void HttpSession::OnWrite(bool keep_alive,
 void HttpSession::DoClose() {
   boost::beast::error_code ec;
   stream_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+}
+
+void HttpSession::AsyncHandleSimpleProxyRequest(
+    const boost::beast::http::request<boost::beast::http::string_body>& req,
+    std::function<
+        void(boost::beast::http::response<boost::beast::http::string_body>)>
+        on_response) {
+  assert(ui_remote_url_);
+  auto http_proxy =
+      std::make_shared<HttpProxy>(stream_.get_executor(), *ui_remote_url_);
+  http_proxy->AsyncHandleRequest(req, std::move(on_response));
 }
