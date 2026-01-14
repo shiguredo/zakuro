@@ -19,8 +19,13 @@ static constexpr int kHttpSessionTimeoutSeconds = 30;
 // HttpServer
 // ----------------------------
 
-HttpServer::HttpServer(const std::string& host, int port)
-    : host_(host), port_(port), resolver_(ioc_) {}
+HttpServer::HttpServer(const std::string& host,
+                       int port,
+                       std::optional<std::string> ui_remote_url)
+    : host_(host),
+      port_(port),
+      ui_remote_url_(std::move(ui_remote_url)),
+      resolver_(ioc_) {}
 
 HttpServer::~HttpServer() {
   Stop();
@@ -106,8 +111,8 @@ void HttpServer::OnAccept(boost::beast::error_code ec,
 // ----------------------------
 
 HttpSession::HttpSession(boost::asio::ip::tcp::socket socket,
-                         const std::string& ui_remote_url)
-    : stream_(std::move(socket)), ui_remote_url_(ui_remote_url) {}
+                         std::optional<std::string> ui_remote_url)
+    : stream_(std::move(socket)), ui_remote_url_(std::move(ui_remote_url)) {}
 
 void HttpSession::AsyncHandleRequest(
     boost::beast::http::request<boost::beast::http::string_body> req,
@@ -135,7 +140,7 @@ void HttpSession::AsyncHandleRequest(
   }
 
   // UI リモート URL が設定されている場合はリバースプロキシ
-  if (!ui_remote_url_.empty()) {
+  if (ui_remote_url_) {
     AsyncHandleSimpleProxyRequest(req, std::move(on_response));
     return;
   }
@@ -291,7 +296,8 @@ void HttpSession::AsyncHandleSimpleProxyRequest(
     std::function<
         void(boost::beast::http::response<boost::beast::http::string_body>)>
         on_response) {
+  assert(ui_remote_url_);
   auto http_proxy =
-      std::make_shared<HttpProxy>(stream_.get_executor(), ui_remote_url_);
+      std::make_shared<HttpProxy>(stream_.get_executor(), *ui_remote_url_);
   http_proxy->AsyncHandleRequest(req, std::move(on_response));
 }

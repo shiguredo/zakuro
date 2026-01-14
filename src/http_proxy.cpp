@@ -79,9 +79,15 @@ void HttpProxy::OnResolve(
   if (use_ssl_) {
     namespace ssl = boost::asio::ssl;
 
-    ssl_ctx_ = std::make_unique<ssl::context>(ssl::context::tlsv12_client);
-    ssl_ctx_->set_verify_mode(ssl::verify_peer);
+    // TLS 1.2 と 1.3 のみ対応
+    SSL_CTX* handle = ::SSL_CTX_new(::TLS_method());
+    SSL_CTX_set_min_proto_version(handle, TLS1_2_VERSION);
+    SSL_CTX_set_max_proto_version(handle, TLS1_3_VERSION);
+    ssl_ctx_ = std::make_unique<ssl::context>(handle);
     ssl_ctx_->set_default_verify_paths();
+    ssl_ctx_->set_options(ssl::context::default_workarounds |
+                          ssl::context::no_sslv2 | ssl::context::no_sslv3 |
+                          ssl::context::single_dh_use);
 
     ssl_stream_ =
         std::make_unique<boost::beast::ssl_stream<boost::beast::tcp_stream>>(

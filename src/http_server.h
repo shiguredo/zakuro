@@ -12,11 +12,10 @@
 
 class HttpServer {
  public:
-  HttpServer(const std::string& host, int port);
+  HttpServer(const std::string& host,
+             int port,
+             std::optional<std::string> ui_remote_url);
   ~HttpServer();
-
-  void SetUIRemoteURL(const std::string& url) { ui_remote_url_ = url; }
-  std::string GetUIRemoteURL() const { return ui_remote_url_; }
 
   void Start();
   void Stop();
@@ -33,7 +32,7 @@ class HttpServer {
   int port_;
   std::unique_ptr<std::thread> thread_;
   std::atomic<bool> running_{false};
-  std::string ui_remote_url_;
+  std::optional<std::string> ui_remote_url_;
 
   boost::asio::io_context ioc_;
   boost::asio::ip::tcp::resolver resolver_;
@@ -44,7 +43,7 @@ class HttpServer {
 class HttpSession : public std::enable_shared_from_this<HttpSession> {
  public:
   explicit HttpSession(boost::asio::ip::tcp::socket socket,
-                       const std::string& ui_remote_url);
+                       std::optional<std::string> ui_remote_url);
 
   void Run();
 
@@ -81,7 +80,7 @@ class HttpSession : public std::enable_shared_from_this<HttpSession> {
   boost::beast::http::request<boost::beast::http::string_body> req_;
   std::shared_ptr<boost::beast::http::response<boost::beast::http::string_body>>
       res_;
-  std::string ui_remote_url_;
+  std::optional<std::string> ui_remote_url_;
 };
 
 #endif  // HTTP_SERVER_H_

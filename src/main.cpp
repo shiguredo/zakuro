@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
   std::optional<std::string> http_host;
   std::optional<int> http_port;
   bool ui = false;
-  std::string ui_remote_url;
+  std::optional<std::string> ui_remote_url;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
   }
 
   // --ui-remote-url は --ui と併用必須
-  if (!ui_remote_url.empty() && !ui) {
+  if (ui_remote_url && !ui) {
     std::cerr << "--ui-remote-url を指定する場合は --ui も指定してください"
               << std::endl;
     return 1;
@@ -217,15 +217,15 @@ int main(int argc, char* argv[]) {
   // HTTP サーバーの起動
   std::unique_ptr<HttpServer> http_server;
   if (http_host && http_port) {
-    http_server.reset(new HttpServer(*http_host, *http_port));
     // --ui 指定時のみリバプロを有効化
+    std::optional<std::string> remote_url;
     if (ui) {
-      std::string remote_url = ui_remote_url.empty()
-                                   ? "https://zakuro-ui.shiguredo.app/"
-                                   : ui_remote_url;
-      http_server->SetUIRemoteURL(remote_url);
-      RTC_LOG(LS_INFO) << "UI remote URL set to: " << remote_url;
+      std::string url =
+          ui_remote_url ? *ui_remote_url : "https://zakuro-ui.shiguredo.app/";
+      RTC_LOG(LS_INFO) << "UI remote URL set to: " << url;
+      remote_url = url;
     }
+    http_server.reset(new HttpServer(*http_host, *http_port, remote_url));
     http_server->Start();
     RTC_LOG(LS_INFO) << "HTTP server started on " << *http_host << ":"
                      << *http_port;
