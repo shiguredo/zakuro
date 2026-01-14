@@ -289,10 +289,10 @@ bool HttpProxy::ParseUrl(const std::string& url) {
   std::string host;
   std::string port;
 
-  if (url_str.rfind("https://", 0) == 0) {
+  if (url.rfind("https://", 0) == 0) {
     scheme = "https";
     url_str = url.substr(8);
-  } else if (url_str.rfind("http://", 0) == 0) {
+  } else if (url.rfind("http://", 0) == 0) {
     scheme = "http";
     url_str = url.substr(7);
   } else {
