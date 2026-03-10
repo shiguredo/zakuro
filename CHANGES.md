@@ -30,6 +30,8 @@
   - @torikizi
 - [UPDATE] CLI11 を `2.6.1` に上げる
   - @torikizi
+- [UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` と `CMAKE_C_STANDARD` を 17 から 20 に上げる
+  - @torikizi
 - [ADD] `--ui` オプションで Zakuro UI を有効化する機能を追加する
   - `--ui-remote-url` オプションでリモート URL を変更可能
   - @voluntas
