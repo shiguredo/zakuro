@@ -18,8 +18,8 @@
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - @torikizi
-- [UPDATE] Sora C++ SDK を `2026.1.2` に上げる
-  - WEBRTC_BUILD_VERSION を `m144.7559.2.1` に上げる
+- [UPDATE] Sora C++ SDK を `2026.2.0-canary.1` に上げる
+  - WEBRTC_BUILD_VERSION を `m145.7632.0.0` に上げる
   - CMAKE_VERSION を `4.2.1` に上げる
   - @torikizi
 - [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
@@ -29,6 +29,8 @@
   - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
   - @torikizi
 - [UPDATE] CLI11 を `2.6.1` に上げる
+  - @torikizi
+- [UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` と `CMAKE_C_STANDARD` を 17 から 20 に上げる
   - @torikizi
 - [ADD] `--ui` オプションで Zakuro UI を有効化する機能を追加する
   - `--ui-remote-url` オプションでリモート URL を変更可能

@@ -22,7 +22,7 @@ find_package(CLI11 REQUIRED)
 
 add_executable(zakuro)
 
-set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
+set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)
 set_target_properties(zakuro PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 string(SUBSTRING "${ZAKURO_COMMIT}" 0 8 ZAKURO_COMMIT_SHORT)
