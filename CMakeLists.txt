@@ -181,5 +181,11 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
+  # Boost 1.91.0 では macOS 14.4 以降で Asio の kqueue_reactor が
+  # std::atomic::wait ベースの atomic_slim_mutex を使うようになった。
+  # Sora C++ SDK はこれを無効化しているため、 Zakuro でも同じマクロを定義する。
+  # 定義がずれると Boost.Asio の内部実装が食い違い、接続時にクラッシュやハングが発生する可能性がある。
+  target_compile_definitions(zakuro PRIVATE BOOST_ASIO_DISABLE_STD_ATOMIC_WAIT)
+
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
 endif()
