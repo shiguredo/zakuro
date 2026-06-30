@@ -23,6 +23,13 @@
   - CMAKE_VERSION を `4.3.2` に上げる
   - BOOST_VERSION を `1.91.0` に上げる
   - @torikizi
+- [UPDATE] Boost.Beast と Boost.Asio の inline namespace 競合を修正する
+  - Sora C++ SDK 2026.2.0-canary.15 以降で `BOOST_ASIO_ENABLE_VERSION_NAMESPACE` が有効になると Boost.Asio が inline namespace（例: v103801_kmn）を使用するようになる
+  - これは Unity Editor 6000.3 とのシンボル衝突回避のため有効化された
+  - Boost.Beast 1.91 の basic_stream.hpp には boost::asio::ssl::stream の前方宣言があり inline namespace に対応していないため、version namespace 有効時に名前解決が曖昧になり `reference to 'ssl' is ambiguous` が発生する
+  - 対応: buildbase.py の `install_boost()` 内で basic_stream.hpp の前方宣言を `BOOST_ASIO_INLINE_NAMESPACE_BEGIN` / `END` でラップするパッチを適用する
+  - 有効時は inline namespace 内に宣言が入り、無効時はマクロが空展開されるため、どちらの設定でも正しく動作する
+  - @torikizi
 - [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
   - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
   - @torikizi
