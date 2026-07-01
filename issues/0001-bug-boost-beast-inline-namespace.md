@@ -115,6 +115,17 @@ zakuro の公開 API や ABI には影響しない。
 
 ## 解決方法
 
+2026-07-01 追記: 本対応は zakuro の buildbase.py ではなく
+sora-cpp-sdk の buildbase.py で行うこととし、
+zakuro 側のパッチ追加は revert した。
+sora-cpp-sdk PR #341 で以下の対応を行った:
+- buildbase.py の `build_and_install_boost()` 内で basic_stream.hpp の
+  前方宣言を `BOOST_ASIO_INLINE_NAMESPACE_BEGIN` / `END` でラップする
+  パッチを追加
+- CHANGES.md に追記
+
+## 以下の内容は全て採用しない方針とした
+
 run.py の `_build()` 内、`install_deps()` 呼び出し直後にパッチを追加する。
 
 パッチの置換文字列は、Sora C++ SDK 2026.2.0-canary.18 / Boost 1.91
