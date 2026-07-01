@@ -625,38 +625,6 @@ def get_webrtc_info(
         )
 
 
-# Sora C++ SDK 2026.2.0-canary.15 以降で BOOST_ASIO_ENABLE_VERSION_NAMESPACE が有効になると
-# Boost.Asio が inline namespace (例: v103801_kmn) を使用するようになる。
-# これは異なるバージョンの Asio が同一プロセス内で共存できるようにするための機能で、
-# Unity Editor 6000.3 とのシンボル衝突回避のために有効化された。
-#
-# しかし Boost.Beast 1.91 の basic_stream.hpp には boost::asio::ssl::stream の
-# 前方宣言があり、inline namespace に対応していない。そのため version namespace が
-# 有効な環境では名前解決が曖昧になりビルドエラーが発生する。
-#
-# Boost.Asio 側でも「前方宣言を壊す可能性があるためデフォルト無効」としており、
-# unofficial な設定と Beast 側の未対応の組み合わせで顕在化した問題。
-#
-# 対応: 前方宣言を BOOST_ASIO_INLINE_NAMESPACE_BEGIN / END でラップする。
-# 有効時は inline namespace 内に宣言が入り、無効時はマクロが空展開されるため、
-# どちらの設定でも正しく動作する。
-BOOST_PATCH_BEAST_INLINE_NAMESPACE = r"""
-diff --git a/include/boost/beast/core/basic_stream.hpp b/include/boost/beast/core/basic_stream.hpp
---- a/include/boost/beast/core/basic_stream.hpp
-+++ b/include/boost/beast/core/basic_stream.hpp
-@@ -1,7 +1,9 @@
- namespace boost {
- namespace asio {
-+BOOST_ASIO_INLINE_NAMESPACE_BEGIN
- namespace ssl {
- template<typename> class stream;
- } // ssl
-+BOOST_ASIO_INLINE_NAMESPACE_END
- } // asio
- } // boost
-"""
-
-
 @versioned
 def install_boost(
     version,
@@ -679,10 +647,6 @@ def install_boost(
     rm_rf(os.path.join(install_dir, "boost"))
     extract(archive, output_dir=install_dir, output_dirname="boost")
 
-    # basic_stream.hpp の inline namespace 競合を修正するパッチ
-    apply_patch_text(
-        BOOST_PATCH_BEAST_INLINE_NAMESPACE, os.path.join(install_dir, "boost"), 1
-    )
 
 # 以下の問題を解決するためのパッチ
 #
