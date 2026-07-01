@@ -58,9 +58,6 @@ basic_stream.hpp の修正で全件解消される。
 
 - Boost.Asio の変更履歴によると、`BOOST_ASIO_ENABLE_VERSION_NAMESPACE` は
   前方宣言を破壊する可能性があるためデフォルト無効になっている
-  （[boost_asio/history.html](https://www.boost.org/doc/libs/latest/doc/html/boost_asio/history.html):
-  "The inline namespace is disabled by default to avoid breaking existing code
-  that forward declares Asio names."）
 - Beast の basic_stream.hpp が asio::ssl::stream の前方宣言を
   inline namespace 非対応のまま持っている
 - 両者の組み合わせが衝突し、コンパイラが名前解決できず ambiguous になる
@@ -86,17 +83,15 @@ cmake 実行前に basic_stream.hpp の forward declaration を
 version namespace が有効な環境では inline namespace 内に宣言が入り、
 無効な環境ではマクロが空展開されるため、どちらでも正しく動作する。
 
-パッチを buildbase.py の `install_boost()` 内で行う理由:
+パッチを run.py の `_build()` 内で行う理由:
 
 - version namespace の有効/無効は Sora C++ SDK のバンドルする Boost の
-   ビルド設定に依存し、CMake の configure 時点では判断できない
-- `install_boost()` で Boost がインストールされた直後、
-   cmake を実行する前にパッチすることで、
-   インストール済みのヘッダファイルを確実に修正できる
-- `@versioned` デコレータのキャッシュ機構により、
-   一度パッチが適用されれば次回以降のビルドで重複処理が発生しない
-- CMakeLists.txt でファイル操作を行うより buildbase.py の Python コードの方が
-   条件分岐・エラーハンドリング・ログ出力が容易
+  ビルド設定に依存し、CMake の configure 時点では判断できない
+- `install_deps()` で Boost がインストールされた直後、
+  cmake を実行する前にパッチすることで、
+  インストール済みのヘッダファイルを確実に修正できる
+- CMakeLists.txt でファイル操作を行うより run.py の Python コードの方が
+  条件分岐・エラーハンドリング・ログ出力が容易
 
 ## 完了条件
 
@@ -120,61 +115,63 @@ zakuro の公開 API や ABI には影響しない。
 
 ## 解決方法
 
-buildbase.py の `install_boost()` 内、`extract()` 直後に
-`BOOST_PATCH_BEAST_INLINE_NAMESPACE` 定数で定義した unified diff を
-`apply_patch_text()` で適用する。
+run.py の `_build()` 内、`install_deps()` 呼び出し直後にパッチを追加する。
 
-パッチの内容は、前方宣言の `namespace asio {` 直後に
-`BOOST_ASIO_INLINE_NAMESPACE_BEGIN` を、`} // ssl` 直後に
-`BOOST_ASIO_INLINE_NAMESPACE_END` を挿入するだけの最小限の diff とする。
+パッチの置換文字列は、Sora C++ SDK 2026.2.0-canary.18 / Boost 1.91
+(DEPS で管理) の `basic_stream.hpp` を確認し、
+インデントや改行位置が一致するよう調整すること。
 
 `--local-sora-cpp-sdk-dir` 使用時はローカルの Sora C++ SDK が
 バンドルする Boost のパスが異なる可能性があるため、
-未対応の場合は既知の制限として明記する。
+その場合は boost_install_dir を動的に解決してから
+パッチを適用すること。未対応の場合は既知の制限として明記する。
 
 ```python
-# buildbase.py
-
-# Sora C++ SDK 2026.2.0-canary.15 以降で BOOST_ASIO_ENABLE_VERSION_NAMESPACE
-# が有効になると Boost.Asio が inline namespace (例: v103801_kmn) を使用する。
-# これは異なるバージョンの Asio が同一プロセス内で共存できるようにするための
-# 機能で、Unity Editor 6000.3 とのシンボル衝突回避のために有効化された。
-#
-# しかし Boost.Beast 1.91 の basic_stream.hpp には
-# boost::asio::ssl::stream の前方宣言があり、inline namespace に対応していない。
-# そのため version namespace が有効な環境では名前解決が曖昧になり
-# ビルドエラーが発生する。
-#
-# Boost.Asio 側でも「前方宣言を壊す可能性があるためデフォルト無効」としており、
-# unofficial な設定と Beast 側の未対応の組み合わせで顕在化した問題。
-#
-# 対応: 前方宣言を BOOST_ASIO_INLINE_NAMESPACE_BEGIN / END でラップする。
-# 有効時は inline namespace 内に宣言が入り、無効時はマクロが空展開されるため、
-# どちらの設定でも正しく動作する。
-BOOST_PATCH_BEAST_INLINE_NAMESPACE = r"""
-diff --git a/include/boost/beast/core/basic_stream.hpp b/include/boost/beast/core/basic_stream.hpp
---- a/include/boost/beast/core/basic_stream.hpp
-+++ b/include/boost/beast/core/basic_stream.hpp
-@@ -1,7 +1,9 @@
- namespace boost {
- namespace asio {
-+BOOST_ASIO_INLINE_NAMESPACE_BEGIN
- namespace ssl {
- template<typename> class stream;
- } // ssl
-+BOOST_ASIO_INLINE_NAMESPACE_END
- } // asio
- } // boost
-"""
-
-@versioned
-def install_boost(
-    ...
-):
-    ...
-    # basic_stream.hpp の inline namespace 競合を修正するパッチ
-    apply_patch_text(
-        BOOST_PATCH_BEAST_INLINE_NAMESPACE,
-        os.path.join(install_dir, "boost"), 1
-    )
+# get_sora_info() の取得後（300行目前後）に移動する場合は
+# sora_info.boost_install_dir を利用してパスを構成する:
+#   basic_stream_hpp = os.path.join(
+#       sora_info.boost_install_dir, "include",
+#       "boost", "beast", "core", "basic_stream.hpp"
+#   )
+basic_stream_hpp = os.path.join(
+    install_dir, "boost", "include",
+    "boost", "beast", "core", "basic_stream.hpp"
+)
+if not os.path.exists(basic_stream_hpp):
+    logging.warning(f"basic_stream.hpp not found: {basic_stream_hpp}")
+else:
+    s = open(basic_stream_hpp).read()
+    if "BOOST_ASIO_INLINE_NAMESPACE_BEGIN" in s:
+        logging.info(
+            "basic_stream.hpp already patched, skipping")
+    else:
+        old_fwd = (
+            "namespace boost {\n"
+            "namespace asio {\n"
+            "namespace ssl {"
+            "\ntemplate<typename> class stream;\n"
+            "} // ssl\n"
+            "} // asio\n"
+            "} // boost"
+        )
+        new_fwd = (
+            "namespace boost {\n"
+            "namespace asio {\n"
+            "BOOST_ASIO_INLINE_NAMESPACE_BEGIN\n"
+            "namespace ssl {"
+            "\ntemplate<typename> class stream;\n"
+            "} // ssl\n"
+            "BOOST_ASIO_INLINE_NAMESPACE_END\n"
+            "} // asio\n"
+            "} // boost"
+        )
+        if old_fwd not in s:
+            logging.warning(
+                "basic_stream.hpp: forward declaration pattern "
+                "not found, patch skipped")
+        else:
+            s = s.replace(old_fwd, new_fwd)
+            open(basic_stream_hpp, "w").write(s)
+            logging.info(
+                "basic_stream.hpp: patched forward declaration")
 ```
