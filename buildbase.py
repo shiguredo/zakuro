@@ -635,7 +635,7 @@ def get_webrtc_info(
 # 有効な環境では名前解決が曖昧になりビルドエラーが発生する。
 #
 # Boost.Asio 側でも「前方宣言を壊す可能性があるためデフォルト無効」としており、
-# デフォルト無効の設定と Beast 側の未対応の組み合わせで顕在化した問題。
+# unofficial な設定と Beast 側の未対応の組み合わせで顕在化した問題。
 #
 # 対応: 前方宣言を BOOST_ASIO_INLINE_NAMESPACE_BEGIN / END でラップする。
 # 有効時は inline namespace 内に宣言が入り、無効時はマクロが空展開されるため、
