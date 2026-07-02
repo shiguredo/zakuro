@@ -115,6 +115,10 @@ zakuro の公開 API や ABI には影響しない。
 
 ## 解決方法
 
+2026-07-02 追記: sora-cpp-sdk 2026.2.0-canary.19 がリリースされ、
+PR #341 の修正を含む。
+zakuro は canary.18 から canary.19 にアップデートすることで対応完了する。
+
 2026-07-01 追記: 本対応は zakuro の buildbase.py ではなく
 sora-cpp-sdk の buildbase.py で行うこととし、
 zakuro 側のパッチ追加は revert した。
