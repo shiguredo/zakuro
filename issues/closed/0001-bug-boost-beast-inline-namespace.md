@@ -2,7 +2,7 @@
 
 - Priority: High
 - Created: 2026-06-29
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-07-03
 - Model: deepseek-v4-flash
 - Branch: feature/fix-boost-beast-inline-namespace
 - Polished: 2026-06-29
@@ -114,6 +114,9 @@ grep -c "BOOST_ASIO_INLINE_NAMESPACE_BEGIN" \
 zakuro の公開 API や ABI には影響しない。
 
 ## 解決方法
+
+2026-07-03 追記: zakuro 2026.1.0-canary.8 としてリリース済み。
+sora-cpp-sdk 2026.2.0-canary.19 へのアップデート (PR #91) を含む。
 
 2026-07-02 追記: sora-cpp-sdk 2026.2.0-canary.19 がリリースされ、
 PR #341 の修正を含む。
