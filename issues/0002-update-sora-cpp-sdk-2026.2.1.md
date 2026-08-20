@@ -1,7 +1,7 @@
 # Sora C++ SDK を 2026.2.1 に上げる
 
 - Created: 2026-08-20
-- Completed:
+- Completed: {YYYY-MM-DD}
 - Branch: feature/update-sora-cpp-sdk-2026.2.1
 - Polished:
 
@@ -45,7 +45,7 @@ zakuro が利用する Sora C++ SDK を `2026.2.0-canary.19` から正式リリ�
   - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
   - CMAKE_VERSION を `4.4.2` に上げる
   - BOOST_VERSION を `1.92.0` に上げる
-  - @<GitHub ユーザー名>
+  - <GitHub ユーザー名>
 ```
 
 `@<GitHub ユーザー名>` は対応者名に置き換えること。対応者名が確定するまで `CHANGES.md` の追記コミットは行わないこと。
