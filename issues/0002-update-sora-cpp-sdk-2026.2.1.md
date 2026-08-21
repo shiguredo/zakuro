@@ -3,19 +3,19 @@
 - Created: 2026-08-20
 - Completed: {YYYY-MM-DD}
 - Branch: feature/update-sora-cpp-sdk-2026.2.1
-- Polished:
+- Polished: 2026-08-21
 
 ## 目的
 
 zakuro が利用する Sora C++ SDK を `2026.2.0-canary.19` から正式リリースの `2026.2.1` に更新する。
 
-`2026.2.1` は `2026.2.0` のホットフィックスリリースであり、DataChannel シグナリング利用時の切断で解放済みの WebSocket に対して `Cancel()` を呼び SIGSEGV でクラッシュする問題を修正している。zakuro は `sora::SoraSignaling` を利用するため、この修正の恩恵を受ける。
+`2026.2.1` は `2026.2.0` のホットフィックスリリースであり、DataChannel シグナリング利用時の切断で解放済みの WebSocket に対して `Cancel()` を呼び SIGSEGV でクラッシュする問題を修正している。zakuro は `sora::SoraSignaling` を利用しており、`--sora-data-channel-signaling` 指定時は DataChannel シグナリングの切断経路を通るため、この修正の対象となる。
 
 あわせて `2026.2.0` で導入された以下の変更も取り込まれる。
 
-- libwebrtc を `m150.7871.3.1` に更新する
-- Boost を `1.92.0` に更新する
-- CMAKE を `4.4.2` に更新する
+- `WEBRTC_BUILD_VERSION` (libwebrtc) を `m150.7871.3.1` に更新する
+- `BOOST_VERSION` (Boost) を `1.92.0` に更新する
+- `CMAKE_VERSION` (CMAKE) を `4.4.2` に更新する
 
 ## 現状
 
@@ -25,7 +25,7 @@ zakuro が利用する Sora C++ SDK を `2026.2.0-canary.19` から正式リリ�
 
 ## 設計方針
 
-`DEPS` を sora-cpp-sdk 2026.2.1 の `DEPS` に合わせて更新する。
+SDK 関連の依存バージョンを sora-cpp-sdk 2026.2.1 の `DEPS` に合わせて、以下の 4 項目を更新する。`CLI11_VERSION` / `BLEND2D_VERSION` / `OPENH264_VERSION` は zakuro 固有の依存のため変更しない。
 
 - `SORA_CPP_SDK_VERSION` を `2026.2.1` に変更する
 - `WEBRTC_BUILD_VERSION` を `m150.7871.3.1` に変更する
@@ -33,6 +33,8 @@ zakuro が利用する Sora C++ SDK を `2026.2.0-canary.19` から正式リリ�
 - `CMAKE_VERSION` を `4.4.2` に変更する
 
 `BOOST_VERSION` は buildbase.py の `install_boost` が sora-cpp-sdk のリリース資産名 (`boost-{BOOST_VERSION}_sora-cpp-sdk-{SORA_CPP_SDK_VERSION}_{platform}`) からダウンロード URL を組み立てるため、SDK がバンドルする Boost のバージョン (`1.92.0`) と必ず一致させる必要がある。
+
+`WEBRTC_BUILD_VERSION` は zakuro のコードが libwebrtc のヘッダとライブラリへ直接リンクするため、SDK がビルドされた libwebrtc と ABI を合わせる必要があり、SDK の `DEPS` の値 (`m150.7871.3.1`) と一致させる。
 
 `include/sora` 配下の公開ヘッダ差分は `dyn.h` / `renderer/base_renderer.h` / `ssl_verifier.h` のみで、zakuro はこれらを直接利用していない。zakuro が利用する `SoraSignalingConfig` / `SoraClientContext` / `VideoCodecImplementation` のヘッダは変更されていないため、ソースコードの修正は想定しない。ただしビルドと動作で必ず検証すること。
 
@@ -45,21 +47,21 @@ zakuro が利用する Sora C++ SDK を `2026.2.0-canary.19` から正式リリ�
   - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
   - CMAKE_VERSION を `4.4.2` に上げる
   - BOOST_VERSION を `1.92.0` に上げる
-  - <GitHub ユーザー名>
+  - `@<GitHub ユーザー名>`
 ```
 
-`@<GitHub ユーザー名>` は対応者名に置き換えること。対応者名が確定するまで `CHANGES.md` の追記コミットは行わないこと。
+`@<GitHub ユーザー名>` は対応者の GitHub ユーザー名に置き換えること。
 
 ### 影響を受ける SDK の変更
 
 `2026.2.0` で導入された変更のうち、zakuro に影響しうるもの。
 
 - TLS 検証の信頼ストアが OS のシステム CA に切り替わる
-  - zakuro は `SoraSignalingConfig::ca_cert` を指定していないため、接続先はシステム CA に信頼される証明書を使う必要がある
-- NVIDIA Pascal 世代以前 (sm_75 未満) の GPU サポートが廃止される
+  - zakuro は `SoraSignalingConfig::ca_cert` を指定する手段を持たないため、接続先はシステム CA に信頼される証明書を使う必要がある。独自 CA を使う Sora サーバーへは、TLS 検証を無効化する `--insecure` 以外で接続できない
+- NVIDIA Pascal 世代以前 (sm_50 〜 sm_70) の GPU サポートが廃止される
   - 該当 GPU では NVIDIA ハードウェアエンコーダー / デコーダーが利用できなくなる
 - `SoraClientContext` の ABI が変更される (`ConnectionContext::MediaEngineReference` の保持)
-  - プリビルド SDK をヘッダごと再ビルドするため、zakuro 側の対応は不要
+  - この変更は 2026.2.0-canary 系の途中で導入済みであり、zakuro が現に利用する `2026.2.0-canary.19` に既に含まれる。プリビルド SDK は同一タグのヘッダとバイナリがリリース資産として提供されるため、zakuro 側の対応は不要
 
 ## 完了条件
 
@@ -69,7 +71,7 @@ zakuro が利用する Sora C++ SDK を `2026.2.0-canary.19` から正式リリ�
 - `ubuntu-22.04_x86_64`
 - `ubuntu-24.04_x86_64`
 
-また、`test/test_zakuro.py` の `test_version` が `DEPS` 更新後の値 (`sora_cpp_sdk` / `libwebrtc` / `boost`) で通ること。Sora への接続と、WebSocket および DataChannel シグナリングでの切断がクラッシュせず正常に動作すること (2026.2.1 の修正の検証)。
+また、`test/test_zakuro.py` の `test_version` が `DEPS` 更新後の値 (`sora_cpp_sdk` / `libwebrtc` / `boost`) で通ること。Sora への接続と、WebSocket および DataChannel シグナリング (`--sora-data-channel-signaling`) での切断がクラッシュせず正常に動作すること (2026.2.1 の修正の検証)。
 
 ## 解決方法
 
