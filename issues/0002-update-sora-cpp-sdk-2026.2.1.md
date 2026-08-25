@@ -3,7 +3,7 @@
 - Created: 2026-08-20
 - Completed: {YYYY-MM-DD}
 - Branch: feature/update-sora-cpp-sdk-2026.2.1
-- Polished: 2026-08-21
+- Polished: 2026-08-26
 
 ## 目的
 
@@ -47,7 +47,7 @@ SDK 関連の依存バージョンを sora-cpp-sdk 2026.2.1 の `DEPS` に合わ
   - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
   - CMAKE_VERSION を `4.4.2` に上げる
   - BOOST_VERSION を `1.92.0` に上げる
-  - `@<GitHub ユーザー名>`
+  - @<GitHub ユーザー名>
 ```
 
 `@<GitHub ユーザー名>` は対応者の GitHub ユーザー名に置き換えること。
@@ -72,6 +72,27 @@ SDK 関連の依存バージョンを sora-cpp-sdk 2026.2.1 の `DEPS` に合わ
 - `ubuntu-24.04_x86_64`
 
 また、`test/test_zakuro.py` の `test_version` が `DEPS` 更新後の値 (`sora_cpp_sdk` / `libwebrtc` / `boost`) で通ること。Sora への接続と、WebSocket および DataChannel シグナリング (`--sora-data-channel-signaling`) での切断がクラッシュせず正常に動作すること (2026.2.1 の修正の検証)。
+
+### 検証の内訳
+
+`.github/workflows/build.yml` の CI はビルド (`python3 run.py build <target> --package`) のみで、pytest は実行しない。したがって以下の手動検証は CI 完了だけでは担保されず、実 Sora サーバーに接続して実施する。
+
+前提:
+
+- 実 Sora が必須。`test/.env.template` を参考に `TEST_SIGNALING_URLS` / `TEST_CHANNEL_ID_PREFIX` / `TEST_SECRET_KEY` を設定する
+- `test_version` の実行: `cd test && uv run pytest test_zakuro.py -k test_version`
+
+手動検証のバリエーション:
+
+| 観点 | 値 | 対象 |
+|---|---|---|
+| シグナリング | WebSocket (既定) | 接続・切断が正常に動作する |
+| シグナリング | DataChannel (`--sora-data-channel-signaling`) | 接続・切断がクラッシュしない (2026.2.1 の修正検証) |
+| role | sendrecv / sendonly / recvonly | 全シグナリング種別で正常に動作する |
+| vcs | 1 / 2 / 3 | 複数クライアントでの切断の多重度を検証する |
+| 切断経路 | `--duration` 指定での `Disconnect()` | 修正対象の切断パスを実際に踏む |
+
+特に DataChannel シグナリング × `--duration` 指定での切断は、2026.2.1 が修正した「解放済み WebSocket への `Cancel()` による SIGSEGV」が発生する経路そのものなので、vcs=2 以上でもクラッシュしないことを必ず確認する。
 
 ## 解決方法
 
