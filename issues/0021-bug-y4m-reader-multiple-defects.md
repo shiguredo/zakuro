@@ -3,7 +3,7 @@
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-y4m-reader-multiple-defects
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-08
 
 ## 目的
 
