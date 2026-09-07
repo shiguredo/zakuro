@@ -7,11 +7,11 @@
 
 ## 目的
 
-`Y4MReader` に以下 3 種の欠陥がある。いずれも稀ながら実運用で踏みうるので、まとめて修正する。
+Y4M 経路 (`Y4MReader` の 2 件と `FakeVideoCapturer` の 1 件) に以下 3 種の欠陥がある。いずれも稀ながら実運用で踏みうるので、まとめて修正する。
 
 - ファイルオープン後に file_size 取得失敗すると FILE* がリークする
 - Y4M ヘッダの `F` フィールド分母が 0 のとき除算エラーになる
-- `GetFrame` が Y+U+V を一括で `MutableDataY()` に書き込んでおり、`I420Buffer` の内部レイアウトに関する暗黙前提が壊れると U/V プレーンが壊れる
+- Y4M フレームを `GetFrame` の書き込み先として渡した `MutableDataY()` に一括で書き込んでおり、`I420Buffer` の内部レイアウトに関する暗黙前提が壊れると U/V プレーンが壊れる
 
 ## 現状
 
@@ -33,8 +33,10 @@
 `y4m_reader_.GetFrame(now, y4m_buffer_->MutableDataY(), &updated);` として
 `GetSize() = width*height + (width+1)/2 * (height+1)/2 * 2` バイトを `MutableDataY()` に一括で書き込んでいる。
 
-`webrtc::I420Buffer` は内部でプレーンごとに stride を持っており、`Y` の後 `width*height` の位置に必ずしも `U` プレーンの先頭が来る保証はない (16 バイト境界でパディングされる実装がある)。
-現状の一括書き込みは、`I420Buffer` の実装が「Y/U/V 連続・stride==width」であることに依存している。
+`webrtc::I420Buffer` は内部でプレーンごとに stride を持っており、`I420Buffer::Create(width, height)` が返す
+`stride_y` / `stride_u` / `stride_v` の値は API 上の保証が無い。現状の libwebrtc (`m150.7871.3.0`) では
+`stride_y == width`、`stride_u == stride_v == (width+1)/2` となり、実データが Y → U → V と連続配置される。
+現状の一括書き込みは、この libwebrtc の実装詳細 (Y/U/V 連続・stride==width) に依存している。
 
 ## 設計方針
 
@@ -49,16 +51,22 @@
 
 ### I420Buffer stride 前提
 
-以下いずれかで対処する。
+Y4M フレームは Y プレーン (width*height) → U プレーン → V プレーン (各 (width+1)/2 * (height+1)/2) の順に
+連続格納されるため、読み出し側 (`Y4MReader`) は一括読み出しのままとする。stride 前提の解消は
+書き込み先である `FakeVideoCapturer` 側で行う。
 
-- プレーンごとに `MutableDataY()` / `MutableDataU()` / `MutableDataV()` を取得し、行単位で `stride` を考慮して `memcpy` する
-- Y4M の読み込み専用に width と等しい stride を確定させた `I420Buffer` の subclass を用意する
+1. `GetFrame` の書き込み先を `GetSize()` バイトの一時バッファ (`std::vector<uint8_t>`) に変更する
+2. 一時バッファから `y4m_buffer_` の `MutableDataY()` / `MutableDataU()` / `MutableDataV()` へ行単位でコピーする
+   - コピー元の行幅: Y プレーンは `width`、U / V プレーンは `(width+1)/2`
+   - コピー先のオフセット: 各プレーンの `StrideY()` / `StrideU()` / `StrideV()` を使う
 
-libwebrtc の `I420Buffer::Create` は現状 `stride == width` を返す実装が多いが、これは仕様保証ではないので
-明示的に stride を扱う実装に修正する。
+libwebrtc の `I420Buffer::Create` が返す stride と Y/U/V の配置は API 上の保証が無いため、プレーンごとに stride を
+扱う実装に修正する。`webrtc::I420Buffer` をサブクラス化して stride を固定する案は、`I420Buffer` の stride が
+コンストラクタの引数と private メンバで決まり 2 引数 `Create` と同じ経路しかないため、現在と同じ暗黙前提を
+構造的に解消できず、採用しない。
 
 ## 完了条件
 
 - `Open` で `file_size` 取得失敗時に FILE* がリークしないこと (Valgrind で確認)
 - `fps_den_ == 0` の Y4M を渡した際に除算エラーではなくエラー返却で終わること
-- `I420Buffer` の内部 stride が変わっても Y4M 経路の映像が正しく生成されること
+- Y4M フレームが `y4m_buffer_` のプレーン別 stride (`StrideY()` / `StrideU()` / `StrideV()`) を考慮した行単位コピーで書き込まれており、`I420Buffer` への `GetSize()` 一括書き込みと stride == width 前提がコードに残っていないこと
