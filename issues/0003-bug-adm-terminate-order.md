@@ -3,7 +3,7 @@
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-adm-terminate-order
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-07
 - Milestone: 2026.1.0
 
 ## 目的
@@ -44,6 +44,7 @@
 
 - `Terminate()` の中で `StopAudioThread()` が `device_buffer_.reset()` より先に呼ばれていること
 - macOS arm64 / Ubuntu 22.04 / Ubuntu 24.04 で `--vcs 2 --duration 5 --repeat-interval 1` を数分間走らせ、
-  終了時にセグフォが発生しないこと
+  終了時にセグフォが発生しないこと（`--repeat-interval 1` のためプロセスは自然終了しないので、
+  SIGINT / SIGTERM で終了させる）
 - 可能であれば ThreadSanitizer / AddressSanitizer 有効ビルドで、
   `webrtc::AudioDeviceBuffer` へのアクセスが race や UAF として検知されないこと
