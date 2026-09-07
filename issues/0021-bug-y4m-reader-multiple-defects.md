@@ -59,11 +59,14 @@ Y4M フレームは Y プレーン (width*height) → U プレーン → V プ�
 2. 一時バッファから `y4m_buffer_` の `MutableDataY()` / `MutableDataU()` / `MutableDataV()` へ行単位でコピーする
    - コピー元の行幅: Y プレーンは `width`、U / V プレーンは `(width+1)/2`
    - コピー先のオフセット: 各プレーンの `StrideY()` / `StrideU()` / `StrideV()` を使う
+   - `GetFrame` は同一フレームの再要求で `*updated = false` を返し、その場合一時バッファへ書き込まないため、
+     コピーは `updated == true` のときのみ行う
 
 libwebrtc の `I420Buffer::Create` が返す stride と Y/U/V の配置は API 上の保証が無いため、プレーンごとに stride を
-扱う実装に修正する。`webrtc::I420Buffer` をサブクラス化して stride を固定する案は、`I420Buffer` の stride が
-コンストラクタの引数と private メンバで決まり 2 引数 `Create` と同じ経路しかないため、現在と同じ暗黙前提を
-構造的に解消できず、採用しない。
+扱う実装に修正する。`webrtc::I420Buffer` には stride を指定する 5 引数版 `Create` と protected の 5 引数コンストラクタが
+あり、`stride_y == width` に固定すること自体は可能だが、`DataU()` / `DataV()` が `DataY()` の直後に連続配置される
+ことは API 上保証されておらず、現行 libwebrtc の単一アロケーションとオフセット計算 (`DataU() = data_ + stride_y_ * height_`
+など) への依存が残る。そのため一括書き込みの暗黙前提は構造的には解消されず、採用しない。
 
 ## 完了条件
 
