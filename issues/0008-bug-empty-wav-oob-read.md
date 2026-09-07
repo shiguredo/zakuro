@@ -3,7 +3,7 @@
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-empty-wav-oob-read
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-07
 - Milestone: 2026.1.0
 
 ## 目的
@@ -26,17 +26,26 @@
 
 ## 設計方針
 
-以下のいずれか（推奨は両方）で対処する。
+以下の 2 つを実施する。片方だけでは完了条件を満たせない。
 
-- `WavReader::Load` の末尾で `if (data.empty()) return <負のエラーコード>;` を返す。
-  空 data チャンクの WAV は入力として不正なので、エラーで弾く
-- `ZakuroAudioDeviceModule::StartAudioThread` の Safari / FakeAudio 分岐で
-  `if (fake_audio_->data.empty()) { /* 無音を送る、または break */ }` のガードを追加
+1. `WavReader::Load` が data チャンクを読み込んだ直後に `if (data.empty()) return -11;` を返す。
+   空 data チャンクの WAV は入力として不正なので、エラーで弾く。
+   `-11` は既存のエラーコード (`-1`, `-4` 〜 `-10`, `1`) と衝突しない新規コードとする。
+2. `ZakuroAudioDeviceModule::StartAudioThread` の Safari / FakeAudio 分岐で、
+   空 data を検出したら 0 (無音) を送るガードを追加する。
+   10 ミリ秒分の無音バッファを生成し、通常どおり `SetRecordedBuffer` / `DeliverRecordedData` で送出する。
+   録音デバイスとして無音を送出し続ける方が、受信側に音声の欠落を作らないため。
 
-前者だけでも本 issue の UB は防げるが、後者を defense-in-depth として入れておくと将来の変更にも強くなる。
+対処 1 だけでも本 issue の UB は防げるが、対処 2 は将来の変更に対する defense-in-depth であり、
+空 data の `FakeAudioData` を直接構築するコード経路 (テスト等) があってもクラッシュしないことを保証する。
+
+なお、対処 2 の検証は `--fake-audio-capture` 経由では行えない。対処 1 により空 data チャンクの WAV は
+`WavReader::Load` で拒否されるため、空 data の `FakeAudioData` を直接構築して
+`ZakuroAudioDeviceModule` に渡すテストが必要になる (C++ 単体テスト基盤は issue 0043 で整備予定)。
 
 ## 完了条件
 
 - `WavReader::Load` が空 data チャンクの WAV を成功として受理しないこと（単体テストで検証可能）
-- 空 data の `FakeAudioData` を `ZakuroAudioDeviceModule` に流し込んでも OOB 読み出しが発生しないこと
-- AddressSanitizer 有効ビルドで空 WAV を `--fake-audio-capture` 指定して数秒動かし、OOB read が検知されないこと
+- 空 data の `FakeAudioData` を `ZakuroAudioDeviceModule` に流し込んでも OOB 読み出しが発生せず、無音が送出されること
+- AddressSanitizer 有効ビルドで空 data チャンクの WAV を `--fake-audio-capture` に指定して起動し、
+  `WavReader::Load` のエラーログが出力されてオーディオスレッドが開始されず、OOB read が検知されないこと
