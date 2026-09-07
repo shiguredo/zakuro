@@ -3,14 +3,14 @@
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-http-server-stop-and-error-paths
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-07
 
 ## 目的
 
 `HttpServer` に以下 3 種の問題があり、正式リリースまでに解消する。
 
 - `Stop` が非スレッドセーフで `thread_->join()` を二重に呼ぶ可能性がある
-- `Start` が bind 成否を呼び出し元に返さず、失敗しても「HTTP サーバー起動」と嘘のログが出て気付けない
+- `Start` が bind / resolve の失敗を呼び出し元に返さず、失敗しても「HTTP サーバー起動」と嘘のログが出て気付けない
 - `OnAccept` の永続エラー (fd 枯渇等) で `DoAccept()` を即再開して無限ループする
 
 ## 現状
@@ -22,13 +22,15 @@
 `running_` は atomic だが、複数スレッドから同時に呼ばれると `join` が二重呼び出しになる可能性がある。
 destructor から Stop が呼ばれる経路も含めて、単一呼び出しを保証する必要がある。
 
-### Start の bind 失敗を呼び出し元に返さない
+### Start の bind / resolve 失敗を呼び出し元に返さない
 
 `HttpServer::Start` は void 返り値で、`running_ = true; thread_.reset(new std::thread([this] { Run(); }));` するだけ。
 `OnResolve` の中で `acceptor(ioc_, endpoint)` が bind 失敗の例外を投げると、
 `Run()` の catch でログを出して ioc.run() から戻るのみ。
+同様に `OnResolve` の resolve エラーや結果空でもログを出して戻るだけで、
+スレッド起動後の失敗は `Start` の呼び出し元に伝わらない。
 `main.cpp` は `Start` の後 `RTC_LOG(LS_INFO) << "HTTP server started ...";` を出してそのまま次の処理に進み、
-ユーザは HTTP RPC を叩けない理由が分からない。
+ユーザーは HTTP RPC を叩けない理由が分からない。
 
 ### OnAccept の永続エラー無限ループ
 
@@ -44,18 +46,27 @@ CPU 100% のスピンループになる。
 `std::atomic<bool>` の `exchange` で「一度だけ Stop する」実装にする。
 `if (running_.exchange(false))` の分岐内でのみ ioc.stop / join / reset を実行する。
 
-### Start の bind 成否伝搬
+### Start の bind / resolve 成否伝搬
 
-`Start` を `bool` 返り値にする。または `std::promise<bool>` で `OnResolve` の完了 (bind 成功) を待ってから返す。
-`main.cpp` 側では失敗時に `RTC_LOG(LS_ERROR)` を出して `return 1;` する。
+`Start` を `bool` 返り値にする。既存の非同期構造 (`async_resolve` → `OnResolve`) を保ったまま、
+`std::promise<bool>` で `OnResolve` の完了 (accept 開始可否) を待ってから返す。
+promise は `OnResolve` の全終了経路 (bind 成功・resolve エラー・結果空・bind 例外は
+`OnResolve` 内で catch して設定) で必ず設定し、`Start` が永久ブロックしないようにする。
+
+`main.cpp` 側では false の場合に `RTC_LOG(LS_ERROR)` を出して `return 1;` する。
 
 ### OnAccept のバックオフ
 
-永続エラー時にバックオフを入れる (例: 1 秒後に再試行、あるいは失敗回数で判定してサーバー停止に切り替える)。
-`EMFILE` は fd 枯渇なので、根本原因は他所にあるが、少なくともスピンループは避ける。
+accept エラー時は即時に `DoAccept()` を呼び直さない。停止処理による
+`boost::asio::error::operation_aborted` は再試行せず、それ以外のエラーはタイマーで一定時間
+(例: 1 秒) 待ってから再試行する。
+
+`EMFILE` は fd 枯渇であり、接続の終了に伴い解消し得る一時的なエラーなので、
+バックオフで再試行し続ける方針とし、サーバー停止への切替は行わない。
+根本原因は他所にあるが、少なくともスピンループは避ける。
 
 ## 完了条件
 
 - `HttpServer::Stop` を複数スレッドから同時に呼んでも join が 1 度だけ実行されること
-- bind に失敗した場合、`main` は非ゼロ終了し明確なエラーメッセージを出すこと
-- `EMFILE` シミュレーションで CPU 100% のスピンループにならないこと
+- bind または resolve に失敗した場合、`main` は非ゼロ終了し明確なエラーメッセージを出すこと
+- `EMFILE` シミュレーション (fd を枯渇させて accept に失敗させる) で CPU 100% のスピンループにならないこと
