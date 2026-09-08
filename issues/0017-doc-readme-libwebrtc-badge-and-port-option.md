@@ -1,16 +1,21 @@
-# README のバッジ・ヘルプが実装と乖離している (libwebrtc / --port / 動作環境)
+# README のバッジ・ヘルプが実装と乖離している (libwebrtc / --port)
 
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-readme-libwebrtc-badge-and-port-option
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-08
 - Milestone: 2026.1.0
 
 ## 目的
 
 `README.md` の記述が develop の実装と複数箇所で乖離しており、
 利用者が正しくない情報を元にビルド・利用を試みる状況になっている。
-以下 3 点を最新の実装に合わせて修正する。
+以下 2 点を最新の実装に合わせて修正する。
+
+なお、README の動作環境 (macOS 15 arm64 / Ubuntu 22.04 x86_64 / Ubuntu 24.04 x86_64) は
+CI (`.github/workflows/build.yml`) のビルド対象と既に一致している。
+`CMakeLists.txt` に残る Ubuntu 20.04 x86_64 分岐は README ではなく `CMakeLists.txt` の
+修正になるため、issues/0046 で対応する。
 
 ## 現状
 
@@ -26,21 +31,24 @@
 `src/util.cpp` の `Util::ParseArgs` には `--port` の `add_option` は存在しない。
 実装から消えているのに README ヘルプにだけ残っている。
 
-### 動作環境と CMakeLists.txt の整合性欠落
-
-`README.md` の動作環境は `Ubuntu 22.04 x86_64` / `Ubuntu 24.04 x86_64` / `macOS 15 arm64`。
-一方 `CMakeLists.txt` の `ZAKURO_PLATFORM` 判定には `ubuntu-20.04_x86_64` 分岐が残っており、
-`CHANGES.md 2025.1.0` で「Ubuntu 20.04 のビルドを削除」と明記されているのに削除されていない。
-
 ## 設計方針
 
-- README バッジの libwebrtc バージョンを `m150.7871` (または `m150.7871.3`) に更新する
+- README バッジの libwebrtc バージョンを `m150.7871` に更新し、リンク先を
+  `branch-heads/7871` に変更する
+  - 既存バッジは DEPS の `WEBRTC_BUILD_VERSION` から `m<マイルストーン>.<branch-head>` を
+    抜き出した形式 (例: DEPS `m141.7390.2.0` に対して `m141.7390`)。DEPS は
+    `m150.7871.3.0` なので `m150.7871` になる
+  - パッチ部 (`3.0`) は含めない。issue 0002 で `m150.7871.3.1` への更新も予定されており、
+    マイルストーンと branch-head のみなら更新の影響を受けない
 - README ヘルプ抜粋から `--port` の 2 行を削除する
 - README 全体のヘルプ抜粋を、実装 (`src/util.cpp`) に合わせて再生成することが望ましい
-  (別 issue で `--http-host` / `--http-port` / `--ui` / `--ui-remote-url` 追加を扱う。本 issue は既存の乖離除去だけに絞る)
+  (再生成と `--http-host` / `--http-port` / `--ui` / `--ui-remote-url` の追加は issues/0018 で扱う。
+  本 issue は既存の乖離除去だけに絞る)
+  - issues/0018 と本 issue は README の同一のヘルプ抜粋ブロックを触るため、
+    issues/0018 が先に完了している場合は `--port` の 2 行が既に削除されていることがある
 
 ## 完了条件
 
-- `README.md` の libwebrtc バッジが DEPS の `WEBRTC_BUILD_VERSION` と一致していること
+- `README.md` の libwebrtc バッジが `m150.7871` かつリンク先が `branch-heads/7871` であること
+  (DEPS の `WEBRTC_BUILD_VERSION` (`m150.7871.3.0`) のマイルストーンと branch-head に一致)
 - `README.md` ヘルプ抜粋に `--port` オプションが記載されていないこと
-- 動作環境の記述と `CMakeLists.txt` の分岐の整合性が取れていること (別 issue の `feature/remove-ubuntu-2004-branch` と連動)
