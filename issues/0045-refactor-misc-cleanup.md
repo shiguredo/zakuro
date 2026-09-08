@@ -1,9 +1,9 @@
-# 小さな掃除まとめ (Xorshift ヘッダーガード名・iostream include・SendMessage スレッド・NOTICE)
+# 小さな掃除まとめ (Xorshift ヘッダーガード名・iostream include・SendMessage スレッド・ログ出力先オプション)
 
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/refactor-misc-cleanup
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-09
 
 ## 目的
 
@@ -29,11 +29,6 @@
 偶然安全に動くが、API から見て呼び出しスレッド制約が明示されていない。
 将来別スレッドから呼ばれると Sora SDK 側の `SoraSignaling::SendDataChannel` の内部状態にレースを起こす可能性がある。
 
-### NOTICE の OpenSSL 表記
-
-`src/http_proxy.cpp` は `<openssl/ssl.h>` を直接 include し `SSL_CTX_new` などを呼ぶが、
-`NOTICE` に OpenSSL / BoringSSL のライセンス表記が無い。webrtc の NOTICE がカバーしているか要確認。
-
 ### FileRotatingLogSink のパスハードコード
 
 `src/main.cpp` の `FileRotatingLogSink("./", "webrtc_logs", ...)` はカレントディレクトリ依存。
@@ -42,13 +37,19 @@ CI や systemd から起動すると想定外の場所にログが出る。書�
 
 ## 設計方針
 
-- Xorshift のガード名を `XORSHIFT_H_` に変更
-- game_key_core.h の実装を `.cpp` に切り出し、ヘッダーから iostream を外す
-- `VirtualClient::SendMessage` を `boost::asio::post(*config_.sora_config.io_context, [...] { ... })` でラップするか、少なくとも呼び出しスレッド制約をコメントで明示
-- `NOTICE` を確認し、必要なら OpenSSL / BoringSSL のライセンスを追記
-- `--log-dir` / `--log-prefix` CLI オプションを追加
+- Xorshift のガード名を `XORSHIFT_H_` に変更する
+- `src/game/game_key_core.cpp` を新規作成して実装を移し、`CMakeLists.txt` の `target_sources` に追加する。
+  ヘッダーから iostream を外す (`std::cerr` の出力は .cpp 側に残す)。
+  なお `src/game/game_key_core.h` は issues/0006 (keys_ の mutex 追加) も変更するため、実装時に 0006 の
+  反映状況を確認してから進める
+- `VirtualClient::SendMessage` を `boost::asio::post(*config_.sora_config.io_context, ...)` で ioc スレッドへ
+  委譲し、呼び出しスレッド制約を不要にする。post 先のラムダでは `signaling_` / `closing_` を再確認し、
+  `shared_from_this` (または `weak_from_this`) でオブジェクト寿命を保証すること
+  (raw `this` をキャプチャした post は issues/0024 が排除する失敗パターンと同じため禁止)
+- `--log-dir` / `--log-prefix` CLI オプションを追加する (デフォルトは現行と同じ `./` / `webrtc_logs`)。
+  ログシンクの生成・破棄は issues/0010 (RAII 化) も変更するため、実装時に 0010 の反映状況を確認してから進める
 
 ## 完了条件
 
-- 上記 5 点が全て対応済みになっていること
+- 上記 4 点が全て対応済みになっていること
 - ビルドとテストが通ること
