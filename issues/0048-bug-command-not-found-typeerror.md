@@ -3,7 +3,7 @@
 - Created: 2026-09-08
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-command-not-found-error
-- Polished: 2026-09-09
+- Polished: 2026-09-08
 
 ## 目的
 
