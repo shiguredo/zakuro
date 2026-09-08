@@ -3,7 +3,7 @@
 - Created: 2026-09-08
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-canary-rollback
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-08
 
 ## 目的
 
@@ -19,14 +19,20 @@
 
 ## 設計方針
 
-- `git tag` / `git push` の失敗時に、直前の `git commit` (canary が作成したコミット) を
-  `git reset --hard HEAD~1` で巻き戻す
-- 巻き戻し前に、対象コミットが canary のものであることを確認してから実行する
-  (canary 実行前の作業ツリーがクリーンであることを `git status --porcelain` で確認するなどの防御を入れる)
+- `write_version_file` による VERSION の書き換え前に、作業ツリーがクリーンであることを
+  `git status --porcelain` で確認し、クリーンでなければ何も変更せずエラーメッセージを出力して終了する
+- `git tag` / `git push` の失敗時は、HEAD のコミットが canary のものであること
+  (例: `git log -1 --format=%s` の結果が `[canary] Update VERSION` であること) を確認してから、
+  そのコミットがリモートに push されていない場合に限り `git reset --hard HEAD~1` で巻き戻す
+- ブランチ push 成功後にタグ push が失敗した場合は、コミットがリモートに反映済みのため
+  巻き戻さず、その旨をエラーメッセージに含めて終了する
+- 巻き戻す際に、この実行で作成したタグが残っていれば `git tag -d` で削除する
 - 失敗とロールバックの結果を明確なエラーメッセージで出力して終了する
 - `--dry-run` 時は実際の操作を行わない (既存の dry-run 出力を維持する)
 
 ## 完了条件
 
 - `git tag` が既存タグで失敗した場合に、VERSION 更新コミットが残らないこと
+- 巻き戻した場合に、この実行で作成したタグも残らないこと
+- 作業ツリーがクリーンでない場合に、何も変更せず終了すること
 - ロールバックを実行した際に、その旨が明確なエラーメッセージで出力されること
