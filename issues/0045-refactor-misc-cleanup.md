@@ -52,8 +52,12 @@ CI や systemd から起動すると想定外の場所にログが出る。書�
   なお `closing_` を中心とした状態管理は issues/0024 (状態機械化) でも変更されるため、
   実装時に issues/0024 の反映状況を確認してから進める
 - `--log-dir` / `--log-prefix` CLI オプションを追加する (デフォルトは現行と同じ `./` / `webrtc_logs`)。
+  CLI オプションの登録は `Util::ParseArgs` (src/util.cpp) の共通オプション (`--log-level` の並び) に追加し、
+  その値を `src/main.cpp` の `FileRotatingLogSink` の生成 (`log_sink` の初期化) に渡す。
   プロセス全体のオプションなので、`log-level` と同様に JSONC 設定ファイルのトップレベルキー
   (`log-dir` / `log-prefix`) でも指定可能にし、`src/main.cpp` の common_args 生成に追加する。
+  なお `Util::ParseArgs` の引数と CLI 定義は issues/0041 (引数の構造体化と CLI 定義のカテゴリ分離)
+  でも変更されるため、実装時に 0041 の反映状況を確認してから進める。
   ログシンクの生成・破棄は issues/0010 (RAII 化) と issues/0040 (`log_sink` 生成の make_unique 化)
   も変更するため、実装時に 0010 / 0040 の反映状況を確認してから進める
 
