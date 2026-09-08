@@ -1,9 +1,9 @@
-# README のヘルプ抜粋に develop で追加した HTTP / UI オプションを追記する
+# README のヘルプ抜粋に develop の HTTP / UI オプションを反映する
 
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-readme-help-http-ui-options
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-08
 - Milestone: 2026.1.0
 
 ## 目的
@@ -34,14 +34,18 @@
 ## 設計方針
 
 `README.md` のヘルプ抜粋を、実装 (`src/util.cpp`) の `add_option` / `add_flag` に基づいて再生成する。
-最も簡便なのは `zakuro --help` の実行結果をそのまま貼り付ける方式。
+方式は `zakuro --help` の実行結果をそのまま貼り付ける。
 `--http-host` / `--http-port` / `--ui` / `--ui-remote-url` を含む最新のヘルプに置き換える。
+再生成により、実装に存在しない `--port` の 2 行（issues/0017 で扱う）も自然に削除される。
 
-同時に「アプリ全体オプション」と「インスタンス毎のオプション」の境界がヘルプから読み取れるよう、
-コメント行を挿入することも検討する（実装 (`src/util.cpp`) にはコメントとして既に境界がある）。
+CLI11 のヘルプ出力にはコメント行を挿入できない。実装 (`src/util.cpp`) の
+「アプリケーション全体の共通オプション」と「インスタンス毎のオプション」の境界を示すコメント行を
+抜粋に挿入すると、完了条件の「`zakuro --help` の実際の出力と一致」を満たせなくなるため挿入しない。
 
 ## 完了条件
 
 - `README.md` のヘルプ抜粋に `--http-host` / `--http-port` / `--ui` / `--ui-remote-url` が記載されていること
 - `zakuro --help` の実際の出力と README の抜粋が一致していること
-- 動作環境変更や別の新オプション追加時にヘルプ抜粋を更新するフローがドキュメントに書かれていること
+- `README.md` の「ヘルプ」セクションに、抜粋が `zakuro --help` の出力を反映している旨と、
+  オプションの追加・変更・削除時には `zakuro --help` を再実行して抜粋を更新する旨の注記が書かれていること
+  （注記は抜粋ブロックの外に置き、抜粋自体はヘルプ出力と一致させる）
