@@ -3,13 +3,13 @@
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/refactor-run-py-subcommands
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-08
 
 ## 目的
 
-`run.py` にサブコマンドが `build` と `format` しかなく、`test` / `canary` などのプロジェクトオペレーションは
-別ルート (未整備 or `canary.py` 直接実行 or CI から) で叩く必要がある。
-`format.sh` と `run.py format` の 2 系統が並立しているのも冗長。整理する。
+`run.py` にサブコマンドが `build` と `format` しかなく、`test` / `canary` を `run.py` から起動できない。
+`test` は起動手段が無く、`canary` は `canary.py` を直接実行する必要がある。
+`format.sh` と `run.py format` の 2 系統が並立しているのも冗長。`run.py` にサブコマンドを集約して整理する。
 
 ## 現状
 
@@ -28,27 +28,19 @@
 `format.sh` (bash + clang-format) と `run.py format` (Python + clang-format) が同じ処理を 2 通り実装。
 差もある (format.sh は `.mm` を含むが `run.py` は `.h`/`.cpp` のみ)。二重管理で挙動が乖離するリスク。
 
-### canary.py のロールバック無し
-
-`canary.py` は `subprocess.run(..., check=True)` で git 操作を順次実行するが、
-途中失敗時のロールバックが無い。`git commit` 成功 → `git tag` 失敗 (既存タグ) で commit だけ残る。
-
-### buildbase.py cmd の nullable arg
-
-`buildbase.py::cmd` は `resolve=True` のデフォルトで `shutil.which(args[0])` の結果を先頭に置換。
-存在しないコマンドを指定すると `[None, ...]` になり `TypeError` (エラーメッセージが分かりにくい)。
-
 ## 設計方針
 
-- `run.py` に `test` サブコマンドを追加。`cd test && uv run pytest ...` 相当を呼び出す
-- `run.py` に `canary` サブコマンドを追加、または `canary.py` の使い方を README に明記
-- `canary.py` に git 操作のロールバック (`try/except` で `git reset --hard HEAD~1`) を追加
+- `run.py` に `test` サブコマンドを追加。`test/` で `uv run pytest` を実行する。
+  実行にはビルド済みバイナリが必要 (test/zakuro.py の `Zakuro` が `_build/` 配下の実行ファイルを参照)。
+  `sora_config` フィクスチャ依存テストは `TEST_SIGNALING_URLS` / `TEST_CHANNEL_ID_PREFIX` /
+  `TEST_SECRET_KEY` が未設定だと skip される
+- `run.py` に `canary` サブコマンドを追加。`canary.py` の `main` 相当の処理
+  (VERSION 更新・git タグ付け・push) を実行できるようにする
 - `format.sh` を廃止し `run.py format` に統一 (`.mm` 対応を移植)
-- `buildbase.py::cmd` の先頭に `if shutil.which(args[0]) is None: raise RuntimeError(f"command not found: {args[0]}")` を追加
 
 ## 完了条件
 
-- `python3 run.py test` で pytest が実行できること
-- `python3 run.py canary` またはドキュメントで canary リリース手順が明示されていること
+- `python3 run.py test` で `test/` の pytest が起動すること (Sora 接続に依存するテストは
+  `TEST_SIGNALING_URLS` 等の環境変数が未設定だと skip されること)
+- `python3 run.py canary` で canary リリース操作 (VERSION 更新・タグ付け・push) が実行できること
 - `format.sh` が削除され、`run.py format` に統一されていること
-- 存在しないコマンドを叩いたときに明確なエラーメッセージが出ること
