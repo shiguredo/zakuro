@@ -40,8 +40,9 @@ CI や systemd から起動すると想定外の場所にログが出る。書�
 - Xorshift のガード名を `XORSHIFT_H_` に変更する
 - `src/game/game_key_core.cpp` を新規作成して実装を移し、`CMakeLists.txt` の `target_sources` に追加する。
   ヘッダーから iostream を外す (`std::cerr` の出力は .cpp 側に残す)。
-  なお `src/game/game_key_core.h` は issues/0006 (keys_ の mutex 追加) も変更するため、実装時に 0006 の
-  反映状況を確認してから進める
+  なお `src/game/game_key_core.h` は issues/0006 (keys_ の mutex 追加) だけではなく issues/0039
+  (コメントアウトされた PopKey の削除) と issues/0040 (`th_` の make_unique 化) も変更するため、
+  実装時に 0006 / 0039 / 0040 の反映状況を確認してから進める
 - `VirtualClient::SendMessage` を `boost::asio::post(*config_.sora_config.io_context, ...)` で ioc スレッドへ
   委譲し、呼び出しスレッド制約を不要にする。`signaling_` / `closing_` の確認は呼び出し元スレッドでは
   行わず、post 先のラムダ内でのみ行う (呼び出し元スレッドで読むと ioc スレッド側の書き込みと
@@ -53,7 +54,8 @@ CI や systemd から起動すると想定外の場所にログが出る。書�
 - `--log-dir` / `--log-prefix` CLI オプションを追加する (デフォルトは現行と同じ `./` / `webrtc_logs`)。
   プロセス全体のオプションなので、`log-level` と同様に JSONC 設定ファイルのトップレベルキー
   (`log-dir` / `log-prefix`) でも指定可能にし、`src/main.cpp` の common_args 生成に追加する。
-  ログシンクの生成・破棄は issues/0010 (RAII 化) も変更するため、実装時に 0010 の反映状況を確認してから進める
+  ログシンクの生成・破棄は issues/0010 (RAII 化) と issues/0040 (`log_sink` 生成の make_unique 化)
+  も変更するため、実装時に 0010 / 0040 の反映状況を確認してから進める
 
 ## 完了条件
 
