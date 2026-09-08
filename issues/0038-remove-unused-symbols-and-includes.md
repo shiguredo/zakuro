@@ -3,7 +3,7 @@
 - Created: 2026-08-27
 - Completed: {YYYY-MM-DD}
 - Branch: feature/remove-unused-symbols-and-includes
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-08
 
 ## 目的
 
@@ -29,10 +29,10 @@
 ### 未使用 include
 
 - `src/zakuro.h`: `#include <boost/optional.hpp>` (使用箇所無し。std::optional に移行済み)
-- `src/zakuro.cpp` L29: `#include "zakuro.h"` は L1 と重複
+- `src/zakuro.cpp`: `#include "zakuro.h"` がファイル冒頭と、ローカル include の並び (`#include "wav_reader.h"` と `#include "zakuro_stats.h"` の間) の 2 箇所にあり重複
 - `src/virtual_client.cpp`: `#include <iostream>` は `std::cerr` / `std::cout` を使っていないので不要
-- `src/virtual_client.cpp`: builtin_audio_*_factory / webrtc_media_engine / audio_device / audio_device_factory / audio_processing の各 include は本 TU 内でシンボルを直接使っていない (Sora 側で使うので不要)
-- `src/nop_video_decoder.cpp`: VP8 / VP9 / AV1 エンコーダーヘッダーの include は不要 (`CreateH264Format` のため `h264.h` だけ必要)
+- `src/virtual_client.cpp`: builtin_audio_decoder_factory / builtin_audio_encoder_factory / builtin_video_decoder_factory / builtin_video_encoder_factory / webrtc_media_engine / audio_device / audio_device_factory / audio_processing の各 include は本 TU 内でシンボルを直接使っていない (Sora 側で使うので不要)
+- `src/nop_video_decoder.cpp`: `libaom_av1_encoder.h` と `vp8.h` のエンコーダーヘッダーは不要 (本 TU で使うコーデック関係ヘッダーは `CreateH264Format` のための `h264.h` と `SupportedVP9Codecs()` を宣言する `vp9.h` のみ)
 
 ## 設計方針
 
