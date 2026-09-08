@@ -43,10 +43,16 @@ CI や systemd から起動すると想定外の場所にログが出る。書�
   なお `src/game/game_key_core.h` は issues/0006 (keys_ の mutex 追加) も変更するため、実装時に 0006 の
   反映状況を確認してから進める
 - `VirtualClient::SendMessage` を `boost::asio::post(*config_.sora_config.io_context, ...)` で ioc スレッドへ
-  委譲し、呼び出しスレッド制約を不要にする。post 先のラムダでは `signaling_` / `closing_` を再確認し、
-  `shared_from_this` (または `weak_from_this`) でオブジェクト寿命を保証すること
-  (raw `this` をキャプチャした post は issues/0024 が排除する失敗パターンと同じため禁止)
+  委譲し、呼び出しスレッド制約を不要にする。`signaling_` / `closing_` の確認は呼び出し元スレッドでは
+  行わず、post 先のラムダ内でのみ行う (呼び出し元スレッドで読むと ioc スレッド側の書き込みと
+  レースになり「偶然安全」が解消されない)。ラムダ内で双方を再確認し、`shared_from_this`
+  (または `weak_from_this`) でオブジェクト寿命を保証すること
+  (raw `this` をキャプチャした post は issues/0024 が排除する失敗パターンと同じため禁止)。
+  なお `closing_` を中心とした状態管理は issues/0024 (状態機械化) でも変更されるため、
+  実装時に issues/0024 の反映状況を確認してから進める
 - `--log-dir` / `--log-prefix` CLI オプションを追加する (デフォルトは現行と同じ `./` / `webrtc_logs`)。
+  プロセス全体のオプションなので、`log-level` と同様に JSONC 設定ファイルのトップレベルキー
+  (`log-dir` / `log-prefix`) でも指定可能にし、`src/main.cpp` の common_args 生成に追加する。
   ログシンクの生成・破棄は issues/0010 (RAII 化) も変更するため、実装時に 0010 の反映状況を確認してから進める
 
 ## 完了条件
