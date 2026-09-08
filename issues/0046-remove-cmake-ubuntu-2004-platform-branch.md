@@ -3,7 +3,7 @@
 - Created: 2026-09-08
 - Completed: {YYYY-MM-DD}
 - Branch: feature/remove-ubuntu-2004-branch
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-08
 
 ## 目的
 
