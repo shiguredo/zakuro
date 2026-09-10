@@ -64,7 +64,3 @@ sora-demo の fake のように適当な音を出し続けられるようにし�
 現時点で実装予定が無い。加えて、キー操作と仮想クライアントの割り当て、
 クライアント数分の `GameAudio` の登録方法、既存のキー割り当てとの衝突回避、
 遅延フォーカス環境でのフォーカス取得問題の切り分けといった設計判断が必要なため pending とする。
-
-## 参照
-
-- GitHub: <https://github.com/shiguredo/sora-oss-private/issues/1019>
