@@ -12,7 +12,7 @@ Content Hint はトラックの内容 (映像なら動き / 詳細 / テキス�
 ヒントとして伝えるもので、劣化制御や音声処理をコンテンツに適した挙動へ切り替えるために使う。
 現状は映像の Content Hint を `--fixed-resolution` で `kText` に固定する手段しかない。
 
-momo と同じ引数を用意する (sora-oss-private#1023 / momo-private#234)。
+momo と同じ引数を用意する。
 `--fixed-resolution` を廃止する破壊的変更を含む。
 
 ## 現状
@@ -57,9 +57,3 @@ momo と同じ引数を追加する。
 ## 解決方法
 
 (実装時に記入)
-
-## 参照
-
-- GitHub: <https://github.com/shiguredo/sora-oss-private/issues/1023>
-- GitHub: <https://github.com/shiguredo/momo-private/issues/234>
-- GitHub: <https://github.com/shiguredo/sora-oss-private/issues/2343>
