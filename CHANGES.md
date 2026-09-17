@@ -47,6 +47,8 @@
 - [ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する
   - Notification の場合は 204 No Content を返す
   - @voluntas
+- [FIX] ZakuroAudioDeviceModule::Init の再入で device_buffer_ を差し替えて UAF する問題を修正する
+  - @Hexa
 
 ### misc
 

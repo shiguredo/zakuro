@@ -81,6 +81,12 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 
   // Main initialization and termination
   virtual int32_t Init() override {
+    // webrtc::AudioDeviceModuleImpl::Init と同様、多重呼び出しは no-op にする。
+    // 無条件に device_buffer_ を置き換えると、オーディオスレッド稼働中の再入で
+    // 旧バッファへの UAF と RegisterAudioCallback の消失が起きる。
+    if (initialized_) {
+      return 0;
+    }
     device_buffer_ = std::make_unique<webrtc::AudioDeviceBuffer>(env_);
     initialized_ = true;
     if (adm_) {
