@@ -1,7 +1,7 @@
 # ZakuroAudioDeviceModule::Init の再入で device_buffer_ が use-after-free になる
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-24
 - Branch: feature/fix-adm-init-reentry-uaf
 - Polished: 2026-09-07
 - Milestone: 2026.1.0
@@ -74,3 +74,22 @@ libwebrtc の `ConnectionContext::AddRefMediaEngine`（`MediaEngineReference`）
   issues/0003 の修正が反映されていることを前提とする）
 - 可能であれば AddressSanitizer / ThreadSanitizer 有効ビルドで、`webrtc::AudioDeviceBuffer`
   へのアクセスが race や UAF として検知されないこと
+
+## 解決方法
+
+`ZakuroAudioDeviceModule::Init` の先頭で `initialized_` が true なら 0 を返し、
+`device_buffer_` を作り直さない。`Terminate` が `initialized_` を false に戻すため、
+終了後の再初期化ではバッファを作り直せる。この修正は #92 で develop に入っている。
+
+検証は実行ファイル `zakuro_adm_test` で行う。テストフレームワークは未導入のため、
+`main` が合否を返す。フレームワーク導入後に置き換えてよい。
+
+- 録音中に 2 回目の `Init` を呼び、戻り値が 0 であり、`RegisterAudioCallback` で登録した
+  コールバックがその後も呼ばれる
+- `Create` から `Terminate` と破棄までを 1000 回繰り返してクラッシュしない
+
+macOS (macos_arm64) で `zakuro_adm_test` を実行し、上記を確認した。
+AddressSanitizer と ThreadSanitizer での確認は行っていない。
+
+ライフサイクルのループは `StopRecording` でオーディオスレッドを止めてから `Terminate` する。
+`Terminate` 内の解放順序は issues/0003 の対象であり、このテストでは確認しない。
