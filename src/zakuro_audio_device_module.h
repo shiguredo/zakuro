@@ -101,9 +101,12 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
     is_recording_ = false;
     microphone_initialized_ = false;
     recording_initialized_ = false;
-    device_buffer_.reset();
 
+    // オーディオスレッドが device_buffer_ を参照するため、
+    // スレッドを完全に停止してからバッファを破棄する。
+    // 順序を逆にすると join 完了前に nullptr dereference で SIGSEGV する。
     StopAudioThread();
+    device_buffer_.reset();
 
     if (adm_) {
       return adm_->Terminate();

@@ -1,7 +1,7 @@
 # ZakuroAudioDeviceModule::Terminate の解放順序でセグフォする
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-24
 - Branch: feature/fix-adm-terminate-order
 - Polished: 2026-09-07
 - Milestone: 2026.1.0
@@ -48,3 +48,13 @@
   SIGINT / SIGTERM で終了させる）
 - 可能であれば ThreadSanitizer / AddressSanitizer 有効ビルドで、
   `webrtc::AudioDeviceBuffer` へのアクセスが race や UAF として検知されないこと
+
+## 解決方法
+
+`ZakuroAudioDeviceModule::Terminate` で、`StopAudioThread()` を呼んでオーディオスレッドを
+`join` してから `device_buffer_.reset()` する。破棄を先に行うと、停止前のスレッドが
+破棄済みバッファを参照して SIGSEGV する。
+
+CI で作成したバイナリを macOS arm64、Ubuntu 22.04、Ubuntu 24.04 で何回か数分間起動し、
+Ctrl+C で停止してセグフォしないことを確認した。
+AddressSanitizer と ThreadSanitizer での確認は行っていない。
