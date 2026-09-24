@@ -183,3 +183,24 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
 
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
 endif()
+
+# ZakuroAudioDeviceModule の初期化再入とライフサイクルを検証する。
+enable_testing()
+add_executable(zakuro_adm_test
+  test/zakuro_audio_device_module_test.cpp
+  src/zakuro_audio_device_module.cpp
+)
+set_target_properties(zakuro_adm_test PROPERTIES CXX_STANDARD 20 C_STANDARD 20)
+target_include_directories(zakuro_adm_test PRIVATE src)
+target_link_libraries(zakuro_adm_test PRIVATE Sora::sora)
+target_compile_definitions(zakuro_adm_test
+  PRIVATE
+    OPENSSL_IS_BORINGSSL
+    BOOST_NO_CXX98_FUNCTION_BASE
+)
+if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
+  target_compile_options(zakuro_adm_test PRIVATE -fconstant-string-class=NSConstantString)
+  target_link_options(zakuro_adm_test PRIVATE -ObjC)
+  set_target_properties(zakuro_adm_test PROPERTIES CXX_VISIBILITY_PRESET hidden)
+endif()
+add_test(NAME zakuro_adm_test COMMAND zakuro_adm_test)
