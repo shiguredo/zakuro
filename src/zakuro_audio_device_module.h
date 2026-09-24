@@ -81,6 +81,13 @@ class ZakuroAudioDeviceModule : public webrtc::AudioDeviceModule {
 
   // Main initialization and termination
   virtual int32_t Init() override {
+    // 初期化済みなら何もしない。
+    // device_buffer_ を作り直すと、稼働中のオーディオスレッドが破棄済みバッファを参照する。
+    // RegisterAudioCallback で登録した callback も旧バッファ側に残ったまま失われる。
+    // Terminate が initialized_ を false に戻すので、終了後の再初期化では作り直せる。
+    if (initialized_) {
+      return 0;
+    }
     device_buffer_ = std::make_unique<webrtc::AudioDeviceBuffer>(env_);
     initialized_ = true;
     if (adm_) {
