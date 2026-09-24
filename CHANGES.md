@@ -54,6 +54,8 @@
 
 - [ADD] pytest を使った E2E テストを追加する
   - @voluntas
+- [ADD] ZakuroAudioDeviceModule の初期化再入を検証するテストを追加する
+  - @Hexa
 
 ## 2025.3.1
 
