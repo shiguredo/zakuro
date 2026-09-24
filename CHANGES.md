@@ -47,6 +47,8 @@
 - [ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する
   - Notification の場合は 204 No Content を返す
   - @voluntas
+- [FIX] ZakuroAudioDeviceModule::Init の再入で device_buffer_ を差し替えて UAF する問題を修正する
+  - @Hexa
 - [FIX] ZakuroAudioDeviceModule::Terminate でオーディオスレッド停止前に device_buffer_ を破棄してセグフォする問題を修正する
   - @Hexa
 
@@ -54,6 +56,8 @@
 
 - [ADD] pytest を使った E2E テストを追加する
   - @voluntas
+- [ADD] ZakuroAudioDeviceModule の初期化再入を検証するテストを追加する
+  - @Hexa
 
 ## 2025.3.1
 

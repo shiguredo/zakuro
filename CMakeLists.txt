@@ -183,3 +183,35 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
 
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
 endif()
+
+# ZakuroAudioDeviceModule の初期化再入とライフサイクルを検証する。
+# テストフレームワークは未導入のため、この実行ファイルの終了コードで合否を返す。
+enable_testing()
+add_executable(zakuro_adm_test
+  test/zakuro_audio_device_module_test.cpp
+  src/zakuro_audio_device_module.cpp
+)
+# 標準は zakuro 本体と揃える。Sora 経由のヘッダを本体と違う条件でコンパイルしない。
+set_target_properties(zakuro_adm_test PROPERTIES CXX_STANDARD 20 C_STANDARD 20)
+# ヘッダは src 直下にある。テストがリンクするのは ADM の実装だけ。
+target_include_directories(zakuro_adm_test PRIVATE src)
+# WebRTC と Boost は Sora::sora のインターフェース依存として付く。
+target_link_libraries(zakuro_adm_test PRIVATE Sora::sora)
+target_compile_definitions(zakuro_adm_test
+  PRIVATE
+    # libwebrtc のヘッダは OPENSSL_IS_BORINGSSL の有無で API が分かれる。
+    # 同梱されているのは BoringSSL なので定義する。
+    OPENSSL_IS_BORINGSSL
+    # Boost.ContainerHash が clang の libc++ で落ちるのを避ける。zakuro 本体と同じ。
+    BOOST_NO_CXX98_FUNCTION_BASE
+)
+if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
+  # libwebrtc の macOS ビルドに合わせる。zakuro 本体と同じ。
+  # NSConstantString は Objective-C 文字列のクラスを揃える。
+  # -ObjC は静的ライブラリ内の Objective-C クラスをリンクから落とさない。
+  # hidden visibility は libwebrtc のシンボル可視性に合わせる。
+  target_compile_options(zakuro_adm_test PRIVATE -fconstant-string-class=NSConstantString)
+  target_link_options(zakuro_adm_test PRIVATE -ObjC)
+  set_target_properties(zakuro_adm_test PROPERTIES CXX_VISIBILITY_PRESET hidden)
+endif()
+add_test(NAME zakuro_adm_test COMMAND zakuro_adm_test)
