@@ -3,18 +3,18 @@
 - Created: 2026-09-15
 - Completed: {YYYY-MM-DD}
 - Branch: feature/update-follow-worker-thread-removal
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-25
 
 ## 目的
 
-libwebrtc の issue 558821261「Deprecate and remove PeerConnectionFactoryDependencies::worker_thread」で worker thread が廃止される。CL 501620「Default worker thread to network thread」と CL 502480「Warn when a distinct worker thread is configured」はマージ済みで、削除系の CL 499302 / 501640 / 501720 / 502000 / 502500 / 502860 / 502940 / 502960 はレビュー中である。`PeerConnectionFactoryDependencies::worker_thread` と `PeerConnectionFactoryInterface::worker_thread()` は将来削除される。
+libwebrtc の issue 558821261「Deprecate and remove PeerConnectionFactoryDependencies::worker_thread」で worker thread が廃止される。CL 501620「Default worker thread to network thread」と CL 502480「Warn when a distinct worker thread is configured」に加えて、削除系の CL 499302 / 502580 / 502600 / 502860 / 502940 もマージ済みであり、残る削除系の CL (501640 / 501720 / 502000 / 502500 / 502960 / 503300 / 503320 / 505340) はレビュー中である。webrtc の main では `pc/peer_connection_factory_dependencies.h` と `PeerConnectionFactoryInterface::worker_thread()` が既に削除されており、worker thread が残っているのは各ブランチ (sora-cpp-sdk が使う m154 など) のみである。したがって最終的には sora-cpp-sdk 側が libwebrtc のブランチ更新に追随し、worker_thread を削除したリリースが来るのを待つことになる。
 
 対応は 2 段階に分ける。
 
 - 方針 1 (いますぐ実施): 専用の worker thread をやめて network thread を使う
 - 方針 2 (558821261 を実装した libwebrtc をマージした後に実施): worker_thread の利用箇所と API を全て無くす
 
-本リポジトリは worker thread を独自生成しておらず、sora-cpp-sdk の `SoraClientContext` が作った `PeerConnectionFactoryDependencies` を `configure_dependencies` コールバックで借りて `dependencies.worker_thread` を参照しているだけである。したがって方針 2 が該当する。方針 1 の時点では sora-cpp-sdk が `dependencies.worker_thread` に network thread を渡すため、本リポジトリは変更不要で、方針 2 まで遅延できる。
+本リポジトリは worker thread を独自生成しておらず、sora-cpp-sdk の `SoraClientContext` が作った `PeerConnectionFactoryDependencies` を `configure_dependencies` コールバックで借りて `dependencies.worker_thread` を参照しているだけである。したがって方針 2 が該当する。方針 1 は sora-cpp-sdk 2026.3.0-canary.7 (2026-09-17) で適用済みであり、`dependencies.worker_thread` に network thread が渡されるようになった。この時点では本リポジトリは変更不要で、worker_thread が削除された sora-cpp-sdk のリリースを待って方針 2 を実施すればよい。
 
 ## 現状
 
@@ -23,17 +23,18 @@ libwebrtc の issue 558821261「Deprecate and remove PeerConnectionFactoryDepend
 - `ZakuroAudioDeviceModule` 自身は worker thread に依存しない (`src/zakuro_audio_device_module.cpp`)。
 - 依存は `DEPS` の `SORA_CPP_SDK_VERSION=2026.2.0-canary.19` / `WEBRTC_BUILD_VERSION=m150.7871.3.0`。
 - 既存の open issue `issues/0026-refactor-adm-stop-thread-and-environment.md` は本文で `dependencies.worker_thread->BlockingCall` を前提として記述しているため、本 issue の対応時に 0026 の記述も実態に合わせて更新する必要がある。
+- `issues/0026` は worker_thread の削除を待たずに実施できる (未実施) ため、本 issue に着手する時点では 0026 の実装が反映済みである可能性が高い。本 issue の「現状」と「設計方針」は、0026 実施後の実コードを対象に再検証してから着手すること。
 
 ## 設計方針
 
 - 前提条件: sora-cpp-sdk の worker_thread 削除がリリースされ、`SORA_CPP_SDK_VERSION` を更新できる状態になっていること。現時点では存在しないため、本 issue には着手できない。
 - `dependencies.worker_thread` を `dependencies.network_thread` に置き換え、2 回の `BlockingCall` を 1 回にまとめる。
 - `DEPS` の `SORA_CPP_SDK_VERSION` を更新する。
-- `issues/0026-refactor-adm-stop-thread-and-environment.md` の記述を更新する。
+- `issues/0026-refactor-adm-stop-thread-and-environment.md` の `dependencies.worker_thread->BlockingCall` を前提とした記述を、`dependencies.network_thread` に置き換えた後に成立する内容へ更新する。
 
 ## 完了条件
 
-- `worker_thread` の参照が 0 件であること。
+- `src/` における `worker_thread` の参照が 0 件であること。
 - `--no-audio-device` / `--fake-audio-capture` / 自動生成音声で動作確認できていること。
 - `CHANGES.md` の `## develop` にエントリが追記されていること。
 
