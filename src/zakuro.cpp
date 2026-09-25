@@ -42,6 +42,7 @@ struct DataChannels {
     int interval = 500;
     int size_min = MESSAGE_SIZE_MIN;
     int size_max = MESSAGE_SIZE_MIN;
+    std::string data;  // カスタムデータ（空の場合は BinaryPool を使用）
   };
   std::vector<Channel> channels;
   std::vector<sora::SoraSignalingConfig::DataChannel> schannels;
@@ -153,6 +154,19 @@ static bool ParseDataChannels(boost::json::value data_channels,
 
     if (ch.size_min > ch.size_max) {
       ch.size_max = ch.size_min;
+    }
+
+    // data
+    {
+      auto it = obj.find("data");
+      if (it != obj.end()) {
+        ch.data = boost::json::serialize(it->value());
+        if (ch.data.size() > MESSAGE_SIZE_MAX) {
+          std::cerr << "data size exceeds MESSAGE_SIZE_MAX" << std::endl;
+          return false;
+        }
+        obj.erase(it);
+      }
     }
 
     // boost::optional<bool> ordered;
@@ -520,7 +534,11 @@ int Zakuro::Run() {
     for (const auto& ch : dcs.channels) {
       ScenarioData sd;
       sd.Sleep(ch.interval, ch.interval);
-      sd.SendDataChannelMessage(ch.label, ch.size_min, ch.size_max);
+      std::shared_ptr<std::string> data;
+      if (!ch.data.empty()) {
+        data = std::make_shared<std::string>(ch.data);
+      }
+      sd.SendDataChannelMessage(ch.label, ch.size_min, ch.size_max, data);
       dcs_data.push_back(std::make_tuple("scenario-dcs-" + ch.label, sd));
     }
 
