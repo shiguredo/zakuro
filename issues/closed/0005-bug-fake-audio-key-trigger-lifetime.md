@@ -1,7 +1,7 @@
 # FakeAudioKeyTrigger のスレッドが破棄済み io_context / ScenarioPlayer / VirtualClient を触る
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-25
 - Branch: feature/fix-fake-audio-key-trigger-lifetime
 - Polished: 2026-09-07
 - Milestone: 2026.1.0
@@ -53,3 +53,9 @@ join 待ちの間にスレッドが `vcs_.size()` へアクセスして破棄済
 - macOS / Linux で `--vcs 3 --duration 10 --repeat-interval 2` を長時間走らせ、
   終了時にキー入力を投げても UAF / セグフォが発生しないこと
 - 可能であれば ThreadSanitizer 有効ビルドで race が検知されないこと
+
+## 解決方法
+
+`Zakuro::Run` の内側ブロックで、 `ScenarioPlayer` の生成後に `std::unique_ptr<FakeAudioKeyTrigger> trigger` を宣言する。ブロック終了時は宣言と逆順で破棄されるため、 `trigger` のデストラクタがバックグラウンドスレッドを join してから `io_context` と `ScenarioPlayer` が破棄される。`vcs.clear()` はブロックの外にあるので、join の後に実行される。
+
+CI で作成したバイナリを macOS arm64 、 Ubuntu 22.04 、 Ubuntu 24.04 で、 `--vcs 3 --duration 10 --repeat-interval 2` により各 10 回起動し、起動から 10 数秒後に Ctrl+C のあと `s` を押して SIGSEGV しないことを確認した。ThreadSanitizer での確認は行っていない。
