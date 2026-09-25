@@ -604,7 +604,7 @@ int Zakuro::Run() {
 
     // ブロック終了時は、宣言と逆順で破棄される。
     // FakeAudioKeyTrigger をここに置くと、io_context と ScenarioPlayer より先にデストラクタが走る。
-    // デストラクタがバックグラウンドスレッドを join してから、それらと vcs を破棄する。
+    // デストラクタがバックグラウンドスレッドを join してから、それらを破棄する。
     // join 前に破棄すると、終了時のキー入力が破棄済みオブジェクトへ post する。
     std::unique_ptr<FakeAudioKeyTrigger> trigger;
     if (fake_audio_key_trigger) {
@@ -635,9 +635,13 @@ int Zakuro::Run() {
     for (auto& vc : vcs) {
       vc->Clear();
     }
-  }
 
-  vcs.clear();
+    // キースレッドは vcs を参照する。join してから要素を破棄する。
+    // VirtualClient::retry_timer_ は io_context に紐づく。
+    // io_context より後に破棄すると、破棄済み service のメンバ関数を呼ぶ。
+    trigger.reset();
+    vcs.clear();
+  }
 
   return 0;
 }

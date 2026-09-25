@@ -1,7 +1,7 @@
 # VirtualClient::retry_timer_ が io_context より長寿命で UB になる
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-25
 - Branch: feature/fix-retry-timer-outlives-io-context
 - Polished: 2026-09-07
 - Milestone: 2026.1.0
@@ -51,3 +51,11 @@ pending waits が残ったまま破棄した場合は scheduler の内部デー�
 - `VirtualClient` (と `retry_timer_`) が `io_context` より先に destruct され、service が生存しているうちに破棄されること
 - 通常のビルド (例: `python run.py build <target>`) が成功すること
 - サニタイザを有効にできる環境があれば、`boost::asio::steady_timer` に関する UB / UAF が検知されないこと
+
+## 解決方法
+
+`Zakuro::Run` で `ioc.run()` から戻ったあと、各 `VirtualClient::Clear()` で `retry_timer_` を止める。続けて `FakeAudioKeyTrigger` を `reset()` してキースレッドを join し、その後に `vcs.clear()` する。この `vcs.clear()` は内側ブロックの中なので、 `io_context` のデストラクタより前に `VirtualClient` が破棄される。
+
+キースレッドは `vcs` を参照する。join より前に要素を破棄すると、終了時のキー入力が破棄済みの `VirtualClient` を参照する。
+
+macOS arm64 で `zakuro` のビルドが成功することを確認した。サニタイザ付きビルドでの確認は行っていない。
