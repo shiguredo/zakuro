@@ -1,7 +1,7 @@
 # FileRotatingLogSink を RemoveLogToStream せずに破棄していて UAF する
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-25
 - Branch: feature/fix-file-rotating-log-sink-uaf
 - Polished: 2026-09-07
 - Milestone: 2026.1.0
@@ -56,3 +56,9 @@ libwebrtc はプログラム終了時にこの stream リストをクリーン�
 
 - `AddLogToStream` 後の全ての return パスで `RemoveLogToStream` が実行されること (RAII 化推奨)
 - Valgrind で zakuro を実行し、プロセス終了時に UAF が検知されないこと
+
+## 解決方法
+
+`main` に `InstalledFileLogSink` を追加する。コンストラクタは `Init()` に成功した非 null の `FileRotatingLogSink` を受け取り、`AddLogToStream` する。デストラクタは先に `RemoveLogToStream` を呼び、その後に `unique_ptr` がシンクを破棄する。`Init()` 失敗の return は、このオブジェクトを作る前なので登録しない。登録後の return は、オブジェクトの破棄で解除される。
+
+Ubuntu 24.04 の CI バイナリを Valgrind で 2 、 3 分起動して Ctrl+C したところ、`ERROR SUMMARY: 0 errors from 0 contexts` だった。Ubuntu 22.04 では `10 errors from 7 contexts` だったが、内訳は未初期化値の使用で、`Invalid read` と `Invalid write` はなかった。
