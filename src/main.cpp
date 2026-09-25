@@ -1,10 +1,12 @@
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <csignal>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 // Linux
@@ -27,6 +29,34 @@
 #include "zakuro_stats.h"
 
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
+
+namespace {
+
+// AddLogToStream で登録したシンクを、破棄する前に RemoveLogToStream する。
+// 解除せずに破棄すると、LogMessage の静的リストが破棄済みシンクを指したまま残る。
+// main の return 後に RTC_LOG が走ると、そのシンクへ書き込む。
+class InstalledFileLogSink {
+ public:
+  // sink は Init() に成功した非 null である前提。null は受け取らない。
+  explicit InstalledFileLogSink(
+      std::unique_ptr<webrtc::FileRotatingLogSink> sink)
+      : sink_(std::move(sink)) {
+    assert(sink_ != nullptr);
+    webrtc::LogMessage::AddLogToStream(sink_.get(), webrtc::LS_INFO);
+  }
+
+  ~InstalledFileLogSink() {
+    webrtc::LogMessage::RemoveLogToStream(sink_.get());
+  }
+
+  InstalledFileLogSink(const InstalledFileLogSink&) = delete;
+  InstalledFileLogSink& operator=(const InstalledFileLogSink&) = delete;
+
+ private:
+  std::unique_ptr<webrtc::FileRotatingLogSink> sink_;
+};
+
+}  // namespace
 
 // 雑なエスケープ処理
 // 文字列中に \ や " が含まれてたら全体をエスケープする
@@ -187,7 +217,8 @@ int main(int argc, char* argv[]) {
     log_sink.reset();
     return 1;
   }
-  webrtc::LogMessage::AddLogToStream(log_sink.get(), webrtc::LS_INFO);
+  // 以降の return では、デストラクタが RemoveLogToStream してからシンクを破棄する。
+  [[maybe_unused]] InstalledFileLogSink installed_log_sink(std::move(log_sink));
 
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();
