@@ -55,6 +55,8 @@
   - @Hexa
 - [FIX] VirtualClient の retry_timer_ が io_context より後に破棄されて未定義動作になる問題を修正する
   - @Hexa
+- [FIX] FileRotatingLogSink を RemoveLogToStream せずに破棄して終了時に use-after-free になる問題を修正する
+  - @Hexa
 
 ### misc
 
