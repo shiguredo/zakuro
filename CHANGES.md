@@ -53,6 +53,8 @@
   - @Hexa
 - [FIX] FakeAudioKeyTrigger が終了時に破棄済みの io_context へ post する問題を修正する
   - @Hexa
+- [FIX] VirtualClient の retry_timer_ が io_context より後に破棄されて未定義動作になる問題を修正する
+  - @Hexa
 
 ### misc
 
