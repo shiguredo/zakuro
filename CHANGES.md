@@ -51,6 +51,8 @@
   - @Hexa
 - [FIX] ZakuroAudioDeviceModule::Terminate でオーディオスレッド停止前に device_buffer_ を破棄してセグフォする問題を修正する
   - @Hexa
+- [FIX] FakeAudioKeyTrigger が終了時に破棄済みの io_context へ post する問題を修正する
+  - @Hexa
 
 ### misc
 

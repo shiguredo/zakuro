@@ -209,7 +209,6 @@ int Zakuro::Run() {
   std::unique_ptr<GameAudioManager> gam;
 
   bool fake_audio_key_trigger = config_.fake_audio_capture.empty();
-  std::unique_ptr<FakeAudioKeyTrigger> trigger;
   if (fake_audio_key_trigger) {
     gam.reset(new GameAudioManager());
   }
@@ -603,6 +602,11 @@ int Zakuro::Run() {
       scenario_player.Play(i, std::move(cdata), li);
     }
 
+    // ブロック終了時は、宣言と逆順で破棄される。
+    // FakeAudioKeyTrigger をここに置くと、io_context と ScenarioPlayer より先にデストラクタが走る。
+    // デストラクタがバックグラウンドスレッドを join してから、それらと vcs を破棄する。
+    // join 前に破棄すると、終了時のキー入力が破棄済みオブジェクトへ post する。
+    std::unique_ptr<FakeAudioKeyTrigger> trigger;
     if (fake_audio_key_trigger) {
       trigger.reset(new FakeAudioKeyTrigger(ioc, config_.key_core, gam.get(),
                                             &scenario_player, vcs));
