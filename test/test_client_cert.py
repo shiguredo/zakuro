@@ -13,10 +13,13 @@ from typing import Any
 
 import pytest
 
-from zakuro import Zakuro
+from zakuro import Zakuro, get_zakuro_executable_path
 
 # クライアント証明書の commonName と一致することを確認する
 CLIENT_CERT_COMMON_NAME = "zakuro-test-client"
+
+# クライアント証明書と秘密鍵を片方だけ指定した場合のエラーメッセージ
+PAIR_REQUIRED_MESSAGE = "--client-cert and --client-key must be specified together"
 
 
 @dataclass(frozen=True)
@@ -366,6 +369,86 @@ def test_client_cert_and_key_not_specified(
         assert "client_key is set" not in z.stderr_output
     finally:
         server.stop()
+
+
+@pytest.mark.parametrize(
+    "option_name",
+    ["client-cert", "client-key"],
+    ids=["client-cert", "client-key"],
+)
+def test_client_cert_or_key_without_pair(
+    option_name: str, mtls_certificates: MtlsCertificates, free_port: int
+) -> None:
+    """クライアント証明書と秘密鍵の片方だけを指定した場合はエラーになる
+
+    設定ファイル経由の指定でも検証されることを確認する。
+    """
+    # オプション名に応じて片方だけを指定する
+    client_cert: Path | None = None
+    client_key: Path | None = None
+    if option_name == "client-cert":
+        client_cert = mtls_certificates.client_cert
+    else:
+        client_key = mtls_certificates.client_key
+
+    with pytest.raises(RuntimeError) as excinfo:
+        with Zakuro(
+            instances=[
+                _build_local_instance(
+                    "wss://127.0.0.1:1/signaling",
+                    client_cert=client_cert,
+                    client_key=client_key,
+                )
+            ],
+            http_port=free_port,
+        ):
+            pass
+
+    # 設定ファイル経由の片方だけの指定でも非 0 で終了する
+    error_output = str(excinfo.value)
+    assert "exited unexpectedly with code 1" in error_output, (
+        f"終了コードが 1 ではない: {error_output!r}"
+    )
+    assert PAIR_REQUIRED_MESSAGE in error_output, (
+        f"ペア必須エラーが stderr に出ていない: {error_output!r}"
+    )
+
+
+@pytest.mark.parametrize(
+    "option_name",
+    ["client-cert", "client-key"],
+    ids=["client-cert", "client-key"],
+)
+def test_client_cert_or_key_without_pair_cli(
+    option_name: str, mtls_certificates: MtlsCertificates, free_port: int
+) -> None:
+    """コマンドラインで片方だけを指定した場合もエラーになる"""
+    # 必須オプションを揃えたうえで、片方の証明書オプションだけを追加する
+    args = [
+        get_zakuro_executable_path(),
+        "--sora-signaling-url",
+        "wss://127.0.0.1:1/signaling",
+        "--sora-channel-id",
+        "mtls-test",
+        "--sora-role",
+        "sendrecv",
+        "--http-port",
+        str(free_port),
+        "--no-video-device",
+        "--no-audio-device",
+    ]
+    if option_name == "client-cert":
+        args += ["--client-cert", str(mtls_certificates.client_cert)]
+    else:
+        args += ["--client-key", str(mtls_certificates.client_key)]
+
+    result = subprocess.run(args, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 1, (
+        f"終了コードが 1 ではない: {result.returncode}\nstderr: {result.stderr}"
+    )
+    assert PAIR_REQUIRED_MESSAGE in result.stderr, (
+        f"ペア必須エラーが stderr に出ていない: {result.stderr!r}"
+    )
 
 
 @pytest.mark.parametrize(

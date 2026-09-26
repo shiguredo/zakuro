@@ -1,4 +1,4 @@
-"""Zakuro プロセスを管理するためのクラス"""
+"""Zakuro プロセスを管理するためのモジュール"""
 
 import json
 import platform
@@ -54,6 +54,69 @@ class RpcClient:
         return self._call("GetVersion")
 
 
+def get_zakuro_executable_path() -> str:
+    """ビルド済みの zakuro 実行ファイルのパスを自動検出"""
+    project_root = Path(__file__).parent.parent
+    build_dir = project_root / "_build"
+
+    if not build_dir.exists():
+        raise RuntimeError(
+            f"Build directory {build_dir} does not exist. "
+            f"Please build with: python3 run.py build <target>"
+        )
+
+    available_targets = [
+        d.name
+        for d in build_dir.iterdir()
+        if d.is_dir() and (d / "release" / "zakuro" / "zakuro").exists()
+    ]
+
+    if not available_targets:
+        raise RuntimeError(
+            f"No built zakuro executables found in {build_dir}. "
+            f"Please build with: python3 run.py build <target>"
+        )
+
+    if len(available_targets) == 1:
+        target = available_targets[0]
+    else:
+        # 複数ビルドがある場合は、プラットフォームに応じて優先順位を決める
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+
+        if system == "darwin":
+            if machine == "arm64" or machine == "aarch64":
+                preferred = ["macos_arm64", "macos_x86_64"]
+            else:
+                preferred = ["macos_x86_64", "macos_arm64"]
+        elif system == "linux":
+            if machine == "aarch64":
+                preferred = ["ubuntu-24.04_arm64", "ubuntu-22.04_arm64"]
+            else:
+                preferred = ["ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
+        else:
+            preferred = []
+
+        target = None
+        for pref in preferred:
+            if pref in available_targets:
+                target = pref
+                break
+
+        if not target:
+            target = available_targets[0]
+
+    zakuro_path = project_root / "_build" / target / "release" / "zakuro" / "zakuro"
+
+    if not zakuro_path.exists():
+        raise RuntimeError(
+            f"zakuro executable not found at {zakuro_path}. "
+            f"Please build with: python3 run.py build {target}"
+        )
+
+    return str(zakuro_path)
+
+
 class Zakuro:
     """Zakuro プロセスを管理するクラス
 
@@ -90,7 +153,7 @@ class Zakuro:
         startup_timeout: int = 30,
     ) -> None:
         # 実行ファイルのパスを自動検出
-        self._executable_path = self._get_zakuro_executable_path()
+        self._executable_path = get_zakuro_executable_path()
         self._process: subprocess.Popen[Any] | None = None
 
         # stderr はテストから警告の有無を検証できるようにスレッドで読み続ける
@@ -124,68 +187,6 @@ class Zakuro:
         """zakuro の stderr 出力を取得"""
         with self._stderr_lock:
             return "".join(self._stderr_lines)
-
-    def _get_zakuro_executable_path(self) -> str:
-        """ビルド済みの zakuro 実行ファイルのパスを自動検出"""
-        project_root = Path(__file__).parent.parent
-        build_dir = project_root / "_build"
-
-        if not build_dir.exists():
-            raise RuntimeError(
-                f"Build directory {build_dir} does not exist. "
-                f"Please build with: python3 run.py build <target>"
-            )
-
-        available_targets = [
-            d.name
-            for d in build_dir.iterdir()
-            if d.is_dir() and (d / "release" / "zakuro" / "zakuro").exists()
-        ]
-
-        if not available_targets:
-            raise RuntimeError(
-                f"No built zakuro executables found in {build_dir}. "
-                f"Please build with: python3 run.py build <target>"
-            )
-
-        if len(available_targets) == 1:
-            target = available_targets[0]
-        else:
-            # 複数ビルドがある場合は、プラットフォームに応じて優先順位を決める
-            system = platform.system().lower()
-            machine = platform.machine().lower()
-
-            if system == "darwin":
-                if machine == "arm64" or machine == "aarch64":
-                    preferred = ["macos_arm64", "macos_x86_64"]
-                else:
-                    preferred = ["macos_x86_64", "macos_arm64"]
-            elif system == "linux":
-                if machine == "aarch64":
-                    preferred = ["ubuntu-24.04_arm64", "ubuntu-22.04_arm64"]
-                else:
-                    preferred = ["ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
-            else:
-                preferred = []
-
-            target = None
-            for pref in preferred:
-                if pref in available_targets:
-                    target = pref
-                    break
-
-            if not target:
-                target = available_targets[0]
-
-        zakuro_path = project_root / "_build" / target / "release" / "zakuro" / "zakuro"
-
-        if not zakuro_path.exists():
-            raise RuntimeError(
-                f"zakuro executable not found at {zakuro_path}. "
-                f"Please build with: python3 run.py build {target}"
-            )
-
-        return str(zakuro_path)
 
     def __enter__(self) -> Self:
         """コンテキストマネージャーの開始"""

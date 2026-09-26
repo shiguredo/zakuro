@@ -1,7 +1,7 @@
 # `--client-cert` と `--client-key` の片方だけを指定した場合はエラーにする
 
 - Created: 2026-09-26
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-26
 - Branch: feature/add-client-cert-key-pair-check
 - Polished: 2026-09-26
 
@@ -34,3 +34,13 @@
 - 設定ファイル経由のインスタンスでも同じ検証がかかること
 - `python run.py build macos_arm64` など対象プラットフォームのビルドが通ること
 - 追加した pytest のテストが pass すること
+
+## 解決方法
+
+`src/util.cpp` の `Util::ParseArgs` に、`client_cert` / `client_key` の一方のみが設定されている場合にエラーにする検証を追加した。既存の必須オプション検証と同じ位置・同じ形式 (`std::cerr` + `std::exit(1)`) で、`--client-cert and --client-key must be specified together` を出力する。設定ファイル経由のインスタンスも `Util::ParseInstanceToArgs` から `Util::ParseArgs` を通るため、同じ検証がかかる。
+
+- `test/test_client_cert.py` に、設定ファイル経由とコマンドライン経由で片方だけを指定した場合のテストを追加した (終了コード 1 とエラーメッセージを確認)
+- テストから CLI を直接起動できるように、`test/zakuro.py` の `Zakuro._get_zakuro_executable_path` をモジュール直下の `get_zakuro_executable_path` に移動した
+- `CHANGES.md` の `## develop` に `[ADD]` を追記した
+
+macOS arm64 で `python3 run.py build macos_arm64` が成功し、既存テストを含む pytest が pass することを確認した。
