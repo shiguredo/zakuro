@@ -1,7 +1,9 @@
 #include "util.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <regex>
+#include <sstream>
 #include <string>
 
 // CLI11
@@ -671,6 +673,22 @@ boost::json::value Util::LoadJsoncFile(const std::string& file_path) {
   }
 
   return result;
+}
+
+std::optional<std::string> Util::LoadFileContents(
+    const std::string& file_path) {
+  std::ifstream file(file_path, std::ios::binary);
+  if (!file.is_open()) {
+    return std::nullopt;
+  }
+
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  // 読み込み中のエラーを検出する
+  if (file.bad() || buffer.bad()) {
+    return std::nullopt;
+  }
+  return buffer.str();
 }
 
 std::string Util::GenerateRandomChars() {

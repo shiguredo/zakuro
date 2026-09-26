@@ -55,6 +55,9 @@
   - @Hexa
 - [FIX] VirtualClient の retry_timer_ が io_context より後に破棄されて未定義動作になる問題を修正する
   - @Hexa
+- [FIX] `--client-cert` / `--client-key` に指定した PEM ファイルを読み込んで Sora C++ SDK に渡すよう修正する
+  - Sora C++ SDK 2025.1.0 でクライアント証明書と秘密鍵の設定値がファイルパスから PEM の内容に変更されたため
+  - @voluntas
 
 ### misc
 
