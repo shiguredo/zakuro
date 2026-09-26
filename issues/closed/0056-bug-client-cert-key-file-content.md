@@ -1,7 +1,7 @@
 # `--client-cert` / `--client-key` を指定しても mTLS 接続できない
 
 - Created: 2026-09-25
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-26
 - Branch: feature/fix-client-cert-key-file-content
 - Polished: 2026-09-26
 
@@ -65,4 +65,17 @@ Sora C++ SDK の sumomo (`examples/sumomo/src/sumomo.cpp`) の読み込み方式
 
 ## 解決方法
 
-未着手
+`Zakuro::Run` で `config_.client_cert` / `client_key` のパスが空でない場合にファイルの内容を読み込み、`SoraSignalingConfig::client_cert` / `client_key` に設定するようにした。パスが空の場合は設定せず、`std::optional` が engaged にならないようにしている。
+
+- `src/util.h` / `src/util.cpp` に `Util::LoadFileContents` を追加した。`std::ifstream` でファイル全体を読み込み、開けない場合や読み込みに失敗した場合は `std::nullopt` を返す
+- `src/zakuro.cpp` の `Zakuro::Run` で PEM ファイルを読み込み、読み込み失敗・内容が空の場合は `std::cerr` にエラーを出力してそのインスタンスを `return 1` で終了する。例外は `std::thread` 上で `std::terminate` になるため投げない
+- `src/zakuro.h` の `ZakuroConfig::client_cert` / `client_key` が PEM ファイルのパスであることをコメントで明記した
+- `test/zakuro.py` に stderr をスレッドで読み続けて `stderr_output` で参照できる仕組みを追加した
+- `test/test_client_cert.py` を追加し、openssl で生成したテスト用証明書とクライアント証明書必須のローカル TLS サーバーを使った E2E テストを実装した
+  - クライアント証明書が TLS ハンドシェイクで送信されること
+  - 未指定時に SDK に証明書が設定されないこと
+  - 読み込み失敗 (空ファイル・読み取り権限なし) の場合はエラーになり接続しないこと
+  - 読み込みに失敗したインスタンス以外は接続を継続すること
+- `CHANGES.md` の `## develop` に `[FIX]` を追記した
+
+macOS arm64 で `python3 run.py build macos_arm64` が成功し、`test/test_zakuro.py` と `test/test_client_cert.py` のテストが pass することを確認した。mTLS 必須の実 Sora サーバーへの接続確認は環境がないため行っていない。

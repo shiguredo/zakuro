@@ -446,8 +446,40 @@ int Zakuro::Run() {
 
   sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
-  sora_config.client_cert = config_.client_cert;
-  sora_config.client_key = config_.client_key;
+  // client_cert / client_key は SoraSignalingConfig 側では PEM の内容を要求する。
+  // パスが空の場合は std::optional を engaged にしない。
+  // この関数は std::thread 上で実行されるため、読み込みに失敗しても例外は投げず、
+  // エラーメッセージを出力してこのインスタンスの処理を終了する。
+  auto load_pem_file =
+      [this](const std::string& path,
+             const std::string& label) -> std::optional<std::string> {
+    auto contents = Util::LoadFileContents(path);
+    if (!contents) {
+      std::cerr << "[" << config_.name << "] failed to load " << label << ": "
+                << path << std::endl;
+      return std::nullopt;
+    }
+    if (contents->empty()) {
+      std::cerr << "[" << config_.name << "] " << label << " is empty: " << path
+                << std::endl;
+      return std::nullopt;
+    }
+    return contents;
+  };
+  if (!config_.client_cert.empty()) {
+    auto client_cert = load_pem_file(config_.client_cert, "client cert");
+    if (!client_cert) {
+      return 1;
+    }
+    sora_config.client_cert = std::move(*client_cert);
+  }
+  if (!config_.client_key.empty()) {
+    auto client_key = load_pem_file(config_.client_key, "client key");
+    if (!client_key) {
+      return 1;
+    }
+    sora_config.client_key = std::move(*client_key);
+  }
   sora_config.signaling_urls = config_.sora_signaling_urls;
   sora_config.channel_id = config_.sora_channel_id;
   sora_config.client_id = config_.sora_client_id;
