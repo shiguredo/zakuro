@@ -3,7 +3,7 @@
 - Created: 2026-09-26
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-client-cert-key-pair-check
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-26
 
 ## 目的
 
