@@ -205,6 +205,21 @@ static bool ParseDataChannels(boost::json::value data_channels,
   return true;
 }
 
+// PEM 形式のクライアント証明書かどうかを確認する
+// 証明書チェーンと TRUSTED CERTIFICATE を許可する
+static bool IsPemCertificate(const std::string& contents) {
+  return contents.find("-----BEGIN CERTIFICATE-----") != std::string::npos ||
+         contents.find("-----BEGIN TRUSTED CERTIFICATE-----") !=
+             std::string::npos;
+}
+
+// PEM 形式の秘密鍵かどうかを確認する
+// BEGIN * PRIVATE KEY 形式のラベル (RSA / EC / PKCS#8 / 暗号化など) を許可する
+static bool IsPemPrivateKey(const std::string& contents) {
+  return contents.find("-----BEGIN ") != std::string::npos &&
+         contents.find("PRIVATE KEY-----") != std::string::npos;
+}
+
 int Zakuro::Run() {
   std::unique_ptr<GameAudioManager> gam;
 
@@ -450,9 +465,8 @@ int Zakuro::Run() {
   // パスが空の場合は std::optional を engaged にしない。
   // この関数は std::thread 上で実行されるため、読み込みに失敗しても例外は投げず、
   // エラーメッセージを出力してこのインスタンスの処理を終了する。
-  auto load_pem_file =
-      [this](const std::string& path,
-             const std::string& label) -> std::optional<std::string> {
+  auto load_pem_file = [this](const std::string& path, const std::string& label,
+                              auto is_valid_pem) -> std::optional<std::string> {
     auto contents = Util::LoadFileContents(path);
     if (!contents) {
       std::cerr << "[" << config_.name << "] failed to load " << label << ": "
@@ -464,17 +478,25 @@ int Zakuro::Run() {
                 << std::endl;
       return std::nullopt;
     }
+    // PEM として解釈できない内容は SDK に渡さない
+    if (!is_valid_pem(*contents)) {
+      std::cerr << "[" << config_.name << "] " << label
+                << " is not PEM format: " << path << std::endl;
+      return std::nullopt;
+    }
     return contents;
   };
   if (!config_.client_cert.empty()) {
-    auto client_cert = load_pem_file(config_.client_cert, "client cert");
+    auto client_cert =
+        load_pem_file(config_.client_cert, "client cert", IsPemCertificate);
     if (!client_cert) {
       return 1;
     }
     sora_config.client_cert = std::move(*client_cert);
   }
   if (!config_.client_key.empty()) {
-    auto client_key = load_pem_file(config_.client_key, "client key");
+    auto client_key =
+        load_pem_file(config_.client_key, "client key", IsPemPrivateKey);
     if (!client_key) {
       return 1;
     }

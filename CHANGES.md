@@ -50,6 +50,9 @@
 - [ADD] `--client-cert` と `--client-key` の片方だけを指定した場合はエラーにする
   - 設定ミスを起動時に検出するため
   - @voluntas
+- [ADD] `--client-cert` / `--client-key` に PEM の開始行を含まないファイルを指定した場合はエラーにする
+  - SDK に渡す前に PEM の開始行を確認する
+  - @voluntas
 - [FIX] ZakuroAudioDeviceModule::Init の再入で device_buffer_ を差し替えて UAF する問題を修正する
   - @Hexa
 - [FIX] ZakuroAudioDeviceModule::Terminate でオーディオスレッド停止前に device_buffer_ を破棄してセグフォする問題を修正する

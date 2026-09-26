@@ -21,16 +21,33 @@ CLIENT_CERT_COMMON_NAME = "zakuro-test-client"
 # クライアント証明書と秘密鍵を片方だけ指定した場合のエラーメッセージ
 PAIR_REQUIRED_MESSAGE = "--client-cert and --client-key must be specified together"
 
+# オプション名とエラーメッセージに使うラベルの対応
+CERTIFICATE_LABELS = {"client-cert": "client cert", "client-key": "client key"}
+
 
 @dataclass(frozen=True)
 class MtlsCertificates:
     """テスト用に生成した mTLS の証明書一式"""
 
     ca_cert: Path
+    ca_key: Path
     server_cert: Path
     server_key: Path
     client_cert: Path
     client_key: Path
+
+
+@dataclass(frozen=True)
+class MtlsCertificateVariants:
+    """テスト用に生成した追加形式のクライアント証明書と秘密鍵"""
+
+    trusted_client_cert: Path
+    chain_client_cert: Path
+    rsa_client_cert: Path
+    rsa_client_key: Path
+    ec_client_cert: Path
+    ec_client_key: Path
+    encrypted_client_key: Path
 
 
 def _run_openssl(args: list[str]) -> None:
@@ -44,12 +61,20 @@ def _run_openssl(args: list[str]) -> None:
 
 
 @pytest.fixture
-def mtls_certificates(tmp_path: Path) -> MtlsCertificates:
-    """テスト用の自己署名 CA、サーバー証明書、クライアント証明書を生成する"""
+def openssl_path() -> str:
+    """openssl コマンドのパスを返す"""
     openssl = shutil.which("openssl")
     if openssl is None:
         # テスト用証明書の生成に openssl コマンドが必要なため、無い環境ではスキップする
         pytest.skip("テスト用証明書の生成には openssl コマンドが必要")
+    else:
+        return openssl
+
+
+@pytest.fixture
+def mtls_certificates(tmp_path: Path, openssl_path: str) -> MtlsCertificates:
+    """テスト用の自己署名 CA、サーバー証明書、クライアント証明書を生成する"""
+    openssl = openssl_path
 
     ca_key = tmp_path / "ca-key.pem"
     ca_cert = tmp_path / "ca-cert.pem"
@@ -142,10 +167,161 @@ def mtls_certificates(tmp_path: Path) -> MtlsCertificates:
 
     return MtlsCertificates(
         ca_cert=ca_cert,
+        ca_key=ca_key,
         server_cert=server_cert,
         server_key=server_key,
         client_cert=client_cert,
         client_key=client_key,
+    )
+
+
+def _generate_client_certificate(
+    openssl: str,
+    *,
+    key_path: Path,
+    csr_path: Path,
+    cert_path: Path,
+    ca_cert: Path,
+    ca_key: Path,
+) -> None:
+    """秘密鍵からクライアント証明書を生成する"""
+    _run_openssl(
+        [
+            openssl,
+            "req",
+            "-new",
+            "-key",
+            str(key_path),
+            "-out",
+            str(csr_path),
+            "-subj",
+            f"/CN={CLIENT_CERT_COMMON_NAME}",
+        ]
+    )
+    _run_openssl(
+        [
+            openssl,
+            "x509",
+            "-req",
+            "-in",
+            str(csr_path),
+            "-CA",
+            str(ca_cert),
+            "-CAkey",
+            str(ca_key),
+            "-CAcreateserial",
+            "-out",
+            str(cert_path),
+            "-days",
+            "1",
+            "-sha256",
+        ]
+    )
+
+
+@pytest.fixture
+def mtls_certificate_variants(
+    mtls_certificates: MtlsCertificates, openssl_path: str, tmp_path: Path
+) -> MtlsCertificateVariants:
+    """追加形式のクライアント証明書と秘密鍵を生成する"""
+    openssl = openssl_path
+
+    # TRUSTED CERTIFICATE 形式のクライアント証明書を作成する
+    trusted_client_cert = tmp_path / "trusted-client-cert.pem"
+    _run_openssl(
+        [
+            openssl,
+            "x509",
+            "-in",
+            str(mtls_certificates.client_cert),
+            "-trustout",
+            "-out",
+            str(trusted_client_cert),
+        ]
+    )
+
+    # クライアント証明書と CA 証明書をつないだ証明書チェーンを作成する
+    chain_client_cert = tmp_path / "chain-client-cert.pem"
+    chain_client_cert.write_text(
+        mtls_certificates.client_cert.read_text() + mtls_certificates.ca_cert.read_text()
+    )
+
+    # RSA PRIVATE KEY 形式の秘密鍵と証明書を作成する
+    rsa_client_key = tmp_path / "rsa-client-key.pem"
+    _run_openssl([openssl, "genrsa", "-out", str(rsa_client_key), "2048"])
+    if "RSA PRIVATE KEY" not in rsa_client_key.read_text():
+        # OpenSSL 3 の genrsa は PKCS#8 で出力するため PKCS#1 へ変換する
+        _run_openssl(
+            [
+                openssl,
+                "rsa",
+                "-in",
+                str(rsa_client_key),
+                "-out",
+                str(rsa_client_key),
+                "-traditional",
+            ]
+        )
+        if "RSA PRIVATE KEY" not in rsa_client_key.read_text():
+            raise RuntimeError(f"RSA PRIVATE KEY 形式に変換できなかった: {rsa_client_key}")
+    rsa_client_cert = tmp_path / "rsa-client-cert.pem"
+    _generate_client_certificate(
+        openssl,
+        key_path=rsa_client_key,
+        csr_path=tmp_path / "rsa-client.csr",
+        cert_path=rsa_client_cert,
+        ca_cert=mtls_certificates.ca_cert,
+        ca_key=mtls_certificates.ca_key,
+    )
+
+    # EC PRIVATE KEY 形式の秘密鍵と証明書を作成する
+    ec_client_key = tmp_path / "ec-client-key.pem"
+    _run_openssl(
+        [
+            openssl,
+            "ecparam",
+            "-name",
+            "prime256v1",
+            "-genkey",
+            "-noout",
+            "-out",
+            str(ec_client_key),
+        ]
+    )
+    ec_client_cert = tmp_path / "ec-client-cert.pem"
+    _generate_client_certificate(
+        openssl,
+        key_path=ec_client_key,
+        csr_path=tmp_path / "ec-client.csr",
+        cert_path=ec_client_cert,
+        ca_cert=mtls_certificates.ca_cert,
+        ca_key=mtls_certificates.ca_key,
+    )
+
+    # 暗号化された秘密鍵を作成する (パスフレーズはテスト用のダミー)
+    encrypted_client_key = tmp_path / "encrypted-client-key.pem"
+    _run_openssl(
+        [
+            openssl,
+            "pkcs8",
+            "-topk8",
+            "-in",
+            str(mtls_certificates.client_key),
+            "-out",
+            str(encrypted_client_key),
+            "-passout",
+            "pass:dummy-passphrase",
+        ]
+    )
+
+    return MtlsCertificateVariants(
+        trusted_client_cert=trusted_client_cert,
+        chain_client_cert=chain_client_cert,
+        rsa_client_cert=rsa_client_cert,
+        rsa_client_key=rsa_client_key,
+        ec_client_cert=ec_client_cert,
+        ec_client_key=ec_client_key,
+        encrypted_client_key=encrypted_client_key,
     )
 
 
@@ -486,8 +662,7 @@ def test_client_cert_or_key_load_failure(
             pytest.skip("読み取り権限のないファイルを再現できない環境")
 
     # 指定するオプションに応じて、もう一方には有効なファイルを指定する
-    certificate_labels = {"client-cert": "client cert", "client-key": "client key"}
-    certificate_label = certificate_labels[option_name]
+    certificate_label = CERTIFICATE_LABELS[option_name]
     if option_name == "client-cert":
         client_cert = broken_file
         client_key = mtls_certificates.client_key
@@ -570,3 +745,193 @@ def test_client_cert_load_failure_keeps_other_instances(
     # stop() はサーバースレッドを join するため、ここでの読み出しは競合しない
     # 読み込みに失敗したインスタンスが接続していたら 2 になる
     assert server.connection_count == 1, "接続したインスタンスの数が想定と異なる"
+
+
+@pytest.mark.parametrize(
+    "option_name",
+    ["client-cert", "client-key"],
+    ids=["client-cert", "client-key"],
+)
+@pytest.mark.parametrize(
+    "content_kind",
+    ["whitespace", "not-pem"],
+    ids=["whitespace", "not-pem"],
+)
+def test_client_cert_or_key_not_pem(
+    option_name: str,
+    content_kind: str,
+    mtls_certificates: MtlsCertificates,
+    tmp_path: Path,
+    free_port: int,
+) -> None:
+    """PEM の開始行を含まないファイルを指定した場合はエラーになり、接続しない
+
+    空白のみのファイルと PEM ではないファイルの両方を確認する。
+    """
+    # PEM として解釈できない内容のファイルを用意する
+    not_pem_file = tmp_path / "not-pem.pem"
+    if content_kind == "whitespace":
+        not_pem_file.write_text("   \n\t\n")
+    else:
+        not_pem_file.write_text("this is not a pem file\n")
+
+    # 指定するオプションに応じて、もう一方には有効なファイルを指定する
+    certificate_label = CERTIFICATE_LABELS[option_name]
+    if option_name == "client-cert":
+        client_cert = not_pem_file
+        client_key = mtls_certificates.client_key
+    else:
+        client_cert = mtls_certificates.client_cert
+        client_key = not_pem_file
+    expected_message = f"{certificate_label} is not PEM format"
+
+    server = ClientCertTlsServer(
+        ca_cert=mtls_certificates.ca_cert,
+        server_cert=mtls_certificates.server_cert,
+        server_key=mtls_certificates.server_key,
+    )
+    server.start()
+    try:
+        # 読み込みに失敗したインスタンスは接続せず、プロセスが終了する
+        with pytest.raises(RuntimeError, match=expected_message):
+            with Zakuro(
+                instances=[
+                    _build_local_instance(
+                        f"wss://127.0.0.1:{server.port}/signaling",
+                        client_cert=client_cert,
+                        client_key=client_key,
+                    )
+                ],
+                http_port=free_port,
+                log_level="info",
+            ):
+                pass
+    finally:
+        server.stop()
+    # stop() はサーバースレッドを join するため、ここでの読み出しは競合しない
+    assert server.connection_count == 0, (
+        "PEM として不正なファイルを指定したインスタンスが接続している"
+    )
+
+
+@pytest.mark.parametrize(
+    "pem_format",
+    ["rsa", "ec", "chain"],
+    ids=["rsa", "ec", "chain"],
+)
+def test_client_pem_formats(
+    pem_format: str,
+    mtls_certificates: MtlsCertificates,
+    mtls_certificate_variants: MtlsCertificateVariants,
+    free_port: int,
+) -> None:
+    """RSA PRIVATE KEY / EC PRIVATE KEY 形式の秘密鍵と証明書チェーンでも mTLS のハンドシェイクが成立する"""
+    # PEM の形式に応じて証明書と秘密鍵の組み合わせを選ぶ
+    if pem_format == "rsa":
+        client_cert = mtls_certificate_variants.rsa_client_cert
+        client_key = mtls_certificate_variants.rsa_client_key
+    elif pem_format == "ec":
+        client_cert = mtls_certificate_variants.ec_client_cert
+        client_key = mtls_certificate_variants.ec_client_key
+    elif pem_format == "chain":
+        # 証明書チェーンはベースのクライアント証明書に CA 証明書を連結したもの
+        client_cert = mtls_certificate_variants.chain_client_cert
+        client_key = mtls_certificates.client_key
+    else:
+        pytest.fail(f"未知の PEM 形式: {pem_format}")
+
+    server = ClientCertTlsServer(
+        ca_cert=mtls_certificates.ca_cert,
+        server_cert=mtls_certificates.server_cert,
+        server_key=mtls_certificates.server_key,
+    )
+    server.start()
+    try:
+        with Zakuro(
+            instances=[
+                _build_local_instance(
+                    f"wss://127.0.0.1:{server.port}/signaling",
+                    client_cert=client_cert,
+                    client_key=client_key,
+                )
+            ],
+            http_port=free_port,
+            log_level="info",
+        ) as z:
+            # TLS ハンドシェイクが完了すれば、クライアント証明書が送信されている
+            assert server.wait_for_handshake(timeout=15), "TLS ハンドシェイクが完了しなかった"
+            assert server.peer_common_name == CLIENT_CERT_COMMON_NAME
+        # 新検証で弾かれていないことを確認する
+        assert "is not PEM format" not in z.stderr_output
+    finally:
+        server.stop()
+
+
+def test_client_cert_trusted_certificate(
+    mtls_certificates: MtlsCertificates,
+    mtls_certificate_variants: MtlsCertificateVariants,
+    free_port: int,
+) -> None:
+    """TRUSTED CERTIFICATE の PEM は検証を通過し、SDK が読み込んでハンドシェイクが成立する"""
+    server = ClientCertTlsServer(
+        ca_cert=mtls_certificates.ca_cert,
+        server_cert=mtls_certificates.server_cert,
+        server_key=mtls_certificates.server_key,
+    )
+    server.start()
+    try:
+        with Zakuro(
+            instances=[
+                _build_local_instance(
+                    f"wss://127.0.0.1:{server.port}/signaling",
+                    client_cert=mtls_certificate_variants.trusted_client_cert,
+                    client_key=mtls_certificates.client_key,
+                )
+            ],
+            http_port=free_port,
+            log_level="info",
+        ) as z:
+            # SDK が証明書を読み込んでいれば、クライアント証明書必須のサーバーと接続できる
+            assert server.wait_for_handshake(timeout=15), "TLS ハンドシェイクが完了しなかった"
+            assert server.peer_common_name == CLIENT_CERT_COMMON_NAME
+        assert "is not PEM format" not in z.stderr_output
+    finally:
+        server.stop()
+
+
+def test_client_key_encrypted(
+    mtls_certificates: MtlsCertificates,
+    mtls_certificate_variants: MtlsCertificateVariants,
+    free_port: int,
+) -> None:
+    """ENCRYPTED PRIVATE KEY は検証を通過して SDK に渡る
+
+    Sora C++ SDK にはパスフレーズを渡す手段がないため、SDK 側では読み込みに失敗する。
+    """
+    server = ClientCertTlsServer(
+        ca_cert=mtls_certificates.ca_cert,
+        server_cert=mtls_certificates.server_cert,
+        server_key=mtls_certificates.server_key,
+        require_client_cert=False,
+    )
+    server.start()
+    try:
+        with Zakuro(
+            instances=[
+                _build_local_instance(
+                    f"wss://127.0.0.1:{server.port}/signaling",
+                    client_cert=mtls_certificates.client_cert,
+                    client_key=mtls_certificate_variants.encrypted_client_key,
+                )
+            ],
+            http_port=free_port,
+            log_level="info",
+        ) as z:
+            # 検証を通過していれば接続処理が進む
+            assert server.wait_for_handshake(timeout=15), "TLS ハンドシェイクが完了しなかった"
+        # 検証は通過し、SDK 側で読み込みに失敗したことを確認する
+        # Sora C++ SDK のログ文言に依存した確認であることに注意する
+        assert "client key is not PEM format" not in z.stderr_output
+        assert "client_key is set, but use_private_key failed" in z.stderr_output
+    finally:
+        server.stop()

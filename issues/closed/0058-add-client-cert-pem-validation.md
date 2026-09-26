@@ -1,7 +1,7 @@
 # `--client-cert` / `--client-key` に PEM として不正なファイルを指定した場合はエラーにする
 
 - Created: 2026-09-26
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-26
 - Branch: feature/add-client-cert-pem-validation
 - Polished: 2026-09-26
 
@@ -37,3 +37,16 @@
 - `ENCRYPTED PRIVATE KEY` は新検証で弾かれず SDK に渡ること (SDK にはパスフレーズを渡す手段がないため読み込めない。その挙動は本 issue の対象外)
 - `python run.py build macos_arm64` など対象プラットフォームのビルドが通ること
 - 追加した pytest のテストが pass すること
+
+## 解決方法
+
+`src/zakuro.cpp` の `Zakuro::Run` で、`load_pem_file` ラムダに PEM の開始行を確認する検証を追加した。`--client-cert` は `-----BEGIN CERTIFICATE-----` または `-----BEGIN TRUSTED CERTIFICATE-----`、`--client-key` は `-----BEGIN ` と `PRIVATE KEY-----` を含むことを確認し、含まない場合は `[<name>] <label> is not PEM format: <path>` を出力してそのインスタンスを `return 1` で終了する。
+
+- `IsPemCertificate` / `IsPemPrivateKey` を追加し、`load_pem_file` に判定関数を渡す形にした
+- 厳密な PEM パースは行わず、SDK に渡す前の明らかな誤りを弾くことに留めた
+- `test/test_client_cert.py` に、空白のみと PEM ではないファイルのエラー、`RSA PRIVATE KEY` / `EC PRIVATE KEY` / 証明書チェーン / `TRUSTED CERTIFICATE` / `ENCRYPTED PRIVATE KEY` の各形式のテストを追加した
+  - `ENCRYPTED PRIVATE KEY` は SDK にパスフレーズを渡せないため、検証を通過して SDK に渡り、SDK 側で読み込みに失敗することを確認している
+- テスト用に `MtlsCertificateVariants` と `openssl_path` フィクスチャを追加し、OpenSSL 3 と LibreSSL の両方で動くようにした
+- `CHANGES.md` の `## develop` に `[ADD]` を追記した
+
+macOS arm64 で `python3 run.py build macos_arm64` が成功し、既存テストを含む pytest が pass することを確認した。
