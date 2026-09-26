@@ -47,6 +47,9 @@
 - [ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する
   - Notification の場合は 204 No Content を返す
   - @voluntas
+- [ADD] `--client-cert` と `--client-key` の片方だけを指定した場合はエラーにする
+  - 設定ミスを起動時に検出するため
+  - @voluntas
 - [FIX] ZakuroAudioDeviceModule::Init の再入で device_buffer_ を差し替えて UAF する問題を修正する
   - @Hexa
 - [FIX] ZakuroAudioDeviceModule::Terminate でオーディオスレッド停止前に device_buffer_ を破棄してセグフォする問題を修正する

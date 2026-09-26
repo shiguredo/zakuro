@@ -434,6 +434,15 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::exit(1);
   }
 
+  // --client-cert と --client-key は両方指定する必要がある
+  bool has_client_cert = !config.client_cert.empty();
+  bool has_client_key = !config.client_key.empty();
+  if (has_client_cert != has_client_key) {
+    std::cerr << "--client-cert and --client-key must be specified together"
+              << std::endl;
+    std::exit(1);
+  }
+
   // --openh264 のパスは絶対パスである必要がある
   if (!config.openh264.empty() && config.openh264[0] != '/') {
     std::cerr << "--openh264 file path must be absolute path" << std::endl;
