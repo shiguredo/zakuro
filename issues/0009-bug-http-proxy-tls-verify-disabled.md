@@ -4,7 +4,6 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-http-proxy-tls-verify
 - Polished: 2026-09-07
-- Milestone: 2026.1.0
 
 ## 目的
 
@@ -61,3 +60,11 @@ HTTP プロキシ用の検証スキップオプションを新設するかは別
 - 正常な公開証明書 (Let's Encrypt など) のサーバーへの接続は成功すること
 - macOS は `/etc/ssl/cert.pem`、Ubuntu は `/etc/ssl/certs` のシステム CA が読み込まれ、
   上記の公開証明書の検証が通ること
+
+## pending にする理由
+
+`--ui` の UI リバースプロキシ機能自体を revert した (`Revert "remote-ui 対応 (#75)"`)。UI リバースプロキシは zakuro-rs で実装するため、zakuro では本 issue を対応しない。
+
+本 issue が扱う TLS サーバー証明書検証の欠落は、zakuro-rs (`shiguredo/zakuro-rs`) の `issues/0008-add-ui-proxy.md` に「HTTPS では TLS サーバー証明書検証を必ず有効にする」として統合済み。zakuro-rs の実装で同じ問題を起こさないための記録として残す。
+
+zakuro では対応しないため `Milestone: 2026.1.0` は外す。
