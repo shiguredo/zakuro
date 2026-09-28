@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-boost-json-unchecked-access
 - Polished: 2026-09-07
+- Milestone: 2026.1.0
 
 ## 目的
 
