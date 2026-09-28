@@ -1,7 +1,7 @@
 # GameKeyCore::keys_ のデータレースと iterator invalidation
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-28
 - Branch: feature/fix-game-key-core-data-race
 - Polished: 2026-09-07
 - Milestone: 2026.1.0
@@ -47,3 +47,56 @@ iterator invalidation を起こしてダングリングポインタを dereferen
 - 可能であれば ThreadSanitizer 有効ビルドで race が検知されないこと
 - macOS / Linux で `--config` の `instances` に 2 件以上を定義して複数 Zakuro インスタンスを起動し、
   動作中にキー入力を投げても iterator invalidation による SIGSEGV / 異常挙動が発生しないこと
+
+## 解決方法
+
+2026-09-28 追記: `GameKeyCore` の `keys_` への全アクセスを `std::mutex keys_mutex_` で保護し、
+キー入力の配送中に `GameKey` が破棄されても壊れないようにした。
+
+### 変更内容
+
+- `src/game/game_key_core.h` に `#include <mutex>` と `std::mutex keys_mutex_` を追加し、
+  `Register` / `Unregister` / private `PushKey` の 3 経路すべてで `std::lock_guard` を取るようにした
+- `PushKey` はロックを保持したまま `GameKeyInterface::PushKey` を呼ぶため、その実装から
+  `Register` / `Unregister` へ再入してはならない契約を `GameKeyInterface` と `GameKeyCore::PushKey` の
+  コメントに明記した
+- `keys_mutex_` は `keys_` より先に宣言し、破棄は逆順で `keys_` の後になるようにした
+
+### 追加したテスト
+
+- `test/game_key_core_test.cpp` を追加し、`CMakeLists.txt` に `zakuro_game_key_core_test` を追加した
+  - 8 スレッドから `GameKey` の生成と破棄を 500 回ずつ繰り返し、`Register` / `Unregister` の
+    並行実行で `keys_` が壊れないことを確認する
+  - pty を用意して標準入力を差し替え、キー入力を配送し続けている間に `GameKey` の生成と破棄を
+    20000 回繰り返し、走査中の `Unregister` で壊れないことを確認する
+  - テストフレームワークが未導入のため、実行ファイルの終了コードで合否を返す
+    (`zakuro_adm_test` と同じ流儀)
+
+### 検証結果
+
+- `python3 run.py build macos_arm64` が成功した
+- `ctest` が 2/2 成功した (`zakuro_adm_test` / `zakuro_game_key_core_test`)
+- `uv run pytest` が 20 passed / 1 skipped だった (skip は Sora のシグナリング先が要る `test_version`)
+- ThreadSanitizer 有効ビルドで race を検知しないこと。修正前のヘッダでは race を検知して
+  異常終了し、修正後は 0 件で終了する (プロジェクト同梱の clang には TSan ランタイムが無いため、
+  Apple clang で検証した)
+- 修正前のヘッダに戻すと追加テストが 30 回中 30 回異常終了し、修正後は 30 回中 0 回だった。
+  通常ビルドでも回帰を検出できる
+- `clang-format --dry-run --Werror` の違反が無いこと
+
+### 完了条件 3 について
+
+「macOS / Linux で `--config` の `instances` に 2 件以上を定義して複数 Zakuro インスタンスを起動し、
+動作中にキー入力を投げても SIGSEGV / 異常挙動が発生しないこと」は、Sora のシグナリング先が
+必要でこの環境では実行できず未検証である。代わりに `test/game_key_core_test.cpp` で
+`GameKeyCore` / `GameKey` を直接使って同じ経路 (走査中の `Unregister` と、生成・破棄と並行した配送) を
+検証している。
+
+### 設計方針の前提の訂正
+
+設計方針にある「キー入力頻度は最大 10 Hz 程度」は入力側の制限ではない。
+`GameKeyCore::Init` の背景スレッドは `select` に 100 ミリ秒のタイムアウトを与えているが、
+読み取り可能なら直ちに返るため、標準入力へ連続して書き込めばその速度で `PushKey` が走る。
+10 Hz は `FakeAudioKeyTrigger` が 100 ミリ秒ごとに 1 件消費する側のレートである。
+ロック保持時間が無視できる根拠は、現在の `GameKey::PushKey` がキューへの追加だけで終わる点に
+置き換えた。
