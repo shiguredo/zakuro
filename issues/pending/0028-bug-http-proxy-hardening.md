@@ -84,6 +84,6 @@ UI 資産 1 ページで数十リクエスト来る想定なら、毎回 SSL_CTX
 
 `--ui` の UI リバースプロキシ機能自体を revert した (`Revert "remote-ui 対応 (#75)"`)。UI リバースプロキシは zakuro-rs で実装するため、zakuro では本 issue を対応しない。
 
-本 issue が指摘する URL パース (userinfo / IPv6 / fragment)、resolve を含む総合タイムアウト、レスポンスの body_limit、TLS 設定の共有は、zakuro-rs (`shiguredo/zakuro-rs`) の `issues/0008-add-ui-proxy.md` の対応内容に統合済み。zakuro-rs の実装で同じ問題を起こさないための記録として残す。
+本 issue が指摘する URL パース (userinfo / IPv6 / fragment)、resolve を含む総合タイムアウト、レスポンスの body_limit、TLS 設定の共有は、zakuro-rs (`shiguredo/zakuro-rs`) の `issues/0003-add-ui-proxy.md` の対応内容に統合済み。zakuro-rs の実装で同じ問題を起こさないための記録として残す。
 
 zakuro では対応しないため `Milestone: 2026.1.0` は外す。
