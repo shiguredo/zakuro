@@ -1,7 +1,7 @@
 # doc/USE.md に develop の HTTP / UI / RPC 機能と依存記述の更新を反映する
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-28
 - Branch: feature/add-use-md-http-ui-rpc-and-deps-update
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -62,3 +62,7 @@ CI (`.github/workflows/build.yml`) でもインストールしていない。
 - JSONC 設定例に `port` の記述が無く、develop の新オプションが記載されていること
 - ランタイム依存の記述が実装と一致していること（実行して検証する）
 - OpenH264 バージョンが `DEPS` の値と一致していること
+
+## 解決方法
+
+`--ui` / `--ui-remote-url` を廃止した (`Revert "remote-ui 対応 (#75)"`)。UI オプションと `doc/UI.md` の記載を前提とした本 issue は対応不要となったため closed にする。
