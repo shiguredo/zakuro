@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-config-unknown-key-warning
 - Polished: {YYYY-MM-DD}
+- Updated: 2026-09-28
 
 ## 目的
 
@@ -13,13 +14,13 @@
 
 ## 現状
 
-- `src/main.cpp` の設定ファイル処理は、トップレベルから `log-level` / `http-port` / `http-host` / `ui` / `ui-remote-url` / `output-file-connection-id` / `instance-hatch-rate` のみを取り込み、それ以外のキー (`instances` を除く) は無視する
+- `src/main.cpp` の設定ファイル処理は、トップレベルから `log-level` / `http-port` / `http-host` / `output-file-connection-id` / `instance-hatch-rate` のみを取り込み、それ以外のキー (`instances` を除く) は無視する
 - `client-cert` / `client-key` などのインスタンス用オプションは `instances` の各要素に書く必要があり、`src/util.cpp` の `Util::ParseInstanceToArgs` が扱う
 - トップレベルに `client-cert` / `client-key` を書いた場合、証明書は `SoraSignalingConfig` に設定されず、`Util::ParseArgs` のペア検証にも届かない。警告も出力されないため、設定ミスに気付けない
 
 ## 設計方針
 
-- `src/main.cpp` の設定ファイル読み込みで、トップレベルのキーを許可リスト (`log-level` / `http-port` / `http-host` / `ui` / `ui-remote-url` / `output-file-connection-id` / `instance-hatch-rate` / `instances`) と照合し、未知のキーがあれば `std::cerr` に警告を出力する
+- `src/main.cpp` の設定ファイル読み込みで、トップレベルのキーを許可リスト (`log-level` / `http-port` / `http-host` / `output-file-connection-id` / `instance-hatch-rate` / `instances`) と照合し、未知のキーがあれば `std::cerr` に警告を出力する
 - 警告は英語にし、キー名を含める (例: `unknown top-level key in config file: client-cert`)
 - 既存の挙動 (未知キーを無視して続行する) は変えない。エラーにはしない
 - インスタンス配下の未知キーの検出は本 issue の対象外とする
