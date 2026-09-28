@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-wav-reader-defects
 - Polished: 2026-09-08
+- Milestone: 2026.1.0
 
 ## 目的
 
