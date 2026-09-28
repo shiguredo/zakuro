@@ -4,12 +4,13 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-readme-links-and-faq
 - Polished: 2026-09-08
+- Updated: 2026-09-28
 
 ## 目的
 
-`README.md` から `doc/RPC.md` / `doc/UI.md` / `doc/SUPPORT.md` へのリンクが 1 個もなく、
-develop で追加した JSON-RPC / UI リバースプロキシ機能のドキュメント (`doc/RPC.md` / `doc/UI.md`) が
-README から参照されない「宙に浮いた」状態になっている。`doc/SUPPORT.md` も README からは参照されていない。
+`README.md` から `doc/RPC.md` / `doc/SUPPORT.md` へのリンクが 1 個もなく、
+develop で追加した JSON-RPC のドキュメント (`doc/RPC.md`) と `doc/SUPPORT.md` が
+README から参照されない「宙に浮いた」状態になっている。
 `doc/FAQ.md` にはリンクテキストが実装と食い違うリンクが残っている。ドキュメントの導線を修正する。
 
 ## 現状
@@ -17,8 +18,10 @@ README から参照されない「宙に浮いた」状態になっている。`
 ### README のリンク欠落
 
 `README.md` からは `doc/USE.md` / `doc/BUILD.md` / `doc/FAQ.md` しか参照していない。
-`doc/RPC.md` / `doc/UI.md` / `doc/SUPPORT.md` へのリンクは 0 件。
-利用者は develop で追加された HTTP RPC / UI プロキシ / サポート情報のドキュメントに気付けない。
+`doc/RPC.md` / `doc/SUPPORT.md` へのリンクは 0 件。
+利用者は develop で追加された HTTP RPC / サポート情報のドキュメントに気付けない。
+
+`doc/UI.md` は UI リバースプロキシの廃止 (`Revert "remote-ui 対応 (#75)"`) に伴い削除済みのため、対象外とする。
 
 ### FAQ の壊れたリンク
 
@@ -35,7 +38,6 @@ README から参照されない「宙に浮いた」状態になっている。`
 - `README.md` には目次が無いため、`## FAQ` 節と `## ヘルプ` 節の間に新規節として以下を追加する
   - `## サポート` → `[SUPPORT.md](doc/SUPPORT.md)`
   - `## HTTP RPC` → `[RPC.md](doc/RPC.md)`
-  - `## UI プロキシ` → `[UI.md](doc/UI.md)`
 - `doc/FAQ.md` の `--openH264` リンクを以下に修正
   - リンクテキスト: `--openh264`
   - URL: `USE.md#openh264` (相対リンク)
@@ -43,6 +45,6 @@ README から参照されない「宙に浮いた」状態になっている。`
 
 ## 完了条件
 
-- `README.md` から `RPC.md` / `UI.md` / `SUPPORT.md` の全てにリンクがあること
+- `README.md` から `RPC.md` / `SUPPORT.md` の全てにリンクがあること
 - `doc/FAQ.md` の `--openH264` リンクが機能すること (相対リンク、正しい大文字小文字)
 - `doc/` 配下から `master` ブランチを参照するリンクが 0 件になること
