@@ -1,7 +1,7 @@
 # README のヘルプ抜粋に develop の HTTP / UI オプションを反映する
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-28
 - Branch: feature/add-readme-help-http-ui-options
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -49,3 +49,7 @@ CLI11 のヘルプ出力にはコメント行を挿入できない。実装 (`sr
 - `README.md` の「ヘルプ」セクションに、抜粋が `zakuro --help` の出力を反映している旨と、
   オプションの追加・変更・削除時には `zakuro --help` を再実行して抜粋を更新する旨の注記が書かれていること
   （注記は抜粋ブロックの外に置き、抜粋自体はヘルプ出力と一致させる）
+
+## 解決方法
+
+`--ui` / `--ui-remote-url` を廃止した (`Revert "remote-ui 対応 (#75)"`)。UI オプションを前提とした本 issue は対応不要となったため closed にする。
