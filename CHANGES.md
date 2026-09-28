@@ -61,6 +61,8 @@
 - [FIX] `--client-cert` / `--client-key` に指定した PEM ファイルを読み込んで Sora C++ SDK に渡すよう修正する
   - Sora C++ SDK 2025.1.0 でクライアント証明書と秘密鍵の設定値がファイルパスから PEM の内容に変更されたため
   - @voluntas
+- [FIX] GameKeyCore の keys_ のアクセスを mutex で保護し、キー入力の配送中に GameKey が破棄されるとクラッシュする問題を修正する
+  - @voluntas
 
 ### misc
 
@@ -68,6 +70,8 @@
   - @voluntas
 - [ADD] ZakuroAudioDeviceModule の初期化再入を検証するテストを追加する
   - @Hexa
+- [ADD] GameKeyCore のキー入力配送と登録解除が並行しても壊れないことを検証するテストを追加する
+  - @voluntas
 
 ## 2025.3.1
 
