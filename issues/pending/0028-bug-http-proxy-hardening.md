@@ -1,7 +1,7 @@
 # HttpProxy の複数問題 (SSL_CTX null 未検査・URL パース・タイムアウト・body_limit・SSL_CTX 使い回し)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-28
 - Branch: feature/fix-http-proxy-hardening
 - Polished: 2026-09-07
 
@@ -80,10 +80,8 @@ UI 資産 1 ページで数十リクエスト来る想定なら、毎回 SSL_CTX
 - 10MB 超のレスポンスを送るサーバに接続しても、読み込みが OOM せず body_limit エラーで明示的に失敗すること
 - 同じ `ui_remote_url` に対して `ssl_ctx_` が使い回されていること
 
-## pending にする理由
+## 解決方法
 
 `--ui` の UI リバースプロキシ機能自体を revert した (`Revert "remote-ui 対応 (#75)"`)。UI リバースプロキシは zakuro-rs で実装するため、zakuro では本 issue を対応しない。
 
-本 issue が指摘する URL パース (userinfo / IPv6 / fragment)、resolve を含む総合タイムアウト、レスポンスの body_limit、TLS 設定の共有は、zakuro-rs (`shiguredo/zakuro-rs`) の `issues/0003-add-ui-proxy.md` の対応内容に統合済み。zakuro-rs の実装で同じ問題を起こさないための記録として残す。
-
-zakuro では対応しないため `Milestone: 2026.1.0` は外す。
+本 issue が指摘する URL パース (userinfo / IPv6 / fragment)、resolve を含む総合タイムアウト、レスポンスの body_limit、TLS 設定の共有は、zakuro-rs (`shiguredo/zakuro-rs`) の `issues/0003-add-ui-proxy.md` の対応内容に統合済み。zakuro-rs の実装で同じ問題を起こさないための記録として closed にする。
