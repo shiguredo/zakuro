@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/refactor-log-message-language-compliance
 - Polished: 2026-09-08
+- Updated: 2026-09-28
 
 ## 目的
 
@@ -16,13 +17,12 @@ AGENTS.md の以下 2 規約に違反するログメッセージが本体・テ�
 
 ### 本体側 (英語であるべきなのに日本語)
 
-`src/main.cpp` の 6 箇所。
+`src/main.cpp` の 5 箇所。
 
 - `std::cerr << "getrlimit 失敗" << std::endl;`
 - `std::cerr << "ファイルディスクリプタの数が足りません。" "最低でも 1024 以上にして下さい。" << std::endl;`
 - `std::cerr << "instances キーがありません。" << std::endl;`
 - `std::cerr << "instances の下に設定がありません。" << std::endl;`
-- `std::cerr << "--ui-remote-url を指定する場合は --ui も指定してください" << std::endl;`
 - `std::cerr << "--http-host と --http-port は両方指定する必要があります" << std::endl;`
 
 `src/y4m_reader.cpp` の `ReadHeader` 内の `std::cout << header << std::endl;` (Y4M ヘッダーを標準出力へ出すデバッグ痕跡。`FakeVideoCapturer` の生成毎に `Y4MReader::Open` から呼ばれるため、インスタンス数分出力される)
@@ -52,11 +52,10 @@ AGENTS.md の以下 2 規約に違反するログメッセージが本体・テ�
 
 ## 設計方針
 
-- 本体側の日本語ログメッセージ 6 箇所をすべて英語に翻訳する
+- 本体側の日本語ログメッセージ 5 箇所をすべて英語に翻訳する
   - 例: `"File descriptor limit is too small; must be >= 1024"`
   - 例: `"instances key is missing"`
-  - 例: `"--ui-remote-url requires --ui"`
-- 上記 6 箇所はユーザー向けの設定・引数エラーなので、`std::cerr` のままとする。`RTC_LOG(LS_ERROR)` へ移すと、デフォルトのログレベル (`src/main.cpp` の `log_level` 初期値 `LS_NONE`。`--log-level` 未指定時) では stderr に出力されずログファイルにしか残らないため、起動失敗時にユーザーが原因を確認できない
+- 上記 5 箇所はユーザー向けの設定・引数エラーなので、`std::cerr` のままとする。`RTC_LOG(LS_ERROR)` へ移すと、デフォルトのログレベル (`src/main.cpp` の `log_level` 初期値 `LS_NONE`。`--log-level` 未指定時) では stderr に出力されずログファイルにしか残らないため、起動失敗時にユーザーが原因を確認できない
 - 診断系の出力はログ経路へ移すか削除する (ログレベル非制御の `std::cout` を残さない)
   - `src/y4m_reader.cpp` の `std::cout << header` は削除、または `RTC_LOG(LS_INFO)` に格上げして `--log-level info` 以上のときだけ出力する
   - `src/main.cpp` の JSONC 経由 arg 列出力は `RTC_LOG(LS_INFO)` へ移動するか削除する (`--verbose` フラグは存在しないので、出力を制御したい場合は `--log-level` を使う)
