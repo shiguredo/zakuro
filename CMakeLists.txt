@@ -214,3 +214,23 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   set_target_properties(zakuro_adm_test PROPERTIES CXX_VISIBILITY_PRESET hidden)
 endif()
 add_test(NAME zakuro_adm_test COMMAND zakuro_adm_test)
+
+# GameKeyCore の keys_ が複数スレッドから安全に扱われることを検証する。
+# テストフレームワークは未導入のため、この実行ファイルの終了コードで合否を返す。
+add_executable(zakuro_game_key_core_test
+  test/game_key_core_test.cpp
+)
+# 標準は zakuro 本体と揃える。
+set_target_properties(zakuro_game_key_core_test PROPERTIES CXX_STANDARD 20 C_STANDARD 20)
+# テストが使うのは src/game 配下のヘッダオンリーの GameKeyCore と GameKey だけ。
+# libwebrtc / Boost / OpenSSL のヘッダは含まないため、zakuro_adm_test にある
+# コンパイル定義と macOS 向けオプションは要らない。
+target_include_directories(zakuro_game_key_core_test PRIVATE src)
+# テストは libwebrtc の API を使わないが、標準ライブラリの実装は libwebrtc.a に同梱された
+# libc++ なので、zakuro_adm_test と同じく Sora::sora 経由でリンクする。
+# std::thread と std::mutex を使うため Threads::Threads も付ける。
+target_link_libraries(zakuro_game_key_core_test PRIVATE Sora::sora Threads::Threads)
+add_test(NAME zakuro_game_key_core_test COMMAND zakuro_game_key_core_test)
+# 背景スレッドや書き込みスレッドの待ち合わせが解けずハングした場合に、失敗として検出させる。
+# 手元の実測では 1 秒未満で終わるため、待ち時間の合計 (最大 6 秒) を十分に上回る値を取る。
+set_tests_properties(zakuro_game_key_core_test PROPERTIES TIMEOUT 60)
