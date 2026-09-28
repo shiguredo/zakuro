@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-file-rotating-log-sink-uaf
 - Polished: 2026-09-07
+- Updated: 2026-09-28
 - Milestone: 2026.1.0
 
 ## 目的
@@ -37,9 +38,8 @@ libwebrtc はプログラム終了時にこの stream リストをクリーン�
 
 ## 設計方針
 
-`AddLogToStream` 後に到達する return パスは次の 3 つ。
+`AddLogToStream` 後に到達する return パスは次の 2 つ。
 
-- `--ui-remote-url` を `--ui` 無しで指定した場合の return 1
 - `--http-host` / `--http-port` の片方だけを指定した場合の return 1
 - 正常終了の return 0
 
@@ -47,7 +47,7 @@ libwebrtc はプログラム終了時にこの stream リストをクリーン�
 `log_sink->Init()` 失敗のパスは `log_sink.reset()` が `AddLogToStream` より前に実行されるため、
 登録済みシンクの破棄には当たらない (既存の `init` 失敗時の扱いを維持する)。
 
-上記 3 パスから漏れなく `webrtc::LogMessage::RemoveLogToStream(log_sink.get());` を呼ぶ。
+上記 2 パスから漏れなく `webrtc::LogMessage::RemoveLogToStream(log_sink.get());` を呼ぶ。
 `main` の各 return 箇所に明示的に書くのではなく、登録 (Add) と解除 (Remove) を RAII で対にして
 自動化するのが望ましい。RAII ガードのデストラクタでは、必ず先に `RemoveLogToStream` を実行してから
 シンクを破棄する順序にする (逆順だと解除前に破棄済みシンクへの書き込み経路が残る)。
