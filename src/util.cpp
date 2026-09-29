@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -496,49 +497,104 @@ static std::string ConvertEnv(const std::string& input,
   return result;
 }
 
-std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
+std::optional<std::vector<std::vector<std::string>>> Util::ParseInstanceToArgs(
     const boost::json::value& inst) {
-  std::vector<std::vector<std::string>> argss;
+  // 設定ファイルの instance は必ずオブジェクトである必要がある。
+  // as_object() は型が違うと例外を投げるため、先に型を検査する
+  if (!inst.is_object()) {
+    std::cerr << "instance must be an object" << std::endl;
+    return std::nullopt;
+  }
 
-  bool has_error = false;
+  const auto& obj = inst.as_object();
 
   int instance_num = 1;
-  const auto& obj = inst.as_object();
-  auto it = obj.find("instance-num");
-  if (obj.contains("instance-num")) {
-    instance_num = boost::json::value_to<int>(obj.at("instance-num"));
+  {
+    auto it = obj.find("instance-num");
+    if (it != obj.end()) {
+      // value_to<int> は数値以外に加えて、整数でない値と int の範囲外の値でも
+      // 例外を投げるため、例外を投げない try_value_to で受ける
+      if (!it->value().is_number()) {
+        std::cerr << "instance-num must be a number" << std::endl;
+        return std::nullopt;
+      }
+      auto num = boost::json::try_value_to<int>(it->value());
+      if (num.has_error()) {
+        std::cerr << "instance-num must be an integer in range" << std::endl;
+        return std::nullopt;
+      }
+      instance_num = *num;
+      // 0 以下だとインスタンスが 1 つも起動せず、設定ミスに気付けないためエラーにする
+      if (instance_num <= 0) {
+        std::cerr << "instance-num must be positive" << std::endl;
+        return std::nullopt;
+      }
+      // 上限が無いと argss の構築でメモリを大量に確保するためエラーにする
+      // 上限は --vcs の最大値に合わせる
+      if (instance_num > 1000) {
+        std::cerr << "instance-num must be 1000 or less" << std::endl;
+        return std::nullopt;
+      }
+    }
   }
+
+  std::vector<std::vector<std::string>> argss;
 
   for (int i = 0; i < instance_num; i++) {
     std::map<std::string, std::string> envs;
     envs[""] = std::to_string(i + 1);
     std::vector<std::string> args;
 
+    // 型が想定と異なる値を見つけたら true にする。
+    // ラムダから呼び出し元の関数を return できないため、
+    // エラーはこのフラグに記録してループの最後でまとめて判定する
+    bool has_error = false;
+
     // 値のあるオプション
-    auto add_option = [&args, &envs](const boost::json::object& obj,
-                                     const std::string& prefix,
-                                     const std::string& key) {
+    // check は値の型が想定どおりかを判定する。想定と異なる場合は設定ミスとして弾く。
+    // 型を検査しないと、オブジェクトや配列が空文字列に潰れて CLI11 の検証を
+    // すり抜けるものがあるため
+    auto add_option = [&args, &envs, &has_error](const boost::json::object& obj,
+                                                 const std::string& prefix,
+                                                 const std::string& key,
+                                                 auto check) {
       auto it = obj.find(key);
-      if (it != obj.end()) {
-        args.push_back("--" + prefix + key);
-        args.push_back(ConvertEnv(PrimitiveValueToString(it->value()), envs));
+      if (it == obj.end()) {
+        return;
       }
+      if (!check(it->value())) {
+        std::cerr << prefix << key << " has an unexpected value type"
+                  << std::endl;
+        has_error = true;
+        return;
+      }
+      args.push_back("--" + prefix + key);
+      args.push_back(ConvertEnv(PrimitiveValueToString(it->value()), envs));
     };
 
     // フラグオプション
-    auto add_flag = [&args, &envs](const boost::json::object& obj,
-                                   const std::string& prefix,
-                                   const std::string& key) {
+    // 真偽値以外はフラグとして扱えないため、型が違えば設定ミスとして弾く
+    auto add_flag = [&args, &has_error](const boost::json::object& obj,
+                                        const std::string& prefix,
+                                        const std::string& key) {
       auto it = obj.find(key);
-      if (it != obj.end() && it->value().is_bool() && it->value().as_bool()) {
+      if (it == obj.end()) {
+        return;
+      }
+      if (!it->value().is_bool()) {
+        std::cerr << prefix << key << " must be a boolean" << std::endl;
+        has_error = true;
+        return;
+      }
+      if (it->value().as_bool()) {
         args.push_back("--" + prefix + key);
       }
     };
 
     // JSONオブジェクトをそのまま渡すオプション
-    auto add_json_option = [&args, &envs](const boost::json::object& obj,
-                                          const std::string& prefix,
-                                          const std::string& key) {
+    auto add_json_option = [&args](const boost::json::object& obj,
+                                   const std::string& prefix,
+                                   const std::string& key) {
       auto it = obj.find(key);
       if (it != obj.end()) {
         args.push_back("--" + prefix + key);
@@ -546,46 +602,68 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
       }
     };
 
-    const auto& obj = inst.as_object();
+    // 数値を取るオプションの型判定
+    // 整数を取るオプションに実数を指定すると "2E0" のような
+    // 不可解な引数になるため、ここで弾く
+    auto is_number = [](const boost::json::value& value) {
+      return value.is_number();
+    };
+    // 文字列を取るオプションの型判定 (列挙値の検証は CLI11 に委ねる)
+    auto is_string = [](const boost::json::value& value) {
+      return value.is_string();
+    };
+    // 真偽値を取るオプションの型判定
+    // JSON の数値 1 や文字列 "true" も CLI11 の CheckedTransformer は通すため、
+    // JSON の真偽値だけを受け付ける
+    auto is_bool = [](const boost::json::value& value) {
+      return value.is_bool();
+    };
 
     // 一般オプション
-    add_option(obj, "", "name");
-    add_option(obj, "", "vcs");
-    add_option(obj, "", "vcs-hatch-rate");
-    add_option(obj, "", "duration");
-    add_option(obj, "", "repeat-interval");
-    add_option(obj, "", "max-retry");
-    add_option(obj, "", "retry-interval");
+    add_option(obj, "", "name", is_string);
+    add_option(obj, "", "vcs", is_number);
+    add_option(obj, "", "vcs-hatch-rate", is_number);
+    add_option(obj, "", "duration", is_number);
+    add_option(obj, "", "repeat-interval", is_number);
+    add_option(obj, "", "max-retry", is_number);
+    add_option(obj, "", "retry-interval", is_number);
     add_flag(obj, "", "no-video-device");
     add_flag(obj, "", "no-audio-device");
     add_flag(obj, "", "fake-capture-device");
-    add_option(obj, "", "fake-video-capture");
-    add_option(obj, "", "fake-audio-capture");
+    add_option(obj, "", "fake-video-capture", is_string);
+    add_option(obj, "", "fake-audio-capture", is_string);
     add_flag(obj, "", "sandstorm");
-    add_option(obj, "", "video-device");
-    add_option(obj, "", "resolution");
-    add_option(obj, "", "framerate");
+    add_option(obj, "", "video-device", is_string);
+    add_option(obj, "", "resolution", is_string);
+    add_option(obj, "", "framerate", is_number);
     add_flag(obj, "", "fixed-resolution");
-    add_option(obj, "", "priority");
+    add_option(obj, "", "priority", is_string);
     add_flag(obj, "", "insecure");
-    add_option(obj, "", "openh264");
-    add_option(obj, "", "scenario");
-    add_option(obj, "", "client-cert");
-    add_option(obj, "", "client-key");
-    add_option(obj, "", "initial-mute-video");
-    add_option(obj, "", "initial-mute-audio");
-    add_option(obj, "", "degradation-preference");
+    add_option(obj, "", "openh264", is_string);
+    add_option(obj, "", "scenario", is_string);
+    add_option(obj, "", "client-cert", is_string);
+    add_option(obj, "", "client-key", is_string);
+    // initial-mute-video / initial-mute-audio は CLI 側が値付きのオプション
+    // (--initial-mute-video true) なので、フラグではなく値として渡す
+    add_option(obj, "", "initial-mute-video", is_bool);
+    add_option(obj, "", "initial-mute-audio", is_bool);
+    add_option(obj, "", "degradation-preference", is_string);
 
     // コーデックプリファレンス
-    add_option(obj, "", "vp8-encoder");
-    add_option(obj, "", "vp9-encoder");
-    add_option(obj, "", "av1-encoder");
-    add_option(obj, "", "h264-encoder");
-    add_option(obj, "", "h265-encoder");
+    add_option(obj, "", "vp8-encoder", is_string);
+    add_option(obj, "", "vp9-encoder", is_string);
+    add_option(obj, "", "av1-encoder", is_string);
+    add_option(obj, "", "h264-encoder", is_string);
+    add_option(obj, "", "h265-encoder", is_string);
 
     // soraオプション
     auto sora_it = obj.find("sora");
     if (sora_it != obj.end()) {
+      // as_object() は型が違うと例外を投げるため、先に型を検査する
+      if (!sora_it->value().is_object()) {
+        std::cerr << "sora must be an object" << std::endl;
+        return std::nullopt;
+      }
       const auto& sora_obj = sora_it->value().as_object();
 
       // --sora-signaling-url: string or string[]
@@ -594,6 +672,21 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
         if (it != sora_obj.end()) {
           const auto& value = it->value();
           if (value.is_array()) {
+            // 空配列は値の無い --sora-signaling-url を組み立てて後続の引数を
+            // 食ってしまうため、設定ミスとして弾く
+            if (value.as_array().empty()) {
+              std::cerr << "sora.signaling-url must not be empty" << std::endl;
+              return std::nullopt;
+            }
+            // 配列要素も文字列であることを検査する。
+            // 文字列以外は空文字列に潰れて設定ミスに気付けないため
+            for (const auto& v : value.as_array()) {
+              if (!v.is_string()) {
+                std::cerr << "sora.signaling-url must be string or string[]"
+                          << std::endl;
+                return std::nullopt;
+              }
+            }
             args.push_back("--sora-signaling-url");
             for (const auto& v : value.as_array()) {
               args.push_back(ConvertEnv(PrimitiveValueToString(v), envs));
@@ -602,33 +695,35 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
             args.push_back("--sora-signaling-url");
             args.push_back(ConvertEnv(PrimitiveValueToString(value), envs));
           } else {
-            throw std::runtime_error(
-                "sora.signaling-url must be string or string[]");
+            std::cerr << "sora.signaling-url must be string or string[]"
+                      << std::endl;
+            return std::nullopt;
           }
         }
       }
 
       add_flag(sora_obj, "sora-", "disable-signaling-url-randomization");
-      add_option(sora_obj, "sora-", "channel-id");
-      add_option(sora_obj, "sora-", "client-id");
-      add_option(sora_obj, "sora-", "bundle-id");
-      add_option(sora_obj, "sora-", "role");
-      add_option(sora_obj, "sora-", "video");
-      add_option(sora_obj, "sora-", "audio");
-      add_option(sora_obj, "sora-", "video-codec-type");
-      add_option(sora_obj, "sora-", "audio-codec-type");
-      add_option(sora_obj, "sora-", "video-bit-rate");
-      add_option(sora_obj, "sora-", "audio-bit-rate");
-      add_option(sora_obj, "sora-", "simulcast");
-      add_option(sora_obj, "sora-", "simulcast-rid");
-      add_option(sora_obj, "sora-", "spotlight");
-      add_option(sora_obj, "sora-", "spotlight-number");
-      add_option(sora_obj, "sora-", "spotlight-focus-rid");
-      add_option(sora_obj, "sora-", "spotlight-unfocus-rid");
-      add_option(sora_obj, "sora-", "data-channel-signaling");
-      add_option(sora_obj, "sora-", "data-channel-signaling-timeout");
-      add_option(sora_obj, "sora-", "ignore-disconnect-websocket");
-      add_option(sora_obj, "sora-", "disconnect-wait-timeout");
+      add_option(sora_obj, "sora-", "channel-id", is_string);
+      add_option(sora_obj, "sora-", "client-id", is_string);
+      add_option(sora_obj, "sora-", "bundle-id", is_string);
+      add_option(sora_obj, "sora-", "role", is_string);
+      add_option(sora_obj, "sora-", "video", is_bool);
+      add_option(sora_obj, "sora-", "audio", is_bool);
+      add_option(sora_obj, "sora-", "video-codec-type", is_string);
+      add_option(sora_obj, "sora-", "audio-codec-type", is_string);
+      add_option(sora_obj, "sora-", "video-bit-rate", is_number);
+      add_option(sora_obj, "sora-", "audio-bit-rate", is_number);
+      add_option(sora_obj, "sora-", "simulcast", is_bool);
+      add_option(sora_obj, "sora-", "simulcast-rid", is_string);
+      add_option(sora_obj, "sora-", "spotlight", is_bool);
+      add_option(sora_obj, "sora-", "spotlight-number", is_number);
+      add_option(sora_obj, "sora-", "spotlight-focus-rid", is_string);
+      add_option(sora_obj, "sora-", "spotlight-unfocus-rid", is_string);
+      add_option(sora_obj, "sora-", "data-channel-signaling", is_bool);
+      add_option(sora_obj, "sora-", "data-channel-signaling-timeout",
+                 is_number);
+      add_option(sora_obj, "sora-", "ignore-disconnect-websocket", is_bool);
+      add_option(sora_obj, "sora-", "disconnect-wait-timeout", is_number);
 
       add_json_option(sora_obj, "sora-", "metadata");
       add_json_option(sora_obj, "sora-", "signaling-notify-metadata");
@@ -637,6 +732,11 @@ std::vector<std::vector<std::string>> Util::ParseInstanceToArgs(
       add_json_option(sora_obj, "sora-", "video-av1-params");
       add_json_option(sora_obj, "sora-", "video-h264-params");
       add_json_option(sora_obj, "sora-", "video-h265-params");
+    }
+
+    // 型が想定と異なる値が 1 つでもあれば設定エラーとして扱う
+    if (has_error) {
+      return std::nullopt;
     }
 
     argss.push_back(args);
