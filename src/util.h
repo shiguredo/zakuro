@@ -2,6 +2,8 @@
 #define UTIL_H_
 
 #include <optional>
+#include <string>
+#include <vector>
 
 // Boost
 #include <boost/json.hpp>
@@ -22,8 +24,14 @@ class Util {
                         double& instance_hatch_rate,
                         ZakuroConfig& config,
                         bool ignore_config);
-  static std::vector<std::vector<std::string>> ParseInstanceToArgs(
-      const boost::json::value& inst);
+  // JSONC の instance オブジェクトを CLI 引数の配列に変換する
+  // instance がオブジェクトでない場合、必要なキーの型が想定と異なる場合、
+  // 値が範囲外の場合は std::nullopt を返す (エラーは std::cerr に英語で出力する)
+  static std::optional<std::vector<std::vector<std::string>>>
+  ParseInstanceToArgs(const boost::json::value& inst);
+  // JSONC ファイルを読み込む
+  // 拡張子が .json / .jsonc でない場合、ファイルを開けない場合、
+  // JSON としてパースできない場合は std::runtime_error を投げる
   static boost::json::value LoadJsoncFile(const std::string& file_path);
   // ファイル全体を読み込む
   // ファイルを開けなかった場合や読み込みに失敗した場合は std::nullopt を返す

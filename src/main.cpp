@@ -4,10 +4,14 @@
 #include <csignal>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
 #include <vector>
+
+// Boost
+#include <boost/json.hpp>
 
 // Linux
 #include <sys/resource.h>
@@ -116,35 +120,44 @@ int main(int argc, char* argv[]) {
     configs.push_back(config);
   } else {
     // 設定ファイルがある場合は設定ファイルから引数を構築し直して再度パースする
-    boost::json::value zakuro_value = Util::LoadJsoncFile(config_file);
+    boost::json::value zakuro_value;
+    try {
+      zakuro_value = Util::LoadJsoncFile(config_file);
+    } catch (const std::exception& e) {
+      // 拡張子不正・ファイルオープン失敗・JSON パース失敗はここに来る
+      std::cerr << "failed to load config file: " << e.what() << std::endl;
+      return 1;
+    }
+
+    // 設定ファイルのルートと instances は型が確定していないので先に型を検査する
+    if (!zakuro_value.is_object()) {
+      std::cerr << "config file must be a JSON object" << std::endl;
+      return 1;
+    }
     const auto& zakuro_obj = zakuro_value.as_object();
+
     std::vector<std::string> common_args;
     common_args.clear();
 
-    if (zakuro_obj.contains("log-level")) {
-      common_args.push_back("--log-level");
-      common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("log-level")));
-    }
-    if (zakuro_obj.contains("http-port")) {
-      common_args.push_back("--http-port");
-      common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("http-port")));
-    }
-    if (zakuro_obj.contains("http-host")) {
-      common_args.push_back("--http-host");
-      common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("http-host")));
-    }
-    if (zakuro_obj.contains("output-file-connection-id")) {
-      common_args.push_back("--output-file-connection-id");
-      common_args.push_back(Util::PrimitiveValueToString(
-          zakuro_obj.at("output-file-connection-id")));
-    }
-    if (zakuro_obj.contains("instance-hatch-rate")) {
-      common_args.push_back("--instance-hatch-rate");
-      common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("instance-hatch-rate")));
+    // トップレベルの共通オプションの値を CLI 引数へ変換する。
+    // 値が空文字列に潰れると CLI11 の検証をすり抜けて無言で通るものがあるため、
+    // オブジェクトと配列は設定ミスとして扱う
+    for (const auto& key :
+         {"log-level", "http-port", "http-host", "output-file-connection-id",
+          "instance-hatch-rate"}) {
+      auto it = zakuro_obj.find(key);
+      if (it == zakuro_obj.end()) {
+        continue;
+      }
+      if (it->value().is_object() || it->value().is_array()) {
+        // null は CLI 引数にすると "null" という文字列になり設定ミスに気付けないため、
+        // ここで型として説明せず、実際に受け付ける型だけを挙げる
+        std::cerr << key << " must be a string, a number, or a boolean"
+                  << std::endl;
+        return 1;
+      }
+      common_args.push_back("--" + std::string(key));
+      common_args.push_back(Util::PrimitiveValueToString(it->value()));
     }
 
     std::vector<std::string> post_args;
@@ -161,18 +174,27 @@ int main(int argc, char* argv[]) {
       post_args.push_back(*it);
     }
 
-    if (!zakuro_obj.contains("instances")) {
+    auto instances_it = zakuro_obj.find("instances");
+    if (instances_it == zakuro_obj.end()) {
       std::cerr << "instances キーがありません。" << std::endl;
       return 1;
     }
-    const auto& instances_array = zakuro_obj.at("instances").as_array();
+    if (!instances_it->value().is_array()) {
+      std::cerr << "instances must be an array" << std::endl;
+      return 1;
+    }
+    const auto& instances_array = instances_it->value().as_array();
     if (instances_array.size() == 0) {
       std::cerr << "instances の下に設定がありません。" << std::endl;
       return 1;
     }
     for (const auto& instance : instances_array) {
       auto argss = Util::ParseInstanceToArgs(instance);
-      for (auto args : argss) {
+      if (!argss) {
+        std::cerr << "failed to parse instance settings" << std::endl;
+        return 1;
+      }
+      for (auto& args : *argss) {
         args.insert(args.begin(), common_args.begin(), common_args.end());
         args.insert(args.end(), post_args.begin(), post_args.end());
 

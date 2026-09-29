@@ -18,6 +18,13 @@
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - @torikizi
+- [CHANGE] 設定ファイル (JSONC) の値の型が想定と異なる場合はエラーにする
+  - オブジェクトや配列を値に取らないオプションにこれらを指定した場合はエラーにする
+  - インスタンス配下のオプションは、従来は型が違っても空文字列や未指定として扱われていたものをエラーにする
+  - 真偽値は `true` / `false`、数値は数値のみを受け付ける (`0` / `1` / `"true"` / `"none"` のような CLI の文字列表現はエラーになる)
+  - `instance-num` に 0 以下または 1000 を超える値を指定した場合もエラーにする
+  - `sora.signaling-url` に空配列を指定した場合もエラーにする
+  - @Hexa
 - [UPDATE] Sora C++ SDK を `2026.2.1` に上げる
   - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
   - CMAKE_VERSION を `4.4.2` に上げる
@@ -65,6 +72,10 @@
   - @voluntas
 - [FIX] GameKeyCore の keys_ のアクセスを mutex で保護し、キー入力の配送中に GameKey が破棄されるとクラッシュする問題を修正する
   - @voluntas
+- [FIX] 設定ファイルや Sora からの通知に想定外の JSON を渡された場合に、未捕捉例外でプロセスやスレッドが落ちる問題を修正する
+  - 設定ファイルの読み込みと DataChannels の解析で、型不一致・キー欠落・整数でない数値や範囲外の値を検出する
+  - Sora からの通知が不正な JSON や想定外の形式の場合は、警告を出力して無視する
+  - @Hexa
 
 ### misc
 
