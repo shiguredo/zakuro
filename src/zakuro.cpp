@@ -489,7 +489,9 @@ int Zakuro::Run() {
               capability, sora::VideoCodecImplementation::kCiscoOpenH264));
         }
 
-        // デコーダーは常に NopVideoDecoder を使用する
+        // デコーダーは常に NopVideoDecoder を使用する。
+        // ここで全てのデコーダーを kCustom_1 にするため、create_video_decoder には
+        // 常に kCustom_1 が渡り、kCustom_1 以外の分岐には到達しない
         preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
             capability, sora::VideoCodecImplementation::kCustom_1));
 
@@ -502,7 +504,8 @@ int Zakuro::Run() {
         if (implementation == sora::VideoCodecImplementation::kCustom_1) {
           return std::make_unique<NopVideoDecoder>();
         } else {
-          // const char* を投げると std::exception を継承しないため捕捉できない
+          // `const char*` は `std::exception` を継承した型ではないため
+          // `catch (const std::exception&)` では捕捉できない
           throw std::runtime_error("Invalid implementation");
         }
       };

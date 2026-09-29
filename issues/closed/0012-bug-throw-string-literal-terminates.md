@@ -59,6 +59,13 @@ Sora SDK 側の `SoraVideoDecoderFactory::Create` (try/catch なし) を通過�
 `throw "Invalid implementation";` を `throw std::runtime_error("Invalid implementation");` に
 置き換えた。あわせて推移的なインクルードに依存しないよう `#include <stdexcept>` を追加した。
 
+あわせて `preference` を構築している箇所に、全てのデコーダーを `kCustom_1` にするため
+`create_video_decoder` には常に `kCustom_1` が渡る旨のコメントを追加した。
+
+この分岐に到達するテストは書けない。ラムダは `Zakuro::Run` 内のローカル定義で外部から
+差し替えられず、CLI と設定ファイルにもデコーダーの実装を指定する経路が無い。
+そのため完了条件はコード上の保証 (`git grep` と実装の確認) で判定する。
+
 検証したこと:
 
 - `python3 run.py build macos_arm64` が成功する
@@ -66,10 +73,12 @@ Sora SDK 側の `SoraVideoDecoderFactory::Create` (try/catch なし) を通過�
 - `std::runtime_error` が `catch (const std::exception&)` で捕捉でき、`what()` に
   `Invalid implementation` が入ることを一時的な検証プログラムで確認した。
   `const char*` は同じ catch では捕捉できないこともあわせて確認した
+- この分岐が実行された場合は、経路上に捕捉する `catch` が無いため未捕捉例外で
+  終了する挙動自体は変わらない。変わるのは終了時の診断メッセージだけである
 - `uv run pytest -q` が 112 passed / 1 skipped で通る
 - `clang-format -style=file` が `src/` の全ファイルで差分を出さない
 
-この分岐は現行の設定では到達しない。デコーダの実装は preference 構築の最後で
+この分岐は現行の実装では到達しない。デコーダの実装は preference 構築の最後で
 `kCustom_1` を Merge するため、preference 内のデコーダは常に `kCustom_1` になる。
 
 `CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。
