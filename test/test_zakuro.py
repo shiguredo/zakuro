@@ -1,23 +1,16 @@
 """Zakuro の基本的なテスト"""
 
-import pytest
-
 from conftest import SoraConfig, get_deps_versions, get_zakuro_version
 from zakuro import Zakuro
 
 
-# Sora C++ SDK の Websocket::OnClose がログに Boost.Beast の static_string を流しており、
-# libwebrtc のログ機構がこれを保持できないため、Linux ではシグナリング URL を複数指定して
-# 実 Sora に接続したときに zakuro が SIGABRT する。SDK 側の修正が入るまでの暫定措置として
-# xfail にし、macOS など再現しない環境で成功した場合 (xpass) も失敗にしない
-@pytest.mark.xfail(
-    reason=(
-        "Sora C++ SDK の Websocket::OnClose のログが原因で Linux では zakuro が SIGABRT するため"
-    ),
-    strict=False,
-)
 def test_version(sora_config: SoraConfig, free_port: int) -> None:
-    """バージョン情報を取得できることを確認"""
+    """バージョン情報を取得できることを確認
+
+    実 Sora への接続を伴うため、複数の signaling URL を指定した場合の接続経路も
+    あわせて確認する。Sora C++ SDK は複数の signaling URL へ並列に接続し、
+    敗れた側の WebSocket を閉じる。
+    """
     # 期待されるバージョンを取得
     expected_zakuro_version = get_zakuro_version()
     deps = get_deps_versions()
