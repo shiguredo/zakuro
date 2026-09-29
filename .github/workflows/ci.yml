@@ -54,6 +54,10 @@ jobs:
           # runner のパッケージリストが古いことがあるため先に更新する
           sudo apt-get update
           DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libx11-dev libxext-dev
+          # armv8 向けのクロスコンパイルでは aarch64 のリンカが必要になる
+          if [ "${{ matrix.name }}" = "ubuntu-26.04_armv8" ]; then
+            DEBIAN_FRONTEND=noninteractive sudo apt-get -y install binutils-aarch64-linux-gnu
+          fi
       - name: Build zakuro
         run: python3 run.py build ${{ matrix.name }}
       # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
