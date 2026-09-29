@@ -125,6 +125,10 @@
 
 ### misc
 
+- [UPDATE] `Zakuro::Run` の video decoder factory が投げる例外を `std::runtime_error` にする
+  - `const char*` を投げると `std::exception` を継承しないため、`catch (const std::exception&)` で捕捉できない
+  - 現行の設定ではこの分岐には到達しない
+  - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas

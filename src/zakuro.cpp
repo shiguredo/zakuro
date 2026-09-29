@@ -5,6 +5,7 @@
 #include <csignal>
 #include <functional>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -501,7 +502,8 @@ int Zakuro::Run() {
         if (implementation == sora::VideoCodecImplementation::kCustom_1) {
           return std::make_unique<NopVideoDecoder>();
         } else {
-          throw "Invalid implementation";
+          // const char* を投げると std::exception を継承しないため捕捉できない
+          throw std::runtime_error("Invalid implementation");
         }
       };
 
