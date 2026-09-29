@@ -164,15 +164,28 @@ def _wait_for_stdout_line(
 def _run_to_completion(
     instance: dict[str, object], name: str, tmp_path: Path
 ) -> subprocess.CompletedProcess[str]:
-    """起動したままにせずに zakuro を起動し、終了まで待つ"""
+    """起動したままにせずに zakuro を起動し、終了まで待つ
+
+    上限時間を超えた場合は、その時点までの出力を添えて失敗させる。異常入力が
+    受理されてしまう退行では、クラッシュではなく終了しない状態になるためである。
+    """
     config_path = write_config_object(tmp_path, name, {"instances": [instance]})
-    return subprocess.run(
-        [get_zakuro_executable_path(), "--config", str(config_path)],
-        capture_output=True,
-        text=True,
-        cwd=tmp_path,
-        timeout=CONFIG_ERROR_TIMEOUT_SECONDS,
-    )
+    try:
+        return subprocess.run(
+            [get_zakuro_executable_path(), "--config", str(config_path)],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+            timeout=CONFIG_ERROR_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as e:
+        stdout = e.stdout.decode("utf-8", "replace") if e.stdout else ""
+        stderr = e.stderr.decode("utf-8", "replace") if e.stderr else ""
+        pytest.fail(
+            f"{name}: zakuro が {CONFIG_ERROR_TIMEOUT_SECONDS} 秒以内に終了しなかった "
+            f"(異常入力が受理されている可能性がある)\n"
+            f"stdout={stdout!r}\nstderr={stderr!r}"
+        )
 
 
 def _assert_runs_without_signal(

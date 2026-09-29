@@ -73,11 +73,11 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
 
   StopAudioThread();
 
-  // 10 ミリ秒分のバッファサイズ。sample_rate と channels が小さすぎる場合は 0 になり、
-  // 剰余算や 0 除算が起こるため、音声スレッドを開始しない
+  // 10 ミリ秒分のバッファサイズ。1 フレーム (channels 個) にも満たない場合は
+  // 送出するサンプル数が 0 になり、剰余算や 0 除算も起こるため音声スレッドを開始しない
   int buf_size = config_.sample_rate * config_.channels * 10 / 1000;
-  if (buf_size <= 0) {
-    // 無音を送出できない理由をログに残す
+  if (buf_size < config_.channels) {
+    // 音声を送出できない理由をログに残す
     RTC_LOG(LS_WARNING) << "Invalid audio buffer size: sample_rate="
                         << config_.sample_rate
                         << " channels=" << config_.channels;
@@ -130,8 +130,9 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
       } else if (config_.type ==
                  ZakuroAudioDeviceModuleConfig::Type::External) {
         while (sample_count >= buf_size) {
-          // GameAudio::Render は既存の要素へ書き込むため、毎回サイズを戻す
-          // (deliver が clear するため、resize を忘れると無音になる)
+          // GameAudio::Render は既存の要素へ書き込むため、毎回サイズを戻す。
+          // deliver が clear するため、resize を忘れるとサイズ 0 のバッファを
+          // SetRecordedBuffer に渡すことになる (未初期化領域を送出する)
           buf.resize(buf_size, 0);
           config_.render(buf);
           deliver(buf);

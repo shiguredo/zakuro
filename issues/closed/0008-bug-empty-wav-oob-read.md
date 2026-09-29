@@ -29,9 +29,11 @@
 
 以下の 2 つを実施する。片方だけでは完了条件を満たせない。
 
-1. `WavReader::Load` が data チャンクを読み込んだ直後に `if (data.empty()) return -13;` を返す。
-   空 data チャンクの WAV は入力として不正なので、エラーで弾く。
+1. `WavReader::Load` が data チャンクのサイズから要素数 (`chunk_size / 2`) を求め、0 の場合は
+   `-13` を返す。空 data チャンクの WAV は入力として不正なので、エラーで弾く。
    `-13` は既存のエラーコード (`-1`, `-4` 〜 `-12`, `1`) と衝突しない新規コードとする。
+   `data.empty()` ではなくチャンクサイズで判定するのは、`Load` が `data` を clear しないため
+   同一インスタンスで複数回呼ばれた場合に空 data を見逃すからである。
 2. `ZakuroAudioDeviceModule::StartAudioThread` の Safari / FakeAudio 分岐で、
    空 data を検出したら 0 (無音) を送るガードを追加する。
    10 ミリ秒分の無音バッファを生成し、通常どおり `SetRecordedBuffer` / `DeliverRecordedData` で送出する。
@@ -43,8 +45,10 @@
 なお、対処 2 の検証は `--fake-audio-capture` 経由では行えない。対処 1 により空 data チャンクの WAV は
 `WavReader::Load` で拒否されるため、空 data の `FakeAudioData` を直接構築して
 `ZakuroAudioDeviceModule` に渡す検証が必要になる。
-C++ 単体テスト基盤は撤去済みで、テストは実バイナリを起動する pytest に一本化されており、
-この検証は pytest では行えない。対処 2 はコード上の保証として確認する。
+音声スレッドは Sora への接続が成立した後に `StartRecording` から開始されるため、
+実バイナリを起動する pytest の E2E では到達できない。
+実バイナリと同じコンパイルフラグで一時的な検証プログラムをリンクして実測する
+(恒久テストは設けない)。
 
 ## 完了条件
 
