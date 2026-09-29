@@ -126,6 +126,10 @@
   - 解析結果は `DataChannels::Channel` にコピー済みで、削除した値を読み直す箇所が無かった
   - あわせて引数と解析対象の参照を const にして、値渡しのコピーを無くす
   - @voluntas
+- [UPDATE] `namespace std` に追加していた `to_string` を削除する
+  - 名前空間 std への追加は C++ 標準で undefined behavior であり、CLI11 の既定値表示の経路が ADL 経由で実際に選択していた
+  - 削除後は CLI11 自身のオーバーロードに解決され、返る値は変わらない
+  - @voluntas
 
 ## 2025.3.1
 
