@@ -130,6 +130,17 @@ list(APPEND RESOURCE_FILES
 )
 list(LENGTH RESOURCE_FILES RESOURCE_FILES_LENGTH)
 math(EXPR RESOURCE_FILES_LENGTH_MINUS_ONE "${RESOURCE_FILES_LENGTH} - 1")
+
+# リソースの埋め込みに使うリンカ
+# クロスコンパイル時はホストの ld ではなくターゲット用の ld を使う
+if (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
+  if (CMAKE_CXX_COMPILER_TARGET)
+    find_program(ZAKURO_EMBED_LD NAMES ${CMAKE_CXX_COMPILER_TARGET}-ld REQUIRED)
+  else ()
+    set(ZAKURO_EMBED_LD ld)
+  endif ()
+endif ()
+
 foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   list(GET RESOURCE_FILES ${n} file)
 
@@ -156,7 +167,7 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   elseif (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
-      COMMAND ld
+      COMMAND ${ZAKURO_EMBED_LD}
       ARGS -r -b binary -z noexecstack -o ${CMAKE_CURRENT_BINARY_DIR}/${objfile} ${file}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
       MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file})
