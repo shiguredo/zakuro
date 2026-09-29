@@ -1,7 +1,9 @@
 #include "util.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <regex>
+#include <sstream>
 #include <string>
 
 // CLI11
@@ -38,8 +40,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
                      int& log_level,
                      std::optional<std::string>& http_host,
                      std::optional<int>& http_port,
-                     bool& ui,
-                     std::optional<std::string>& ui_remote_url,
                      std::string& connection_id_stats_file,
                      double& instance_hatch_rate,
                      ZakuroConfig& config,
@@ -68,9 +68,6 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   app.add_option("--http-host", http_host, "HTTP host address to bind");
   app.add_option("--http-port", http_port, "HTTP port number")
       ->check(CLI::Range(1, 65535));
-  app.add_flag("--ui", ui, "Enable UI reverse proxy");
-  app.add_option("--ui-remote-url", ui_remote_url,
-                 "Remote URL for UI reverse proxy");
   app.add_option("--output-file-connection-id", connection_id_stats_file,
                  "Output to specified file with connection IDs");
   app.add_option("--instance-hatch-rate", instance_hatch_rate,
@@ -432,6 +429,15 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::exit(1);
   }
 
+  // --client-cert と --client-key は両方指定する必要がある
+  bool has_client_cert = !config.client_cert.empty();
+  bool has_client_key = !config.client_key.empty();
+  if (has_client_cert != has_client_key) {
+    std::cerr << "--client-cert and --client-key must be specified together"
+              << std::endl;
+    std::exit(1);
+  }
+
   // --openh264 のパスは絶対パスである必要がある
   if (!config.openh264.empty() && config.openh264[0] != '/') {
     std::cerr << "--openh264 file path must be absolute path" << std::endl;
@@ -671,6 +677,22 @@ boost::json::value Util::LoadJsoncFile(const std::string& file_path) {
   }
 
   return result;
+}
+
+std::optional<std::string> Util::LoadFileContents(
+    const std::string& file_path) {
+  std::ifstream file(file_path, std::ios::binary);
+  if (!file.is_open()) {
+    return std::nullopt;
+  }
+
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  // 読み込み中のエラーを検出する
+  if (file.bad() || buffer.bad()) {
+    return std::nullopt;
+  }
+  return buffer.str();
 }
 
 std::string Util::GenerateRandomChars() {

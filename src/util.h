@@ -18,8 +18,6 @@ class Util {
                         int& log_level,
                         std::optional<std::string>& http_host,
                         std::optional<int>& http_port,
-                        bool& ui,
-                        std::optional<std::string>& ui_remote_url,
                         std::string& connection_id_stats_file,
                         double& instance_hatch_rate,
                         ZakuroConfig& config,
@@ -27,6 +25,11 @@ class Util {
   static std::vector<std::vector<std::string>> ParseInstanceToArgs(
       const boost::json::value& inst);
   static boost::json::value LoadJsoncFile(const std::string& file_path);
+  // ファイル全体を読み込む
+  // ファイルを開けなかった場合や読み込みに失敗した場合は std::nullopt を返す
+  // 読み込みに成功した場合はファイルの内容を返す (内容が空の場合は空文字列)
+  static std::optional<std::string> LoadFileContents(
+      const std::string& file_path);
   static std::string GenerateRandomChars();
   static std::string GenerateRandomChars(size_t length);
   static std::string GenerateRandomNumericChars(size_t length);

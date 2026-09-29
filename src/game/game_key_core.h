@@ -4,6 +4,7 @@
 #include <atomic>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -14,6 +15,7 @@
 class GameKeyInterface {
  public:
   ~GameKeyInterface() {}
+  // GameKeyCore がロックを保持したまま呼ぶので、実装から Register / Unregister を呼ばないこと。
   virtual void PushKey(uint8_t c) = 0;
 };
 
@@ -92,8 +94,14 @@ class GameKeyCore {
     }
   }
 
-  void Register(GameKeyInterface* key) { keys_.push_back(key); }
+  // 登録と解除は GameKey の生成と破棄を行うスレッドから呼ばれる。
+  // 背景スレッドの走査と重なると keys_ が壊れるため、keys_mutex_ で保護する。
+  void Register(GameKeyInterface* key) {
+    std::lock_guard<std::mutex> guard(keys_mutex_);
+    keys_.push_back(key);
+  }
   void Unregister(GameKeyInterface* key) {
+    std::lock_guard<std::mutex> guard(keys_mutex_);
     auto it = std::remove_if(keys_.begin(), keys_.end(),
                              [key](GameKeyInterface* k) { return k == key; });
     keys_.erase(it, keys_.end());
@@ -110,7 +118,13 @@ class GameKeyCore {
   //}
 
  private:
+  // 背景スレッドのキー入力待ちループから呼ばれる。
+  // 走査中に Unregister が走ると iterator invalidation を起こし、消えた要素の
+  // GameKeyInterface を dereference することになるため、keys_mutex_ を保持して走査する。
+  // 走査中は Unregister を待たせるが、現在の GameKey::PushKey はキューへの追加だけなので
+  // 保持時間は無視できる。ロックを保持したまま呼ぶ点は GameKeyInterface::PushKey を参照。
   void PushKey(uint8_t c) {
+    std::lock_guard<std::mutex> guard(keys_mutex_);
     for (auto key : keys_) {
       key->PushKey(c);
     }
@@ -119,6 +133,8 @@ class GameKeyCore {
  private:
   std::unique_ptr<std::thread> th_;
   std::atomic_bool stopped_{false};
+  // keys_ の全アクセスを保護する。
+  std::mutex keys_mutex_;
   std::vector<GameKeyInterface*> keys_;
 };
 

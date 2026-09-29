@@ -4,6 +4,8 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-wav-reader-defects
 - Polished: 2026-09-08
+- Updated: 2026-09-29
+- Milestone: 2026.1.0
 
 ## 目的
 
@@ -81,12 +83,15 @@ size_t へ拡張してから比較する。負値化と 32bit 加算のラップ
 ## 完了条件
 
 - chunk サイズ `0xFFFFFFFF` の data チャンクを含む WAV を `--fake-audio-capture` に指定して
-  起動してもクラッシュせず、`failed to load fake audio` のエラーログが出力されること
-  (AddressSanitizer 有効ビルドで確認)
+  起動してもシグナルで異常終了せず、`failed to load fake audio` が標準エラー出力に出ること
+  (`main` が `Zakuro::Run` の返り値を捨てているため終了コードでは判定できない。issues/0031 で解消予定)
 - data チャンク読み込みの変換式が明示的な符号付き変換になっており、unsigned 合成値の
   暗黙変換がコードに残っていないこと
 - `WavReader::Load(std::string path)` の `std::ifstream` が `std::ios::binary` で open されていること
 
-なお、C++ 単体テスト基盤は未整備のため (issue 0043 で整備予定)、負サンプル値の単体テストは
-単体テスト基盤の導入後に追加する。上記の完了条件は現状のテスト基盤 (pytest の E2E) で検証できる
-範囲に限定している。
+なお、C++ 単体テスト基盤は issues/0066 で CTest とともに撤去済みで、テストは実バイナリを起動する pytest に
+一本化されている (issue 0043 も整備予定を取り下げ済み)。負サンプル値の変換は pytest から直接観測できないため、
+検証方法 (コードレビューで担保する / 対象外とする) を実装時に決めて明記する。
+WAV の不正データに対する E2E の回帰テストは issues/0043 の項目 5 が扱う。
+AddressSanitizer 有効ビルドの手段はリポジトリに無く、issues/0036 で追加が提案されているため、
+サニタイザでの確認は本 issue の完了条件に含めない。

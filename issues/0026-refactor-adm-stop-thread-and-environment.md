@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/refactor-adm-stop-thread-and-environment
 - Polished: 2026-09-08
+- Updated: 2026-09-29
 
 ## 目的
 
@@ -21,8 +22,9 @@
 `Terminate` と destructor で二重呼び出しされ、さらに外部から `StopRecording` で呼ばれる可能性もあり、
 複数スレッドから同時に呼ばれると `join` が二重呼び出し、または dangling `unique_ptr` へのアクセスになる。
 
-なお、`Terminate` 内の解放順序 (`device_buffer_` を先に破棄する問題) は issues/0003、
-`Init` の再入による `device_buffer_` の置き換えは issues/0004 がそれぞれ別途対応する。
+なお、`Terminate` の解放順序と `Init` の再入は issues/0003 / issues/0004 がそれぞれ対応済みである
+(2026-09-24)。現行コードでは `Terminate` が `StopAudioThread` → `device_buffer_.reset()` の順で実行し、
+`Init` は `initialized_` による早期 return で再入時に `device_buffer_` を置き換えない。
 本 issue で扱うのは `StopAudioThread` の並行呼び出し安全性と Environment の共有の 2 点のみである。
 
 ### Environment 二重生成
@@ -71,9 +73,11 @@ join は必ず 1 度だけになるようにする。
 ## 完了条件
 
 - `StopAudioThread` の並行呼び出しで join 二重や dangling が発生しないこと
-  - 複数スレッドから `StopAudioThread` を同時に呼び出す C++ 単体テストで検証する。
-    C++ 単体テスト基盤は未整備のため、issues/0043 で導入予定の GoogleTest / doctest / Catch2 のいずれかを
-    使ったテストターゲットの追加が必要
+  - 複数スレッドから `StopAudioThread` を同時に呼び出す C++ 単体テストは、C++ 単体テスト基盤の撤去
+    (issues/0066) により追加できない。pytest は実バイナリを起動する E2E であり、プロセス内部で
+    `StopAudioThread` を同時に呼び出す条件は作れないため対象外とする
+  - 代わりに `audio_thread_` の読み取り・代入・破棄がすべて同一の `std::mutex` 配下、または
+    一度だけ実行される CAS の下にあることをコードレビューで確認する
 - Zakuro::Run 側で生成した 1 つの `webrtc::Environment` を、
   `ZakuroAudioDeviceModule` の `device_buffer_` 生成と内蔵 ADM の生成 (Type::ADM のとき) の両方に使うこと
 - 可能であれば ThreadSanitizer 有効ビルドで、`StopAudioThread` まわりの race が検知されないこと

@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-empty-wav-oob-read
 - Polished: 2026-09-07
+- Updated: 2026-09-29
 - Milestone: 2026.1.0
 
 ## 目的
@@ -41,11 +42,20 @@
 
 なお、対処 2 の検証は `--fake-audio-capture` 経由では行えない。対処 1 により空 data チャンクの WAV は
 `WavReader::Load` で拒否されるため、空 data の `FakeAudioData` を直接構築して
-`ZakuroAudioDeviceModule` に渡すテストが必要になる (C++ 単体テスト基盤は issue 0043 で整備予定)。
+`ZakuroAudioDeviceModule` に渡す検証が必要になる。
+C++ 単体テスト基盤は issues/0066 で撤去済みで、テストは実バイナリを起動する pytest に一本化されており、
+この検証は pytest では行えない。検証方法 (コードレビューで担保する / 対象外とする) は実装時に決めて明記する。
 
 ## 完了条件
 
-- `WavReader::Load` が空 data チャンクの WAV を成功として受理しないこと（単体テストで検証可能）
+- `WavReader::Load` が空 data チャンクの WAV を成功として受理しないこと
+  (実バイナリを起動する pytest の E2E で、空 data チャンクの WAV を `--fake-audio-capture` に指定したときに
+  `failed to load fake audio` が標準エラー出力に出ることを確認する。`main` が `Zakuro::Run` の返り値を
+  捨てているため終了コードでは判定できない。issues/0031 で解消予定)
 - 空 data の `FakeAudioData` を `ZakuroAudioDeviceModule` に流し込んでも OOB 読み出しが発生せず、無音が送出されること
-- AddressSanitizer 有効ビルドで空 data チャンクの WAV を `--fake-audio-capture` に指定して起動し、
-  `WavReader::Load` のエラーログが出力されてオーディオスレッドが開始されず、OOB read が検知されないこと
+  (空 data の `FakeAudioData` を直接構築する検証は C++ 単体テスト基盤の撤去 (issues/0066) により
+  pytest では行えない。検証方法を実装時に決めて明記する)
+- 空 data チャンクの WAV を `--fake-audio-capture` に指定して起動したときに、`WavReader::Load` の
+  エラーログが出力されてオーディオスレッドが開始されないこと
+  (AddressSanitizer 有効ビルドの手段はリポジトリに無く、issues/0036 で追加が提案されている。
+  サニタイザでの確認は本 issue の完了条件に含めない)

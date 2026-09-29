@@ -18,10 +18,10 @@
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - @torikizi
-- [UPDATE] Sora C++ SDK を `2026.2.0-canary.19` に上げる
-  - WEBRTC_BUILD_VERSION を `m150.7871.3.0` に上げる
-  - CMAKE_VERSION を `4.3.2` に上げる
-  - BOOST_VERSION を `1.91.0` に上げる
+- [UPDATE] Sora C++ SDK を `2026.2.1` に上げる
+  - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
+  - CMAKE_VERSION を `4.4.2` に上げる
+  - BOOST_VERSION を `1.92.0` に上げる
   - @torikizi
 - [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
   - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
@@ -33,9 +33,6 @@
   - @torikizi
 - [UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` と `CMAKE_C_STANDARD` を 17 から 20 に上げる
   - @torikizi
-- [ADD] `--ui` オプションで Zakuro UI を有効化する機能を追加する
-  - `--ui-remote-url` オプションでリモート URL を変更可能
-  - @voluntas
 - [ADD] ヘルスチェック用 HTTP API `/.ok` を追加する
   - GET リクエストで 200 OK を返す
   - @voluntas
@@ -47,6 +44,12 @@
 - [ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する
   - Notification の場合は 204 No Content を返す
   - @voluntas
+- [ADD] `--client-cert` と `--client-key` の片方だけを指定した場合はエラーにする
+  - 設定ミスを起動時に検出するため
+  - @voluntas
+- [ADD] `--client-cert` / `--client-key` に PEM の開始行を含まないファイルを指定した場合はエラーにする
+  - SDK に渡す前に PEM の開始行を確認する
+  - @voluntas
 - [FIX] ZakuroAudioDeviceModule::Init の再入で device_buffer_ を差し替えて UAF する問題を修正する
   - @Hexa
 - [FIX] ZakuroAudioDeviceModule::Terminate でオーディオスレッド停止前に device_buffer_ を破棄してセグフォする問題を修正する
@@ -57,13 +60,18 @@
   - @Hexa
 - [FIX] FileRotatingLogSink を RemoveLogToStream せずに破棄して終了時に use-after-free になる問題を修正する
   - @Hexa
+- [FIX] `--client-cert` / `--client-key` に指定した PEM ファイルを読み込んで Sora C++ SDK に渡すよう修正する
+  - Sora C++ SDK 2025.1.0 でクライアント証明書と秘密鍵の設定値がファイルパスから PEM の内容に変更されたため
+  - @voluntas
+- [FIX] GameKeyCore の keys_ のアクセスを mutex で保護し、キー入力の配送中に GameKey が破棄されるとクラッシュする問題を修正する
+  - @voluntas
 
 ### misc
 
 - [ADD] pytest を使った E2E テストを追加する
   - @voluntas
-- [ADD] ZakuroAudioDeviceModule の初期化再入を検証するテストを追加する
-  - @Hexa
+- [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
+  - @voluntas
 
 ## 2025.3.1
 

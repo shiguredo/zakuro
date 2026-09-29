@@ -5,6 +5,7 @@
 - Branch: feature/fix-readme-libwebrtc-badge-and-port-option
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
+- Updated: 2026-09-28
 
 ## 目的
 
@@ -22,8 +23,8 @@ CI (`.github/workflows/build.yml`) のビルド対象と既に一致している
 ### libwebrtc バッジのバージョンが古い
 
 `README.md` の冒頭にある libwebrtc バッジは `libwebrtc-m141.7390`。
-`DEPS` の `WEBRTC_BUILD_VERSION` は `m150.7871.3.0`、`CHANGES.md ## develop` にも
-「WEBRTC_BUILD_VERSION を `m150.7871.3.0` に上げる」と明記されている。
+`DEPS` の `WEBRTC_BUILD_VERSION` は `m150.7871.3.1`、`CHANGES.md ## develop` にも
+「WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる」と明記されている。
 
 ### 削除された `--port` オプションがヘルプ抜粋に残存
 
@@ -37,18 +38,16 @@ CI (`.github/workflows/build.yml`) のビルド対象と既に一致している
   `branch-heads/7871` に変更する
   - 既存バッジは DEPS の `WEBRTC_BUILD_VERSION` から `m<マイルストーン>.<branch-head>` を
     抜き出した形式 (例: DEPS `m141.7390.2.0` に対して `m141.7390`)。DEPS は
-    `m150.7871.3.0` なので `m150.7871` になる
-  - パッチ部 (`3.0`) は含めない。issue 0002 で `m150.7871.3.1` への更新も予定されており、
-    マイルストーンと branch-head のみなら更新の影響を受けない
+    `m150.7871.3.1` なので `m150.7871` になる
+  - パッチ部 (`3.1`) は含めない。マイルストーンと branch-head のみなら更新の影響を受けない
 - README ヘルプ抜粋から `--port` の 2 行を削除する
 - README 全体のヘルプ抜粋を、実装 (`src/util.cpp`) に合わせて再生成することが望ましい
-  (再生成と `--http-host` / `--http-port` / `--ui` / `--ui-remote-url` の追加は issues/0018 で扱う。
-  本 issue は既存の乖離除去だけに絞る)
-  - issues/0018 と本 issue は README の同一のヘルプ抜粋ブロックを触るため、
-    issues/0018 が先に完了している場合は `--port` の 2 行が既に削除されていることがある
+  (再生成と `--http-host` / `--http-port` の追加は issues/0018 の対象だったが、issues/0018 は
+  UI オプションの廃止により closed になった。`--ui` / `--ui-remote-url` は廃止済みのため
+  README に載せない。本 issue は既存の乖離除去だけに絞る)
 
 ## 完了条件
 
 - `README.md` の libwebrtc バッジが `m150.7871` かつリンク先が `branch-heads/7871` であること
-  (DEPS の `WEBRTC_BUILD_VERSION` (`m150.7871.3.0`) のマイルストーンと branch-head に一致)
+  (DEPS の `WEBRTC_BUILD_VERSION` (`m150.7871.3.1`) のマイルストーンと branch-head に一致)
 - `README.md` ヘルプ抜粋に `--port` オプションが記載されていないこと

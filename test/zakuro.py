@@ -1,10 +1,11 @@
-"""Zakuro プロセスを管理するためのクラス"""
+"""Zakuro プロセスを管理するためのモジュール"""
 
 import json
 import platform
 import shlex
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 from types import TracebackType
@@ -53,6 +54,69 @@ class RpcClient:
         return self._call("GetVersion")
 
 
+def get_zakuro_executable_path() -> str:
+    """ビルド済みの zakuro 実行ファイルのパスを自動検出"""
+    project_root = Path(__file__).parent.parent
+    build_dir = project_root / "_build"
+
+    if not build_dir.exists():
+        raise RuntimeError(
+            f"Build directory {build_dir} does not exist. "
+            f"Please build with: python3 run.py build <target>"
+        )
+
+    available_targets = [
+        d.name
+        for d in build_dir.iterdir()
+        if d.is_dir() and (d / "release" / "zakuro" / "zakuro").exists()
+    ]
+
+    if not available_targets:
+        raise RuntimeError(
+            f"No built zakuro executables found in {build_dir}. "
+            f"Please build with: python3 run.py build <target>"
+        )
+
+    if len(available_targets) == 1:
+        target = available_targets[0]
+    else:
+        # 複数ビルドがある場合は、プラットフォームに応じて優先順位を決める
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+
+        if system == "darwin":
+            if machine == "arm64" or machine == "aarch64":
+                preferred = ["macos_arm64", "macos_x86_64"]
+            else:
+                preferred = ["macos_x86_64", "macos_arm64"]
+        elif system == "linux":
+            if machine == "aarch64":
+                preferred = ["ubuntu-24.04_arm64", "ubuntu-22.04_arm64"]
+            else:
+                preferred = ["ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
+        else:
+            preferred = []
+
+        target = None
+        for pref in preferred:
+            if pref in available_targets:
+                target = pref
+                break
+
+        if not target:
+            target = available_targets[0]
+
+    zakuro_path = project_root / "_build" / target / "release" / "zakuro" / "zakuro"
+
+    if not zakuro_path.exists():
+        raise RuntimeError(
+            f"zakuro executable not found at {zakuro_path}. "
+            f"Please build with: python3 run.py build {target}"
+        )
+
+    return str(zakuro_path)
+
+
 class Zakuro:
     """Zakuro プロセスを管理するクラス
 
@@ -89,8 +153,13 @@ class Zakuro:
         startup_timeout: int = 30,
     ) -> None:
         # 実行ファイルのパスを自動検出
-        self._executable_path = self._get_zakuro_executable_path()
+        self._executable_path = get_zakuro_executable_path()
         self._process: subprocess.Popen[Any] | None = None
+
+        # stderr はテストから警告の有無を検証できるようにスレッドで読み続ける
+        self._stderr_lines: list[str] = []
+        self._stderr_lock = threading.Lock()
+        self._stderr_thread: threading.Thread | None = None
 
         # 設定
         self._config = {"instances": instances}
@@ -113,67 +182,11 @@ class Zakuro:
             raise RuntimeError("RPC client not initialized. Use 'with Zakuro(...) as z:'")
         return self._rpc
 
-    def _get_zakuro_executable_path(self) -> str:
-        """ビルド済みの zakuro 実行ファイルのパスを自動検出"""
-        project_root = Path(__file__).parent.parent
-        build_dir = project_root / "_build"
-
-        if not build_dir.exists():
-            raise RuntimeError(
-                f"Build directory {build_dir} does not exist. "
-                f"Please build with: python3 run.py build <target>"
-            )
-
-        available_targets = [
-            d.name
-            for d in build_dir.iterdir()
-            if d.is_dir() and (d / "release" / "zakuro" / "zakuro").exists()
-        ]
-
-        if not available_targets:
-            raise RuntimeError(
-                f"No built zakuro executables found in {build_dir}. "
-                f"Please build with: python3 run.py build <target>"
-            )
-
-        if len(available_targets) == 1:
-            target = available_targets[0]
-        else:
-            # 複数ビルドがある場合は、プラットフォームに応じて優先順位を決める
-            system = platform.system().lower()
-            machine = platform.machine().lower()
-
-            if system == "darwin":
-                if machine == "arm64" or machine == "aarch64":
-                    preferred = ["macos_arm64", "macos_x86_64"]
-                else:
-                    preferred = ["macos_x86_64", "macos_arm64"]
-            elif system == "linux":
-                if machine == "aarch64":
-                    preferred = ["ubuntu-24.04_arm64", "ubuntu-22.04_arm64"]
-                else:
-                    preferred = ["ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
-            else:
-                preferred = []
-
-            target = None
-            for pref in preferred:
-                if pref in available_targets:
-                    target = pref
-                    break
-
-            if not target:
-                target = available_targets[0]
-
-        zakuro_path = project_root / "_build" / target / "release" / "zakuro" / "zakuro"
-
-        if not zakuro_path.exists():
-            raise RuntimeError(
-                f"zakuro executable not found at {zakuro_path}. "
-                f"Please build with: python3 run.py build {target}"
-            )
-
-        return str(zakuro_path)
+    @property
+    def stderr_output(self) -> str:
+        """zakuro の stderr 出力を取得"""
+        with self._stderr_lock:
+            return "".join(self._stderr_lines)
 
     def __enter__(self) -> Self:
         """コンテキストマネージャーの開始"""
@@ -190,6 +203,16 @@ class Zakuro:
                 text=True,
             )
             print(f"Started zakuro process with PID: {self._process.pid}")
+
+            # stderr を読み続けるスレッドを開始する
+            # 読み取り対象のプロセスはスレッド開始時に固定する
+            # (クリーンアップで self._process が None になっても読み続けられるように)
+            with self._stderr_lock:
+                self._stderr_lines.clear()
+            self._stderr_thread = threading.Thread(
+                target=self._read_stderr, args=(self._process,), daemon=True
+            )
+            self._stderr_thread.start()
 
             self._wait_for_startup()
 
@@ -240,6 +263,14 @@ class Zakuro:
 
         return args
 
+    def _read_stderr(self, process: subprocess.Popen[Any]) -> None:
+        """zakuro の stderr を読み続けて保持する"""
+        if process.stderr is None:
+            return
+        for line in process.stderr:
+            with self._stderr_lock:
+                self._stderr_lines.append(line)
+
     def _wait_for_startup(self) -> None:
         """プロセスが起動して HTTP サーバーが利用可能になるまで待機"""
         if not self._process:
@@ -254,13 +285,14 @@ class Zakuro:
         with httpx.Client() as client:
             while time.time() - start_time < self._startup_timeout:
                 if self._process.poll() is not None:
+                    # stderr を読み切ってからエラーメッセージに含める
+                    if self._stderr_thread is not None:
+                        self._stderr_thread.join(timeout=5)
                     error_msg = (
                         f"zakuro process exited unexpectedly with code {self._process.returncode}"
                     )
-                    if self._process.stderr:
-                        stderr_output = self._process.stderr.read()
-                        if stderr_output:
-                            error_msg += f"\nStderr:\n{stderr_output}"
+                    if self.stderr_output:
+                        error_msg += f"\nStderr:\n{self.stderr_output}"
                     raise RuntimeError(error_msg)
 
                 try:
@@ -296,6 +328,11 @@ class Zakuro:
                 self._process.wait()
             self._process = None
             time.sleep(0.2)
+
+        # stderr の読み取りスレッドを終了させる
+        if self._stderr_thread is not None:
+            self._stderr_thread.join(timeout=5)
+            self._stderr_thread = None
 
         # 一時設定ファイルを削除
         if self._temp_config_file:
