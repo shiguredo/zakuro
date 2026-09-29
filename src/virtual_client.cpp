@@ -3,6 +3,9 @@
 #include <chrono>
 #include <iostream>
 
+// Boost
+#include <boost/json.hpp>
+
 // Sora C++ SDK
 #include <sora/sora_video_encoder_factory.h>
 
@@ -200,11 +203,27 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
   }
 }
 void VirtualClient::OnNotify(std::string text) {
-  auto json = boost::json::parse(text);
-  if (json.at("event_type").as_string() == "connection.created") {
-    // 接続できたらリトライ数をリセットする
-    // 他人が接続された時もリセットされることになるけど、
-    // その時は 0 のままになってるはずなので問題ない
-    retry_count_ = 0;
+  // Sora から届く notify が常に想定どおりの形式とは限らない。
+  // parse の失敗と型の不一致で例外が伝播するとスレッドが飛ぶため、ここで全て受け止める
+  try {
+    auto json = boost::json::parse(text);
+    if (!json.is_object()) {
+      RTC_LOG(LS_WARNING) << "OnNotify: notify must be a JSON object";
+      return;
+    }
+    const auto& obj = json.as_object();
+    if (!obj.contains("event_type") || !obj.at("event_type").is_string()) {
+      RTC_LOG(LS_WARNING)
+          << "OnNotify: event_type is missing or is not a string";
+      return;
+    }
+    if (obj.at("event_type").as_string() == "connection.created") {
+      // 接続できたらリトライ数をリセットする
+      // 他人が接続された時もリセットされることになるけど、
+      // その時は 0 のままになってるはずなので問題ない
+      retry_count_ = 0;
+    }
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_WARNING) << "OnNotify: failed to parse notify: " << e.what();
   }
 }

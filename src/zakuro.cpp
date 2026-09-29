@@ -104,7 +104,12 @@ static bool ParseDataChannels(boost::json::value data_channels,
           std::cout << __LINE__ << std::endl;
           return false;
         }
-        ch.interval = boost::json::value_to<int>(it->value());
+        auto interval = boost::json::try_value_to<int>(it->value());
+        if (interval.has_error()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
+        ch.interval = *interval;
         if (ch.interval <= 0) {
           std::cout << __LINE__ << std::endl;
           return false;
@@ -124,7 +129,12 @@ static bool ParseDataChannels(boost::json::value data_channels,
           std::cout << __LINE__ << std::endl;
           return false;
         }
-        ch.size_min = boost::json::value_to<int>(it->value());
+        auto size_min = boost::json::try_value_to<int>(it->value());
+        if (size_min.has_error()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
+        ch.size_min = *size_min;
         if (ch.size_min < MESSAGE_SIZE_MIN || ch.size_min > MESSAGE_SIZE_MAX) {
           std::cout << __LINE__ << std::endl;
           return false;
@@ -143,7 +153,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
         if (!it->value().is_number()) {
           return false;
         }
-        ch.size_max = boost::json::value_to<int>(it->value());
+        auto size_max = boost::json::try_value_to<int>(it->value());
+        if (size_max.has_error()) {
+          return false;
+        }
+        ch.size_max = *size_max;
         if (ch.size_max < MESSAGE_SIZE_MIN || ch.size_max > MESSAGE_SIZE_MAX) {
           return false;
         }
@@ -159,6 +173,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("ordered");
       if (it != obj.end()) {
+        // value_to<bool> は真偽値以外で例外を投げるため、先に型を検査する
+        if (!it->value().is_bool()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
         sch.ordered = boost::json::value_to<bool>(it->value());
       }
     }
@@ -167,7 +186,19 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("max_packet_life_time");
       if (it != obj.end()) {
-        sch.max_packet_life_time = boost::json::value_to<int32_t>(it->value());
+        // value_to<int32_t> は数値以外に加えて、整数でない値と int32_t の
+        // 範囲外の値でも例外を投げるため、例外を投げない try_value_to で受ける
+        if (!it->value().is_number()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
+        auto max_packet_life_time =
+            boost::json::try_value_to<int32_t>(it->value());
+        if (max_packet_life_time.has_error()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
+        sch.max_packet_life_time = *max_packet_life_time;
       }
     }
 
@@ -175,7 +206,18 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("max_retransmits");
       if (it != obj.end()) {
-        sch.max_retransmits = boost::json::value_to<int32_t>(it->value());
+        // value_to<int32_t> は数値以外に加えて、整数でない値と int32_t の
+        // 範囲外の値でも例外を投げるため、例外を投げない try_value_to で受ける
+        if (!it->value().is_number()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
+        auto max_retransmits = boost::json::try_value_to<int32_t>(it->value());
+        if (max_retransmits.has_error()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
+        sch.max_retransmits = *max_retransmits;
       }
     }
 
@@ -183,6 +225,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("protocol");
       if (it != obj.end()) {
+        // value_to<std::string> は文字列以外で例外を投げるため、先に型を検査する
+        if (!it->value().is_string()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
         sch.protocol = boost::json::value_to<std::string>(it->value());
       }
     }
@@ -191,6 +238,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("compress");
       if (it != obj.end()) {
+        // value_to<bool> は真偽値以外で例外を投げるため、先に型を検査する
+        if (!it->value().is_bool()) {
+          std::cout << __LINE__ << std::endl;
+          return false;
+        }
         sch.compress = boost::json::value_to<bool>(it->value());
       }
     }
