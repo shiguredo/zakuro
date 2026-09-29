@@ -1,5 +1,6 @@
 #include "virtual_client.h"
 
+#include <cassert>
 #include <chrono>
 #include <iostream>
 
@@ -23,6 +24,10 @@
 
 std::shared_ptr<VirtualClient> VirtualClient::Create(
     VirtualClientConfig config) {
+  // context が nullptr のまま Connect すると、config_.context の dereference で
+  // クラッシュする。デバッグビルドで呼び出し側の渡し漏れに気付けるようにする。
+  // NDEBUG ビルドでは無効になるため、呼び出し側での検査は別途必要になる。
+  assert(config.context != nullptr);
   return std::shared_ptr<VirtualClient>(new VirtualClient(config));
 }
 VirtualClient::VirtualClient(const VirtualClientConfig& config)
