@@ -162,7 +162,8 @@
   - @voluntas
 - [UPDATE] `Zakuro::Run` の video decoder factory が投げる例外を `std::runtime_error` にする
   - `const char*` は `std::exception` を継承した型ではないため、`catch (const std::exception&)` で捕捉できない
-  - 経路上に捕捉する catch が無いため、未捕捉例外で終了する挙動自体は変わらない (診断情報のみ改善する)
+  - Zakuro と Sora C++ SDK の経路上に捕捉する catch が無いため、捕捉されなければ未捕捉例外で終了する点は変わらない (診断情報のみ改善する)
+  - 例外メッセージに不正だった実装値を含める
   - 現行の実装では preference のデコーダが常に `kCustom_1` になるため、この分岐には到達しない
   - @voluntas
 

@@ -490,8 +490,10 @@ int Zakuro::Run() {
         }
 
         // デコーダーは常に NopVideoDecoder を使用する。
-        // ここで全てのデコーダーを kCustom_1 にするため、create_video_decoder には
-        // 常に kCustom_1 が渡り、kCustom_1 以外の分岐には到達しない
+        // get_custom_engines が全てのコーデックを kCustom_1 のデコーダーとして登録し、
+        // ここで preference のデコーダーを全て kCustom_1 に上書きする。
+        // Sora C++ SDK は preference のデコーダーをそのまま create_video_decoder に
+        // 渡すため、kCustom_1 以外の分岐には到達しない
         preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
             capability, sora::VideoCodecImplementation::kCustom_1));
 
@@ -504,9 +506,13 @@ int Zakuro::Run() {
         if (implementation == sora::VideoCodecImplementation::kCustom_1) {
           return std::make_unique<NopVideoDecoder>();
         } else {
-          // `const char*` は `std::exception` を継承した型ではないため
+          // この分岐は現状到達しない。到達した場合は捕捉する catch が経路上に無いため
+          // 未捕捉例外で終了するが、`std::runtime_error` なら終了時のメッセージに
+          // what() が残る。`const char*` は `std::exception` を継承した型ではないため
           // `catch (const std::exception&)` では捕捉できない
-          throw std::runtime_error("Invalid implementation");
+          throw std::runtime_error(
+              "Invalid implementation: " +
+              boost::json::serialize(boost::json::value_from(implementation)));
         }
       };
 
