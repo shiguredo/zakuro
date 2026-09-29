@@ -123,6 +123,9 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
       } else if (config_.type ==
                  ZakuroAudioDeviceModuleConfig::Type::External) {
         while (sample_count >= buf_size) {
+          // GameAudio::Render は既存の要素へ書き込むため、毎回サイズを戻す
+          // (deliver が clear するため、resize を忘れると無音になる)
+          buf.resize(buf_size, 0);
           config_.render(buf);
           deliver(buf);
           sample_count -= buf_size;
