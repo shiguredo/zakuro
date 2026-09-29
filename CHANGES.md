@@ -120,6 +120,7 @@
   - `WavReader::Load` が空の data チャンクを拒否する
   - `ZakuroAudioDeviceModule` は `fake_audio_->data` が空の場合に無音を送出する
   - `data` の要素数がチャンネル数の倍数でない場合も添字が範囲内になるようにする
+  - バッファサイズが 0 以下になる場合は音声スレッドを開始しない
   - @voluntas
 
 ### misc

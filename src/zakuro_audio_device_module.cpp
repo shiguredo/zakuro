@@ -2,6 +2,9 @@
 
 #include <cmath>
 
+// WebRTC
+#include <rtc_base/logging.h>
+
 ZakuroAudioDeviceModule::ZakuroAudioDeviceModule(
     ZakuroAudioDeviceModuleConfig config)
     : env_(webrtc::CreateEnvironment()), config_(std::move(config)) {
@@ -74,6 +77,10 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
   // 剰余算や 0 除算が起こるため、音声スレッドを開始しない
   int buf_size = config_.sample_rate * config_.channels * 10 / 1000;
   if (buf_size <= 0) {
+    // 無音を送出できない理由をログに残す
+    RTC_LOG(LS_WARNING) << "Invalid audio buffer size: sample_rate="
+                        << config_.sample_rate
+                        << " channels=" << config_.channels;
     return;
   }
 

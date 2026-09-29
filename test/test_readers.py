@@ -92,21 +92,19 @@ def _wav(
     fmt_size: int = 16,
     sample_rate: int = 48000,
     body_size: int = 8,
-    channels: int = 1,
 ) -> bytes:
     """data チャンクのサイズを指定して WAV を作る
 
-    16bit PCM。`fmt_size` と `sample_rate` を変えると fmt チャンクの長さと
-    サンプルレートを、`body_size` を変えると data チャンクの中身のバイト数を、
-    `channels` を変えるとチャンネル数を指定できる。
+    16bit / 1ch の PCM。`fmt_size` と `sample_rate` を変えると fmt チャンクの長さと
+    サンプルレートを、`body_size` を変えると data チャンクの中身のバイト数を指定できる。
     """
     fmt_body = struct.pack(
         "<HHIIHH",
         1,
-        channels,
+        1,
         sample_rate & 0xFFFFFFFF,
-        (sample_rate * channels * 2) & 0xFFFFFFFF,
-        channels * 2,
+        (sample_rate * 2) & 0xFFFFFFFF,
+        2,
         16,
     )
     # fmt チャンクの長さを 16 未満にする場合は、その長さまで切り詰める

@@ -53,10 +53,8 @@ C++ 単体テスト基盤は撤去済みで、テストは実バイナリを起�
   指定したときに `failed to load fake audio: path=... result=-13` が標準エラー出力に出て
   終了コード 1 で終了することを確認する)
 - 空 data の `FakeAudioData` を `ZakuroAudioDeviceModule` に流し込んでも OOB 読み出しが発生せず、無音が送出されること
-  (空 data の `FakeAudioData` を直接構築する検証は C++ 単体テスト基盤が無いため pytest では行えない。
-  また音声スレッドは Sora への接続が成立した後にしか開始されないため、実バイナリを起動する
-  E2E でも到達できない。`fake_audio_->data` が空の場合に無音を送出する分岐があることを
-  コード上の保証として確認する)
+  (音声スレッドは Sora への接続が成立した後にしか開始されないため、pytest の E2E では到達できない。
+  一時的な検証プログラムで実測して確認する)
 - 空 data チャンクの WAV を `--fake-audio-capture` に指定して起動したときに、`WavReader::Load` の
   エラーログが出力されてオーディオスレッドが開始されないこと
   (AddressSanitizer 有効ビルドの手段はリポジトリに無いため、サニタイザでの確認は本 issue の
@@ -66,16 +64,19 @@ C++ 単体テスト基盤は撤去済みで、テストは実バイナリを起�
 
 `src/wav_reader.cpp` と `src/zakuro_audio_device_module.cpp` を次のように修正した。
 
-- `WavReader::Load` は data チャンクを読み込んだ直後に `data.empty()` を確認し、空の場合は
-  -13 を返す
+- `WavReader::Load` は data チャンクの要素数 (`chunk_size / 2`) が 0 の場合に -13 を返す。
+  読み込み後に `data.empty()` を見るのではなく、チャンクサイズから判定する
 - `ZakuroAudioDeviceModule::StartAudioThread` は `fake_audio_->data` が空の場合に
   無音のバッファを `SetRecordedBuffer` / `DeliverRecordedData` で送出する分岐を追加した。
   空のまま `data[index]` を読む経路をなくす
-- あわせて添字を `(index + 1) % data.size()` に変更した。`data` の要素数が `channels` の
-  倍数でない場合、従来は内側のチャンネルのループの途中で `data.size()` に達して
-  範囲外を読んでいた
-- `buf_size` (10 ミリ秒分の要素数) が 0 以下になる場合は音声スレッドを開始しない。
-  剰余算と 0 除算を避けるため
+- あわせて添字を `(sample_index + 1) % data_size` に変更した。`data` の要素数が
+  `channels` の倍数でない場合、従来は内側のチャンネルのループの途中で `data.size()` に
+  達して範囲外を読んでいた
+- `buf_size` (10 ミリ秒分の要素数) が 0 以下になる場合は音声スレッドを開始せず、
+  英語の警告ログを出す。剰余算と 0 除算を避けるため。この変更により、`channels == 0` で
+  0 除算に到達する経路 (x86_64 では SIGFPE) も塞がった
+- External 経路は `GameAudio::Render` が既存の要素へ書き込むため、`render` の直前に
+  `buf.resize(buf_size, 0)` でサイズを戻す。`deliver` がバッファを clear するためである
 
 検証したこと:
 
@@ -88,8 +89,21 @@ C++ 単体テスト基盤は撤去済みで、テストは実バイナリを起�
 
 `test/test_readers.py` に空 data チャンクの WAV を拒否する E2E テストを追加した。
 
-対処 2 は、空 data の `FakeAudioData` を直接構築する C++ 単体テスト基盤が無いため E2E では
-検証していない。`fake_audio_->data` が空の場合に無音を送出する分岐があり、空の vector に
-添字アクセスしないことをコード上の保証として確認した。
+対処 2 と音声スレッドの各経路は、実バイナリと同じコンパイルフラグで一時的な検証
+プログラムをリンクして実測した。`StartAudioThread` は Sora への接続が成立した後に
+`StartRecording` から呼ばれるため、pytest の E2E では到達できない。この検証は
+リポジトリに残していない (恒久テストは実バイナリを起動する pytest に一本化されている)。
+
+実測した結果:
+
+| 入力 (data 要素数, channels, sample_rate) | 修正前 | 修正後 |
+| --- | --- | --- |
+| 0, 1, 16000 (空 data) | SIGABRT (`vector[] index out of bounds`) | 無音 12 回、非無音 0 |
+| 3, 2, 16000 (ステレオで奇数) | SIGABRT | 正常 (非ゼロ 5120) |
+| 1, 2, 16000 | SIGABRT | 正常 (非ゼロ 4800) |
+| 0, 0, 16000 (channels が 0) | 0 除算 (arm64 では 2624 回コールバック) | スレッドを開始しない |
+| 0, 1, 1 (sample_rate が 1) | 0 回 | スレッドを開始しない |
+| 160, 1, 16000 (正常) | 正常 (非ゼロ 2400) | 正常 (非ゼロ 2720) |
+| External + `GameAudio` | 正常 | 正常 (非ゼロ 160) |
 
 `CHANGES.md` の `## develop` に `[FIX]` のエントリを追加した。
