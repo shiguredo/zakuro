@@ -1,8 +1,9 @@
-"""main.cpp の資源管理の E2E テスト
+"""main.cpp の資源管理と fake audio の読み込みの E2E テスト
 
 接続 ID の stats ファイルの書き出し (アトミックな置き換え)・ファイルディスクリプタの
 必要数の判定・引数の解析で終了する経路の終了コードを検証する。
-設定ファイルの異常入力は test_config_json.py が検証する。
+`--fake-audio-capture` に渡す WAV の異常入力 (実ファイルサイズを超えるチャンクサイズ) も
+ここで検証する。設定ファイルの異常入力は test_config_json.py が検証する。
 """
 
 import json
@@ -10,10 +11,13 @@ import re
 import resource
 import shlex
 import signal
+import struct
 import subprocess
 import time
 from collections.abc import Callable
 from pathlib import Path
+
+import pytest
 
 from test_helpers import (
     CONFIG_ERROR_TIMEOUT_SECONDS,
@@ -82,28 +86,128 @@ def test_run_failure_exits_with_nonzero(tmp_path: Path) -> None:
     size < 20 で拒否して Zakuro::Run が 1 を返す。この経路は設定ファイルの読み込み
     エラー (main 自身が検出する) ではないため、戻り値の集約を検証できる。
     """
-    # 0 バイトのファイルは CLI11 の ExistingFile を通るが、WavReader::Load は拒否する。
-    # --no-audio-device を指定すると fake audio の経路に入らないため指定しない
+    # 0 バイトのファイルは CLI11 の ExistingFile を通るが、WavReader::Load は拒否する
     empty_wav = tmp_path / "empty.wav"
     empty_wav.write_bytes(b"")
-    instance = {
-        "fake-audio-capture": str(empty_wav),
-        "no-video-device": True,
-        "sora": {
-            "signaling-url": "wss://127.0.0.1:1/signaling",
-            "channel-id": "main-resource-run-failure",
-            "role": "sendrecv",
-        },
-    }
-    config_path = write_config_object(tmp_path, "run_failure.jsonc", {"instances": [instance]})
-    result = run_zakuro(config_path)
+    config_path = _fake_audio_config_path(tmp_path, "run_failure.jsonc", empty_wav)
+    _assert_fake_audio_load_failure(run_zakuro(config_path))
 
+
+def _write_wav_data_chunk_size(size: int, path: Path, payload: bytes = b"\x00\x00") -> None:
+    """data チャンクのサイズフィールドだけを指定した WAV を書き出す
+
+    16bit PCM / 1ch の fmt チャンクを付け、data チャンクのサイズフィールドは
+    実データ長と一致しない値にできる。チャンクサイズの境界値で挙動が変わるため、
+    サイズを引数で受け取る。
+    """
+    fmt_chunk = struct.pack("<4sIHHIIHH", b"fmt ", 16, 1, 1, 48000, 96000, 2, 16)
+    data_chunk = b"data" + struct.pack("<I", size) + payload
+    body = b"WAVE" + fmt_chunk + data_chunk
+    path.write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+
+
+def _fake_audio_config_path(tmp_path: Path, name: str, wav_path: Path) -> Path:
+    """fake audio の WAV を指定した設定ファイルを書き出す
+
+    `--no-audio-device` が指定されていると fake audio の読み込み経路に入らないため、
+    有効なインスタンス設定から外してから `fake-audio-capture` を設定する。
+    """
+    instance = dict(VALID_INSTANCE)
+    instance.pop("no-audio-device", None)
+    instance["fake-audio-capture"] = str(wav_path)
+    return write_config_object(tmp_path, name, {"instances": [instance]})
+
+
+def _assert_fake_audio_load_failure(result: subprocess.CompletedProcess[str]) -> None:
+    """fake audio の読み込みに失敗してエラー終了したことを検証する"""
+    # シグナルによる強制終了 (負の終了コード) は未捕捉例外の退行として失敗させる
     assert result.returncode == 1, (
         f"終了コードが 1 ではない: returncode={result.returncode}\n"
         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
     )
     assert "failed to load fake audio" in result.stderr, (
-        f"fake audio の読み込み失敗が stderr に出ていない: stderr={result.stderr!r}"
+        f"WAV の読み込み失敗が stderr に出ていない: stderr={result.stderr!r}"
+    )
+
+
+@pytest.mark.parametrize(
+    "chunk_size",
+    [
+        # 符号なし 32bit の最大値。signed で合成すると csize = -1 になり、
+        # csize + 8 が 7 になって実ファイルサイズの比較を素通りしていた。
+        # chunk_size は SIZE_MAX になり、int n = chunk_size / 2 が -1 となって
+        # data.reserve(-1) が std::length_error を投げ、未捕捉例外で abort する
+        0xFFFFFFFF,
+        # 同じく csize + 8 が 0 になり素通りする下限。進みが 0 になるため
+        # data 以外のチャンクでは無限ループ、data チャンクでは abort になる
+        0xFFFFFFF8,
+        # MSB が立つ最小値。csize は INT_MIN になるが csize + 8 は負のままなので、
+        # size_t への変換で巨大値になり比較が真 (拒否) になる。拒否の経路が
+        # 壊れていないことの確認で、修正の退行検出器ではない
+        0x80000000,
+        # MSB が立たない最大値。csize + 8 が signed でオーバーフローするため
+        # 規格上は未定義だが、実測では拒否されていた境界の確認
+        0x7FFFFFFF,
+    ],
+    ids=["0xffffffff", "0xfffffff8", "0x80000000", "0x7fffffff"],
+)
+def test_invalid_wav_data_chunk_size_exits_without_crash(chunk_size: int, tmp_path: Path) -> None:
+    """実ファイルサイズを超える data チャンクサイズの WAV で異常終了しない
+
+    チャンクサイズを signed int で合成すると負値になり、`csize + 8` が 0〜7 になる
+    0xFFFFFFF8〜0xFFFFFFFF で `size < csize + 8` の比較が偽になって素通りする。
+    素通りすると chunk_size が SIZE_MAX 付近の巨大値になり、`int n = chunk_size / 2` が
+    負値になって `data.reserve` が std::length_error を投げ、未捕捉例外で
+    プロセスが強制終了していた。
+
+    修正後は実ファイルサイズとの比較で弾かれ、`Zakuro::Run` がエラーを返す。
+    """
+    wav_path = tmp_path / f"invalid_data_size_{chunk_size:08x}.wav"
+    _write_wav_data_chunk_size(chunk_size, wav_path)
+    config_path = _fake_audio_config_path(tmp_path, f"wav_{chunk_size:08x}.jsonc", wav_path)
+    _assert_fake_audio_load_failure(run_zakuro(config_path))
+
+
+def test_valid_wav_is_accepted(tmp_path: Path) -> None:
+    """正常な WAV が引き続き受理されることを確認する
+
+    負値を含む 16bit PCM の WAV が受理されることを確認する。読み込みに失敗した場合は
+    `Zakuro::Run` が 0 以外を返してプロセスが終了するため、起動が継続していることで
+    受理されたことを確認する。
+
+    同じ設定のまま WAV を不正なものに差し替えると読み込み失敗のメッセージが出ることを
+    先に確認し、設定の組み立てが原因で「読み込み経路を通らないまま合格する」ことを防ぐ。
+
+    変換式を unsigned の合成式に戻しても値は 2 の補数として同じになるため、
+    このテストでは変換式の退行は検出できない (明示的な変換であることはコードで担保する)。
+    """
+    # 0x0000 / 0x7fff / 0x8000 (-32768) / 0xffff (-1) を含める
+    samples = b"".join(struct.pack("<H", s) for s in (0x0000, 0x7FFF, 0x8000, 0xFFFF))
+
+    # 対照ケース: 同じ設定で不正な WAV を渡すと必ず読み込み失敗になること。
+    # これが成立しない場合、以降の「起動が継続している」確認は読み込み経路を
+    # 通っていない可能性があるため、テストとして意味を持たない
+    control_wav = tmp_path / "control.wav"
+    _write_wav_data_chunk_size(0xFFFFFFFF, control_wav)
+    control_config = _fake_audio_config_path(tmp_path, "wav_control.jsonc", control_wav)
+    _assert_fake_audio_load_failure(run_zakuro(control_config))
+
+    wav_path = tmp_path / "valid.wav"
+    _write_wav_data_chunk_size(len(samples), wav_path, payload=samples)
+    config_path = _fake_audio_config_path(tmp_path, "wav_valid.jsonc", wav_path)
+    process = _spawn_zakuro(config_path, [], tmp_path)
+    try:
+        # 読み込みに失敗した場合は即座に終了するため、数秒待っても生存していることで
+        # 受理されたことを確認する。終了した場合は terminate 後も returncode が残る
+        time.sleep(STARTUP_WAIT_SECONDS)
+        assert process.poll() is None, (
+            f"正常な WAV が読み込めずに終了した: returncode={process.returncode}"
+        )
+    finally:
+        _, stderr = terminate_zakuro(process)
+
+    assert "failed to load fake audio" not in stderr, (
+        f"正常な WAV が読み込めていない: stderr={stderr!r}"
     )
 
 

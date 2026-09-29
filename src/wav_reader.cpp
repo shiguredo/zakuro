@@ -1,17 +1,30 @@
 #include "wav_reader.h"
 
+#include <exception>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 int WavReader::Load(std::string path) {
   std::string buf;
   {
     std::stringstream ss;
-    std::ifstream fin(path);
+    // WAV はバイナリ形式のため、テキストモードで開くと Windows で
+    // CRLF 変換によりデータが壊れる
+    std::ifstream fin(path, std::ios::binary);
     ss << fin.rdbuf();
     buf = ss.str();
   }
-  return Load(buf.c_str(), buf.size());
+  // 実ファイルサイズと整合する巨大なチャンクサイズの WAV では、Load(ptr, size) が
+  // サンプル用の領域を確保しようとして失敗しうる。未捕捉のまま外へ出すと
+  // std::terminate に至るため、ここで捕捉して読み込み失敗として扱う
+  try {
+    return Load(buf.c_str(), buf.size());
+  } catch (const std::exception& e) {
+    std::cerr << "failed to load WAV: path=" << path << " what=" << e.what()
+              << std::endl;
+    return -1;
+  }
 }
 
 static bool ReadChunk(const void* p,
@@ -25,9 +38,14 @@ static bool ReadChunk(const void* p,
   name = std::string((const char*)p, (const char*)p + 4);
 
   const uint8_t* buf = (const uint8_t*)p;
-  int csize = (int)buf[4] | ((int)buf[5] << 8) | ((int)buf[6] << 16) |
-              ((int)buf[7] << 24);
-  if (size < csize + 8) {
+  // チャンクサイズはリトルエンディアンの符号なし 32bit として読む。
+  // signed で合成して負値になると size_t への変換で巨大値になり大半はエラー返却されるが、
+  // csize + 8 が 0〜7 になる 0xFFFFFFF8〜0xFFFFFFFF は比較が偽になって素通りしてしまう
+  uint32_t csize = (uint32_t)buf[4] | ((uint32_t)buf[5] << 8) |
+                   ((uint32_t)buf[6] << 16) | ((uint32_t)buf[7] << 24);
+  // uint32_t のまま加算すると 2^32 でラップするため、size_t へ拡張してから比較する。
+  // 実ファイルサイズを超えるチャンクサイズはここで弾く
+  if (size < (size_t)csize + 8) {
     return false;
   }
   chunk_size = csize;
@@ -100,7 +118,11 @@ int WavReader::Load(const void* ptr, size_t size) {
     data.reserve(n);
     p = (const uint8_t*)chunk_data;
     for (int i = 0; i < n; i++) {
-      data.push_back((int)p[0] | ((int)p[1] << 8));
+      // 16bit signed PCM として読む。unsigned の合成式から暗黙変換すると
+      // signed として扱う意図が読めなくなるため、明示的に変換する
+      int16_t s = static_cast<int16_t>(static_cast<uint16_t>(p[0]) |
+                                       (static_cast<uint16_t>(p[1]) << 8));
+      data.push_back(s);
       p += 2;
     }
     return 0;
