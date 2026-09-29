@@ -35,15 +35,13 @@ from buildbase import (
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Linux 向けのビルド対象
-# x86_64 は x86_64 の runner、armv8 は arm64 の runner でネイティブにビルドする
+# Linux (x86_64) 向けのビルド対象
 LINUX_X86_64_PLATFORMS = (
     "ubuntu-22.04_x86_64",
     "ubuntu-24.04_x86_64",
     "ubuntu-26.04_x86_64",
 )
-LINUX_ARMV8_PLATFORMS = ("ubuntu-26.04_armv8",)
-LINUX_PLATFORMS = LINUX_X86_64_PLATFORMS + LINUX_ARMV8_PLATFORMS
+LINUX_PLATFORMS = LINUX_X86_64_PLATFORMS
 
 
 def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
@@ -178,8 +176,6 @@ def install_deps(
         }
         if platform in LINUX_X86_64_PLATFORMS:
             install_cmake_args["platform"] = "linux-x86_64"
-        elif platform in LINUX_ARMV8_PLATFORMS:
-            install_cmake_args["platform"] = "linux-aarch64"
         elif platform == "macos_arm64":
             install_cmake_args["platform"] = "macos-universal"
         install_cmake(**install_cmake_args)

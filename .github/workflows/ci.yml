@@ -33,15 +33,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ubuntu-26.04_armv8 は arm64 の runner でネイティブにビルドする
           - name: ubuntu-22.04_x86_64
             runner: ubuntu-22.04
           - name: ubuntu-24.04_x86_64
             runner: ubuntu-24.04
           - name: ubuntu-26.04_x86_64
             runner: ubuntu-26.04
-          - name: ubuntu-26.04_armv8
-            runner: ubuntu-26.04-arm
     name: Build zakuro for ${{ matrix.name }}
     # ビルドは apt と数 GB のダウンロードを伴うため ubuntu-slim は使わない
     runs-on: ${{ matrix.runner }}
@@ -92,8 +89,6 @@ jobs:
             runner: ubuntu-24.04
           - name: ubuntu-26.04_x86_64
             runner: ubuntu-26.04
-          - name: ubuntu-26.04_armv8
-            runner: ubuntu-26.04-arm
     name: Run pytest for ${{ matrix.name }}
     needs:
       - build_linux
