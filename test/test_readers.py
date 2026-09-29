@@ -7,10 +7,10 @@
 WAV は `WavReader::Load` の失敗が `Zakuro::Run` のエラーになって終了コードと標準エラー
 出力に現れるため、終了コード 1 と `failed to load fake audio` で検証できる。
 
-Y4M は `FakeVideoCapturer` が `Y4MReader::Open` の失敗をログに出さずに戻るため、
-失敗を観測できない。そのため Y4M のテストは「異常な入力でもプロセスがシグナルで
-落ちないこと」だけを検証する。`fps_den_` の検証が効いていることやプレーン別 stride の
-コピーが正しいことは、この E2E では観測できない (コード上の保証として確認する)。
+Y4M の異常なヘッダは `FakeVideoCapturer` が `Failed to Y4MReader::Open` と戻り値を
+ログに出すため、エラーとして扱われたことを観測できる。E2E で観測できないのは
+プレーン別 stride のコピーの正しさだけである (現行 libwebrtc は `stride_y == width` を
+返すため、修正前の一括書き込みでも同じ結果になる。コード上の保証として確認する)。
 
 読み出しを続ける系は `--http-host` / `--http-port` を指定して起動したままにし、
 一定時間後に `SIGKILL` で終了させる。終了コードが `SIGKILL` の値であれば、その間は
@@ -49,6 +49,9 @@ Y4M_HEADER_MARKER = "YUV4MPEG2 "
 
 # Y4MReader::Open が失敗したときに出すメッセージの断片
 Y4M_OPEN_ERROR_MARKER = "Failed to Y4MReader::Open"
+
+# Y4MReader::GetFrame が失敗したときに出すメッセージの断片
+Y4M_FRAME_ERROR_MARKER = "Failed to Y4MReader::GetFrame"
 
 # Y4MReader::ReadHeader が異常なヘッダに対して返す値
 Y4M_READ_HEADER_ERROR_RESULT = "result=-9"
@@ -172,12 +175,15 @@ def _assert_runs_without_signal(
     free_port: int,
     marker: str = HTTP_SERVER_STARTED_MARKER,
     on_stdout: bool = False,
+    unexpected_marker: str | None = None,
 ) -> None:
     """起動したままにして、一定時間シグナルで落ちないことを確認する
 
     `marker` を同期点にしてから `RUN_SECONDS` 待ち、`SIGKILL` で終了させる。終了コードが
     `SIGKILL` の値であれば、その間は動き続けていたことになる。メディアの読み出しを
     検証する場合は、その読み出しが始まることを示すログを `marker` に渡す。
+    `unexpected_marker` を渡すと、その間に標準エラー出力へその文字列が出ていないことも
+    確認する。
     """
     config_path = write_config_object(tmp_path, name, {"instances": [instance]})
     process = subprocess.Popen(
@@ -201,7 +207,10 @@ def _assert_runs_without_signal(
             lines, started = _wait_for_stdout_line(process, marker, STARTUP_WAIT_SECONDS)
         else:
             lines, started = wait_for_stderr_line(process, marker, STARTUP_WAIT_SECONDS)
-        assert started, f"{name}: HTTP サーバーが起動しなかった: stderr={chr(10).join(lines)!r}"
+        assert started, (
+            f"{name}: 同期点 {marker!r} を {STARTUP_WAIT_SECONDS} 秒以内に検出できなかった: "
+            f"output={chr(10).join(lines)!r}"
+        )
         time.sleep(RUN_SECONDS)
         # SIGKILL は捕捉できないため、この時点で生きていれば終了コードは SIGKILL になる
         process.kill()
@@ -217,6 +226,12 @@ def _assert_runs_without_signal(
         f"stdout={stdout.decode('utf-8', 'replace')!r}\n"
         f"stderr={stderr.decode('utf-8', 'replace')!r}"
     )
+
+    if unexpected_marker is not None:
+        stderr_text = stderr.decode("utf-8", "replace")
+        assert unexpected_marker not in stderr_text, (
+            f"{name}: 想定外のログが出ている: {unexpected_marker!r}\nstderr={stderr_text!r}"
+        )
 
 
 def _assert_video_rejected(
@@ -249,7 +264,9 @@ def _assert_video_rejected(
     stderr_lines: list[str] = []
     try:
         _, started = wait_for_stderr_line(process, HTTP_SERVER_STARTED_MARKER, STARTUP_WAIT_SECONDS)
-        assert started, "HTTP サーバーが起動しなかった"
+        assert started, (
+            f"{HTTP_SERVER_STARTED_MARKER!r} を {STARTUP_WAIT_SECONDS} 秒以内に検出できなかった"
+        )
         # リーダーの失敗ログを待つ。失敗をログに出さない実装では待ち時間を満了する
         stderr_lines, rejected = wait_for_stderr_line(
             process, Y4M_OPEN_ERROR_MARKER, STARTUP_WAIT_SECONDS
@@ -340,6 +357,7 @@ def test_y4m_with_odd_size_is_read_without_crash(free_port: int, tmp_path: Path)
         free_port,
         Y4M_HEADER_MARKER,
         on_stdout=True,
+        unexpected_marker=Y4M_FRAME_ERROR_MARKER,
     )
 
 
@@ -375,8 +393,7 @@ def test_wav_data_chunk_size_is_rejected(
     assert FAKE_AUDIO_ERROR_MARKER in result.stderr, (
         f"{reason}: fake audio の読み込み失敗が stderr に出ていない: stderr={result.stderr!r}"
     )
-    # チャンクサイズの検査で拒否されたことを固定する
-    # (fmt チャンクの長さ検査 -11 と data チャンクのサイズ検査 -10 のどちらか)
+    # data チャンクのサイズ検査で拒否されたことを固定する
     assert any(r in result.stderr for r in WAV_CHUNK_SIZE_ERROR_RESULTS), (
         f"{reason}: 拒否の理由がチャンクサイズではない: stderr={result.stderr!r}"
     )
