@@ -609,6 +609,16 @@ int Zakuro::Run() {
     vc_configs.push_back(vc_config);
   }
 
+  // 想定外の scenario は VirtualClient を作る前に検証する。VirtualClient の
+  // retry_timer_ は io_context に紐づくため、生成後に早期 return すると
+  // vcs.clear() を飛ばして io_context より後に破棄される。
+  if (fake_audio_key_trigger && config_.scenario != "" &&
+      config_.scenario != "reconnect") {
+    std::cerr << "[" << config_.name
+              << "] unsupported scenario: " << config_.scenario << std::endl;
+    return 1;
+  }
+
   std::vector<std::shared_ptr<VirtualClient>> vcs;
 
   {
@@ -672,7 +682,9 @@ int Zakuro::Run() {
 
     ScenarioPlayer scenario_player(spc);
     ScenarioData data;
-    int loop_index;
+    // 想定外の scenario はここへ来る前に弾かれているため、scenario が取り得る値は
+    // "" か "reconnect" だけになる。分岐を取りこぼさないよう、"" の分岐を最後の else にする。
+    int loop_index = 0;
     if (!fake_audio_key_trigger) {
       data.Reconnect();
       for (const auto& d : dcs_data) {
@@ -680,17 +692,6 @@ int Zakuro::Run() {
       }
       add_reconnect_scenario(data, true);
       loop_index = 1 + dcs_data.size();
-    } else if (config_.scenario == "") {
-      data.Reconnect();
-      for (const auto& d : dcs_data) {
-        data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
-      }
-      ScenarioData sd;
-      sd.Sleep(1000, 5000);
-      sd.PlayVoiceNumberClient();
-      data.PlaySubScenario("scenario-voice-number-client", sd, 0);
-      add_reconnect_scenario(data, true);
-      loop_index = 1 + dcs_data.size() + 1;
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
       data.Sleep(1000, 5000);
@@ -711,6 +712,17 @@ int Zakuro::Run() {
       data.PlayVoiceNumberClient();
       data.Sleep(1000, 5000);
       loop_index = 0;
+    } else {
+      data.Reconnect();
+      for (const auto& d : dcs_data) {
+        data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
+      }
+      ScenarioData sd;
+      sd.Sleep(1000, 5000);
+      sd.PlayVoiceNumberClient();
+      data.PlaySubScenario("scenario-voice-number-client", sd, 0);
+      add_reconnect_scenario(data, true);
+      loop_index = 1 + dcs_data.size() + 1;
     }
 
     for (int i = 0; i < config_.vcs; i++) {

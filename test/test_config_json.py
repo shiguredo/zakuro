@@ -253,39 +253,60 @@ def test_config_unsupported_extension(extension: str, tmp_path: Path) -> None:
     _assert_config_error(result, CONFIG_ERROR_MARKER)
 
 
-def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
-    """CLI11 の検証で弾かれる値は、CLI11 の終了コードで終了する
+def _assert_cli11_validation_error(result: subprocess.CompletedProcess[str]) -> None:
+    """CLI11 の検証で弾かれたときの終了コードとメッセージを検証する
 
-    設定ファイルの値が型としては正しくても、CLI11 の検証 (列挙値・範囲) で
-    弾かれる場合がある。この経路は `main` ではなく CLI11 が終了させるため、
-    終了コードは 1 ではなく CLI11 が返す値になる。
+    この経路は `main` ではなく CLI11 が終了させるため、終了コードは 1 ではなく
+    CLI11 が返す 105 (ValidationError) になる。
     """
-    config = {
-        "instances": [
-            {
-                "no-video-device": True,
-                "no-audio-device": True,
-                "sora": {
-                    "signaling-url": "wss://127.0.0.1:1/signaling",
-                    "channel-id": "config-json-cli11",
-                    "role": "sendrecv",
-                    # 列挙値ではないため CLI11 の IsMember で弾かれる
-                    "video-codec-type": "UNKNOWN",
-                },
-            }
-        ]
-    }
-    config_path = write_config_object(tmp_path, "cli_validation.jsonc", config)
-    result = run_zakuro(config_path)
-
     _assert_no_signal_exit(result)
-    # CLI11 は検証エラーで 105 (ValidationError) を返す
     assert result.returncode == 105, (
         f"CLI11 の終了コード 105 ではない: returncode={result.returncode}\n"
         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
     )
     assert "Run with --help for more information." in result.stderr, (
         f"CLI11 のエラーメッセージが stderr に出ていない: stderr={result.stderr!r}"
+    )
+
+
+def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
+    """CLI11 の検証で弾かれる値は、CLI11 の終了コードで終了する
+
+    設定ファイルの値が型としては正しくても、CLI11 の検証 (列挙値・範囲) で
+    弾かれる場合がある。ここでは sora 配下の列挙値オプションで確認する。
+    """
+    instance = dict(VALID_INSTANCE)
+    instance["sora"] = dict(VALID_INSTANCE["sora"])
+    # 列挙値ではないため CLI11 の IsMember で弾かれる
+    instance["sora"]["video-codec-type"] = "UNKNOWN"
+    config_path = write_config_object(
+        tmp_path, "cli_validation_video_codec_type.jsonc", {"instances": [instance]}
+    )
+    result = run_zakuro(config_path)
+
+    _assert_cli11_validation_error(result)
+    assert "video-codec-type" in result.stderr, (
+        f"弾かれた項目がエラーメッセージに出ていない: stderr={result.stderr!r}"
+    )
+
+
+def test_unsupported_scenario_exits_with_cli11_code(tmp_path: Path) -> None:
+    """許容値以外の scenario は CLI11 の検証で弾かれる
+
+    ここで弾かれることが、`Zakuro::Run` に届く scenario が許容値だけになる前提を
+    守っている。`Zakuro::Run` 側の検証は CLI 以外で設定を構築した場合の防御である。
+    """
+    instance = dict(VALID_INSTANCE)
+    instance["sora"] = dict(VALID_INSTANCE["sora"])
+    instance["scenario"] = "unknown"
+    config_path = write_config_object(
+        tmp_path, "cli_validation_scenario.jsonc", {"instances": [instance]}
+    )
+    result = run_zakuro(config_path)
+
+    _assert_cli11_validation_error(result)
+    assert "scenario" in result.stderr, (
+        f"弾かれた項目がエラーメッセージに出ていない: stderr={result.stderr!r}"
     )
 
 
