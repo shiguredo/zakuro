@@ -28,14 +28,6 @@
 #include "zakuro.h"
 #include "zakuro_version.h"
 
-namespace std {
-
-std::string to_string(std::string str) {
-  return str;
-}
-
-}  // namespace std
-
 ParseArgsResult Util::ParseArgs(const std::vector<std::string>& cargs,
                                 std::string& config_file,
                                 int& log_level,
