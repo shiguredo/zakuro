@@ -122,6 +122,10 @@
   - @voluntas
 - [UPDATE] `ParseDataChannels` の `interval` 検証にある到達不能コードを削除する
   - @voluntas
+- [UPDATE] `ParseDataChannels` の `size-min` / `size-max` にある効果の無い `obj.erase(it);` を削除する
+  - 解析結果は `DataChannels::Channel` にコピー済みで、削除した値を読み直す箇所が無かった
+  - あわせて引数と解析対象の参照を const にして、値渡しのコピーを無くす
+  - @voluntas
 
 ## 2025.3.1
 

@@ -22,6 +22,7 @@ import pytest
 from test_helpers import (
     BOOLEAN_ERROR_MARKER,
     CONFIG_ERROR_MARKER,
+    CONFIG_ERROR_TIMEOUT_SECONDS,
     DATA_CHANNELS_ERROR_MARKER,
     DATA_CHANNELS_MESSAGE_PREFIX,
     DATA_CHANNELS_SENDING_MARKER,
@@ -383,6 +384,19 @@ def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
             [{"label": "test", "direction": "sendrecv", "size_min": "48"}],
             "size-min must be a number",
         ),
+        # 正規キーと別名キーを同時に指定した場合は正規キーの値を採用する
+        (
+            "data_channels_canonical_size_min_wins.jsonc",
+            [
+                {
+                    "label": "test",
+                    "direction": "sendrecv",
+                    "size-min": 1,
+                    "size_min": 48,
+                }
+            ],
+            "size-min out of range: 1",
+        ),
         # size-max が数値でない場合は数値であることを求めて失敗する
         (
             "data_channels_bad_size_max.jsonc",
@@ -412,6 +426,19 @@ def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
             "data_channels_bad_size_max_alias.jsonc",
             [{"label": "test", "direction": "sendrecv", "size_max": "48"}],
             "size-max must be a number",
+        ),
+        # 正規キーと別名キーを同時に指定した場合は正規キーの値を採用する
+        (
+            "data_channels_canonical_size_max_wins.jsonc",
+            [
+                {
+                    "label": "test",
+                    "direction": "sendrecv",
+                    "size-max": 1,
+                    "size_max": 256000,
+                }
+            ],
+            "size-max out of range: 1",
         ),
         # max_packet_life_time が数値でない場合は value_to<int32_t> が例外を投げていた
         (
@@ -473,11 +500,13 @@ def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
         "size-min-below-lower-bound",
         "size-min-above-upper-bound",
         "size-min-alias-not-number",
+        "size-min-canonical-wins",
         "size-max-not-number",
         "size-max-not-integer",
         "size-max-below-lower-bound",
         "size-max-above-upper-bound",
         "size-max-alias-not-number",
+        "size-max-canonical-wins",
         "max-packet-life-time-not-number",
         "max-packet-life-time-not-integer",
         "max-packet-life-time-out-of-range",
@@ -500,7 +529,10 @@ def test_data_channels_error_exits_without_crash(
     instance["sora"] = dict(VALID_INSTANCE["sora"])
     instance["sora"]["data-channels"] = data_channels
     config_path = write_config_object(tmp_path, name, {"instances": [instance]})
-    result = run_zakuro(config_path)
+    # 正規キー優先を検証するケースは、優先順が崩れると解析を通過して接続を試み続ける。
+    # その場合はタイムアウトで失敗させるため、他のケースより待ち時間を短くする
+    timeout_seconds = CONFIG_ERROR_TIMEOUT_SECONDS if "canonical-wins" not in name else 3
+    result = run_zakuro(config_path, timeout_seconds)
 
     # DataChannels の解析は接続前に行われるため、解析に失敗した場合は接続処理に進まない
     _assert_no_signal_exit(result)
@@ -528,16 +560,24 @@ def test_valid_data_channels_are_accepted(tmp_path: Path) -> None:
     有効な設定が受理されることを確認する。接続先は到達しない URL なので、解析の後に
     始まる DataChannel の送信を同期点にして、解析の通過を確認する。
     """
-    # 省略した場合 (既定値) と、指定した場合の両方を受理することを確認する。size_min /
-    # size_max は別名キーで、境界値の 48 と 256000 を受理する。ordered など任意キーも
-    # 有効値を受理する。受理した個々の値は接続後にしか観測できないため、ここでは
-    # 解析が通過したことだけを確認する
+    # 省略した場合 (既定値) と、指定した場合の両方を受理することを確認する。size-min /
+    # size-max は正規キー、size_min / size_max は別名キーで、それぞれ境界値の 48 と
+    # 256000 を受理する。ordered など任意キーも有効値を受理する。受理した個々の値は
+    # 接続後にしか観測できないため、ここでは解析が通過したことだけを確認する。
+    # 別名キーが実際に読まれることは、異常系の size-min-alias-not-number /
+    # size-max-alias-not-number が担う
     instance = dict(VALID_INSTANCE)
     instance["sora"] = dict(VALID_INSTANCE["sora"])
     instance["sora"]["data-channels"] = [
         {"label": "default", "direction": "sendrecv"},
         {
-            "label": "explicit",
+            "label": "canonical",
+            "direction": "sendrecv",
+            "size-min": 48,
+            "size-max": 256000,
+        },
+        {
+            "label": "alias",
             "direction": "sendrecv",
             "interval": 1000,
             "size_min": 48,
