@@ -70,6 +70,8 @@
 
 - [ADD] pytest を使った E2E テストを追加する
   - @voluntas
+- [ADD] CI で pytest を実行する
+  - @voluntas
 - [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
   - @voluntas
 - [UPDATE] GitHub Actions を検証用の ci.yml とリリース用の release.yml に分割する
