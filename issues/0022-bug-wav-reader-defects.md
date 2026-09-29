@@ -1,7 +1,7 @@
 # WavReader の複数バグ (csize 符号拡張・16bit PCM 暗黙変換・テキストモード open)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/fix-wav-reader-defects
 - Polished: 2026-09-08
 - Updated: 2026-09-29
@@ -95,3 +95,82 @@ size_t へ拡張してから比較する。負値化と 32bit 加算のラップ
 WAV の不正データに対する E2E の回帰テストは issues/0043 の項目 5 が扱う。
 AddressSanitizer 有効ビルドの手段はリポジトリに無く、issues/0036 で追加が提案されているため、
 サニタイザでの確認は本 issue の完了条件に含めない。
+
+## 解決方法
+
+3 項目を修正した。
+
+### csize の符号拡張
+
+`src/wav_reader.cpp` の `ReadChunk` でチャンクサイズを `uint32_t` として合成し、
+比較を `if (size < (size_t)csize + 8)` に変更した。`uint32_t` のまま加算すると
+2^32 でラップして `0xFFFFFFFF` が 7 に化けるため、先に `size_t` へ拡張してから比較する。
+
+修正前は signed で合成していたため `csize + 8` が 0〜7 になる `0xFFFFFFF8`〜`0xFFFFFFFF` で
+比較が偽になり、実ファイルサイズを超えるチャンクサイズを素通りさせていた。
+素通りすると `chunk_size` が `SIZE_MAX` 付近の巨大値になり、`int n = chunk_size / 2` が
+負値となって `data.reserve` が `std::length_error` を投げ、`Zakuro::Run` に
+try / catch が無いため未捕捉例外でプロセスが強制終了していた
+(実バイナリで終了コード 134 = SIGABRT を再現)。
+
+あわせて `WavReader::Load(std::string path)` で `Load(ptr, size)` を try / catch で包み、
+`std::bad_alloc` などの例外を読み込み失敗として扱うようにした。実ファイルサイズと整合する
+巨大なチャンクサイズを受理した場合に、サンプル用の領域の確保が失敗しうるため。
+
+### 16bit PCM の明示的な符号付き変換
+
+data チャンクのサンプルを次の形で読むようにした。
+
+```cpp
+int16_t s = static_cast<int16_t>(static_cast<uint16_t>(p[0]) |
+                                 (static_cast<uint16_t>(p[1]) << 8));
+```
+
+修正前は unsigned の合成式からの暗黙変換で、値は C++20 では正しく定まるものの
+signed 16bit として扱う意図が読み取れなかった。
+
+### テキストモード open
+
+`std::ifstream` を `std::ios::binary` 付きで開くようにした。macOS / Linux では
+挙動は変わらないが、Windows で CRLF 変換により WAV バイナリが壊れるのを防ぐ。
+
+### テスト
+
+`test/test_main_resource.py` に次を追加した。
+
+- `test_invalid_wav_data_chunk_size_exits_without_crash`: data チャンクサイズを
+  `0xFFFFFFFF` / `0xFFFFFFF8` / `0x80000000` / `0x7FFFFFFF` にした 4 ケースをパラメータ化し、
+  シグナルで異常終了せず終了コード 1 で `failed to load fake audio` を出力することを検証する
+- `test_valid_wav_is_accepted`: 負値を含む 16bit PCM の WAV が受理されることを検証する。
+  同じ設定で不正な WAV を渡すと必ず読み込み失敗になる対照ケースを先に実行し、
+  読み込み経路を通っていることを確認する
+
+`test_run_failure_exits_with_nonzero` と共通のセットアップ・アサーションは
+`_fake_audio_config_path` / `_assert_fake_audio_load_failure` に集約した。
+
+### 検証方法
+
+- 修正前後のバイナリを実測し、`0xFFFFFFFF` / `0xFFFFFFF8` が修正前は SIGABRT (134)、
+  修正後は終了コード 1 で `result=-10` になることを確認した
+- `0x80000000` / `0x7FFFFFFF` は修正前から拒否されており、拒否の経路が壊れていないことを
+  確認する境界値として残した
+- 16bit PCM の負サンプル変換は pytest から直接観測できない (unsigned の合成式に戻しても
+  2 の補数として同じ値になる) ため、**コード上の明示的な `static_cast` で担保し、
+  テストの docstring に検出できない旨を明記した**
+- `python3 run.py build macos_arm64` が通り、`test/` 配下の pytest が
+  81 passed / 1 skipped (skip は実 Sora 接続用の環境変数が無い既存テスト) になることを確認した
+- prek のフック (ruff format / ruff check / ty / 組み込みフック) が全て通ることを確認した
+
+### 完了条件の確認
+
+- chunk サイズ `0xFFFFFFFF` の data チャンクを含む WAV で異常終了せず
+  `failed to load fake audio` が出ること: パラメータ化した E2E テストで検証した
+  (終了コード 1 で判定する。`main` が `Zakuro::Run` の戻り値を終了コードに反映する)
+- data チャンク読み込みの変換式が明示的な符号付き変換になっており、unsigned 合成値の
+  暗黙変換がコードに残っていないこと: `src/wav_reader.cpp` の `static_cast<int16_t>` で担保した
+- `WavReader::Load(std::string path)` の `std::ifstream` が `std::ios::binary` で
+  open されていること: コードで担保した
+
+なお、WAV の不正データに対する E2E の回帰テストは issues/0043 の項目 5 が扱うとしていたが、
+本 issue の完了条件を満たすため data チャンクサイズ 4 値のテストを本 issue で追加した。
+0043 の項目 5 は残る範囲 (fmt チャンクの短小・0 バイト・fmt の値不正・Y4M) を扱う。
