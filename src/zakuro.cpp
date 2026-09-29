@@ -48,14 +48,14 @@ struct DataChannels {
   std::vector<sora::SoraSignalingConfig::DataChannel> schannels;
 };
 
-static bool ParseDataChannels(boost::json::value data_channels,
+static bool ParseDataChannels(const boost::json::value& data_channels,
                               DataChannels& m) {
   m = DataChannels();
   if (!data_channels.is_array()) {
     RTC_LOG(LS_ERROR) << "ParseDataChannels: data channels must be an array";
     return false;
   }
-  for (auto& j : data_channels.as_array()) {
+  for (const auto& j : data_channels.as_array()) {
     DataChannels::Channel ch;
     sora::SoraSignalingConfig::DataChannel sch;
 
@@ -63,7 +63,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
       RTC_LOG(LS_ERROR) << "ParseDataChannels: data channel must be an object";
       return false;
     }
-    auto& obj = j.as_object();
+    const auto& obj = j.as_object();
 
     // label
     {
@@ -140,7 +140,6 @@ static bool ParseDataChannels(boost::json::value data_channels,
               << "ParseDataChannels: size-min out of range: " << ch.size_min;
           return false;
         }
-        obj.erase(it);
       }
     }
 
@@ -166,7 +165,6 @@ static bool ParseDataChannels(boost::json::value data_channels,
               << "ParseDataChannels: size-max out of range: " << ch.size_max;
           return false;
         }
-        obj.erase(it);
       }
     }
 

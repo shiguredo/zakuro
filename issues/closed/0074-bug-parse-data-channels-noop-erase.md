@@ -1,7 +1,7 @@
 # ParseDataChannels の size-min / size-max の obj.erase(it) が効果を持たない
 
 - Created: 2026-09-29
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/fix-parse-data-channels-noop-erase
 - Polished: 2026-09-29
 
@@ -59,4 +59,32 @@ erase 以外に `data_channels` と `obj` を書き換える操作は無いた�
 
 ## 解決方法
 
-{YYYY-MM-DD} に記入
+`src/zakuro.cpp` の `ParseDataChannels` から `size-min` / `size-max` ブロックの
+`obj.erase(it);` を削除し、引数を `const boost::json::value&` で受け取るようにした。
+
+- `obj.erase(it);` を削除した。この関数の引数は値渡しで、erase はそのコピーに対する操作であり、
+  削除した値を読み直す箇所が無かった。呼び出し元の `config_.sora_data_channels` には
+  元から影響していない
+- 引数を `const` 参照にして値渡しのコピーを無くした。あわせて要素の参照
+  (`for (const auto& j : ...)`) と `obj` (`const auto& obj = ...`) を明示的に const にした。
+  これにより、この関数が入力の JSON を書き換えないことがコード上で明確になり、
+  `obj.erase(it);` が再混入した場合はコンパイルエラーになる
+- `size-min` / `size-max` 以外の挙動 (受理・拒否の判定、既定値、範囲チェック、ログメッセージ) は
+  変更していない
+
+`test/test_config_json.py` の `test_valid_data_channels_are_accepted` に、正規キー
+(`size-min` / `size-max`) と別名キー (`size_min` / `size_max`) をそれぞれ境界値で受理する
+要素を追加した。あわせて `test_data_channels_error_exits_without_crash` に、正規キーと別名キーを
+同時に指定した場合に正規キーの値を採用することを検証するケースを 2 件追加した
+(`size-min-canonical-wins` / `size-max-canonical-wins`)。
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- `uv run pytest -q` が 90 passed / 1 skipped で通る
+- `uv run ruff check .` / `uv run ruff format --check .` / `uvx ty@0.0.84 check .` が通る
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+- 正規キー優先のテストは、探索順を別名優先に入れ替えた実装で失敗することを確認した
+- 別名キーの探索を無効化した実装で `size-max-alias-not-number` が失敗することを確認した
+
+`CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。
