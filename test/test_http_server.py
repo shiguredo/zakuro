@@ -12,6 +12,7 @@
 
 import contextlib
 import resource
+import select
 import socket
 import subprocess
 import time
@@ -193,6 +194,29 @@ def test_http_server_resolve_failure_exits_with_error(tmp_path: Path) -> None:
     _assert_start_failed(result, HTTP_RESOLVE_ERROR_MARKER)
 
 
+def _read_stderr_for(process: subprocess.Popen[bytes], seconds: int) -> list[str]:
+    """一定時間のあいだ標準エラー出力を読み続けて行を返す
+
+    読み続けることで子プロセスの書き込みがブロックしないようにする。読み出せる行が
+    無い場合も待ち時間の分だけ繰り返す。
+    """
+    lines: list[str] = []
+    assert process.stderr is not None
+    stderr = process.stderr
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([stderr], [], [], 0.1)
+        if not ready:
+            if process.poll() is not None:
+                break
+            continue
+        line = stderr.readline()
+        if line == b"":
+            break
+        lines.append(line.decode("utf-8", errors="replace").rstrip("\n"))
+    return lines
+
+
 def _start_http_server_with_low_fd_limit(
     config_path: Path, port: int, working_directory: Path
 ) -> tuple[subprocess.Popen[bytes], list[str]]:
@@ -255,9 +279,9 @@ def test_http_server_accept_error_does_not_spin(free_port: int, tmp_path: Path) 
         )
         stderr_lines.extend(exhausted_lines)
 
-        # 枯渇してから観測時間の分だけログを読む。枯渇前のログを件数に数えないためである
-        measured_from = len(stderr_lines)
-        time.sleep(ACCEPT_ERROR_WINDOW_SECONDS)
+        # 枯渇してから観測時間の分だけログを読み続ける。読み続けることで子プロセスの
+        # 書き込みがブロックしないようにする (修正前のスピン実装では大量に出る)
+        measured_lines = _read_stderr_for(process, ACCEPT_ERROR_WINDOW_SECONDS)
     finally:
         for client in clients:
             client.close()
@@ -271,24 +295,24 @@ def test_http_server_accept_error_does_not_spin(free_port: int, tmp_path: Path) 
         f"{FD_EXHAUSTION_WAIT_SECONDS} 秒以内に fd が枯渇しなかった: "
         f"stderr={chr(10).join(stderr_lines)!r} stdout={stdout!r}"
     )
+    # EMFILE による枯渇であることを固定する
+    assert FD_EXHAUSTION_ERROR_MARKER in "\n".join(stderr_lines), (
+        f"accept の失敗が fd 枯渇ではない: stderr={chr(10).join(stderr_lines)!r}"
+    )
 
-    stderr = "\n".join(stderr_lines[measured_from:])
+    # 枯渇は観測できているため、観測時間内の件数だけでスピンの有無を判定する。
+    # 枯渇の直後に接続が閉じて復帰した場合は観測時間内のエラーが 0 件になるため、
+    # 件数の下限は設けない
+    stderr = "\n".join(measured_lines)
     accept_errors = stderr.count(HTTP_ACCEPT_ERROR_MARKER)
     retries = stderr.count(HTTP_ACCEPT_RETRY_MARKER)
-    # fd を枯渇させられていない場合は、この検証が成立しないため失敗させる
-    assert accept_errors > 0, (
-        f"accept が失敗しなかった (fd を枯渇させられていない): stderr={stderr!r} stdout={stdout!r}"
-    )
-    # EMFILE による失敗であることを固定する
-    assert FD_EXHAUSTION_ERROR_MARKER in stderr, (
-        f"accept の失敗が fd 枯渇ではない: stderr={stderr!r}"
-    )
     assert accept_errors <= MAX_ACCEPT_ERRORS_IN_WINDOW, (
         f"{ACCEPT_ERROR_WINDOW_SECONDS} 秒間に accept エラーが {accept_errors} 件出た "
         f"(待たずに再試行している): stderr={stderr!r}"
     )
-    # 再試行をやめる退行では再試行のログが 1 件しか出ない
-    assert retries >= MIN_ACCEPT_RETRIES_IN_WINDOW, (
-        f"accept の再試行が {retries} 件しか出なかった "
-        f"({MIN_ACCEPT_RETRIES_IN_WINDOW} 件以上を期待): stderr={stderr!r}"
-    )
+    if accept_errors > 0:
+        # 再試行をやめる退行では再試行のログが 1 件しか出ない
+        assert retries >= MIN_ACCEPT_RETRIES_IN_WINDOW, (
+            f"accept の再試行が {retries} 件しか出なかった "
+            f"({MIN_ACCEPT_RETRIES_IN_WINDOW} 件以上を期待): stderr={stderr!r}"
+        )

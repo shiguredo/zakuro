@@ -1,5 +1,7 @@
 #include "fake_video_capturer.h"
 
+#include <cstring>
+
 // WebRTC
 #include <modules/video_capture/video_capture_defines.h>
 #include <rtc_base/logging.h>
@@ -43,10 +45,16 @@ void FakeVideoCapturer::StartCapture() {
     if (config_.type == FakeVideoCapturerConfig::Type::Y4MFile) {
       int r = y4m_reader_.Open(config_.y4m_path);
       if (r != 0) {
+        // 失敗を黙って捨てると、映像が出ない理由がログから分からない
+        RTC_LOG(LS_ERROR) << "Failed to Y4MReader::Open: path="
+                          << config_.y4m_path << " result=" << r;
         return;
       }
       y4m_buffer_ = webrtc::I420Buffer::Create(y4m_reader_.GetWidth(),
                                                y4m_reader_.GetHeight());
+      // GetFrame は Y/U/V が連続した 1 フレーム分を一括で書き込むため、
+      // I420Buffer のプレーン別 stride を前提にしない一時バッファを用意する
+      y4m_frame_buffer_.resize(y4m_reader_.GetSize());
     }
 
     while (!stopped_) {
@@ -77,10 +85,15 @@ void FakeVideoCapturer::StartCapture() {
         int r = y4m_reader_.GetFrame(
             std::chrono::duration_cast<std::chrono::milliseconds>(now -
                                                                   started_at_),
-            y4m_buffer_->MutableDataY(), &updated);
+            y4m_frame_buffer_.data(), &updated);
         if (r != 0) {
           RTC_LOG(LS_ERROR) << "Failed to Y4MReader::GetFrame: result=" << r;
           return;
+        }
+        // GetFrame は同一フレームの再要求ではバッファに書き込まない。
+        // その場合は前回の内容をそのまま使う
+        if (updated) {
+          CopyY4MFrameToI420Buffer();
         }
         buffer = webrtc::I420Buffer::Create(config_.width, config_.height);
         buffer->ScaleFrom(*y4m_buffer_);
@@ -114,6 +127,33 @@ void FakeVideoCapturer::StopCapture() {
     stopped_ = true;
     thread_->join();
     thread_.reset();
+  }
+}
+
+void FakeVideoCapturer::CopyY4MFrameToI420Buffer() {
+  // Y4M のフレームは Y プレーン (width * height) → U プレーン → V プレーン
+  // (各 chroma_width * chroma_height) の順に連続して格納されている
+  const int width = y4m_reader_.GetWidth();
+  const int height = y4m_reader_.GetHeight();
+  const int chroma_width = y4m_reader_.GetChromaWidth();
+  const int chroma_height = y4m_reader_.GetChromaHeight();
+
+  const uint8_t* src = y4m_frame_buffer_.data();
+  const size_t y_size = (size_t)width * height;
+  const size_t chroma_size = (size_t)chroma_width * chroma_height;
+
+  // コピー元の行幅とコピー先の stride が違うため、プレーンごとに行単位でコピーする
+  for (int y = 0; y < height; y++) {
+    memcpy(y4m_buffer_->MutableDataY() + (size_t)y * y4m_buffer_->StrideY(),
+           src + (size_t)y * width, width);
+  }
+  for (int y = 0; y < chroma_height; y++) {
+    memcpy(y4m_buffer_->MutableDataU() + (size_t)y * y4m_buffer_->StrideU(),
+           src + y_size + (size_t)y * chroma_width, chroma_width);
+  }
+  for (int y = 0; y < chroma_height; y++) {
+    memcpy(y4m_buffer_->MutableDataV() + (size_t)y * y4m_buffer_->StrideV(),
+           src + y_size + chroma_size + (size_t)y * chroma_width, chroma_width);
   }
 }
 

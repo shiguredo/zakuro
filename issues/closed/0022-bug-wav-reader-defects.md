@@ -1,8 +1,8 @@
 # WavReader の複数バグ (csize 符号拡張・16bit PCM 暗黙変換・テキストモード open)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
-- Branch: feature/fix-wav-reader-defects
+- Completed: 2026-09-30
+- Branch: feature/fix-y4m-and-wav-reader-defects
 - Polished: 2026-09-08
 - Updated: 2026-09-29
 - Milestone: 2026.1.0
@@ -83,8 +83,8 @@ size_t へ拡張してから比較する。負値化と 32bit 加算のラップ
 ## 完了条件
 
 - chunk サイズ `0xFFFFFFFF` の data チャンクを含む WAV を `--fake-audio-capture` に指定して
-  起動してもシグナルで異常終了せず、`failed to load fake audio` が標準エラー出力に出ること
-  (`main` が `Zakuro::Run` の返り値を捨てているため終了コードでは判定できない。issues/0031 で解消予定)
+  起動してもシグナルで異常終了せず、`failed to load fake audio` が標準エラー出力に出て
+  終了コード 1 で終了すること
 - data チャンク読み込みの変換式が明示的な符号付き変換になっており、unsigned 合成値の
   暗黙変換がコードに残っていないこと
 - `WavReader::Load(std::string path)` の `std::ifstream` が `std::ios::binary` で open されていること
@@ -95,3 +95,40 @@ size_t へ拡張してから比較する。負値化と 32bit 加算のラップ
 WAV の不正データに対する E2E の回帰テストは issues/0043 の項目 5 が扱う。
 AddressSanitizer 有効ビルドの手段はリポジトリに無く、issues/0036 で追加が提案されているため、
 サニタイザでの確認は本 issue の完了条件に含めない。
+
+## 解決方法
+
+`src/wav_reader.cpp` を次のように修正した。
+
+- `ReadChunk` のチャンクサイズを `uint32_t` で合成し、`size < (size_t)csize + 8` と
+  `size_t` へ拡張してから比較する。signed での合成と `uint32_t` 同士の加算による
+  2^32 のラップをどちらも排除する
+- fmt チャンクの長さが 16 バイト未満の場合は拒否する。長さを確認せずに `p[0]`〜`p[15]` を
+  読むと、入力バッファの外を読むため
+- サンプルレートも `uint32_t` で合成し、0 より大きく 1000000 以下であることを確認する。
+  signed で合成すると MSB が立つ値が負値になり、後段のバッファサイズ計算で未捕捉例外になる
+- data チャンクの要素数を `size_t` にする。チャンクサイズが符号なしであることと、
+  要素数の型を揃えるため
+- data チャンクの読み込みで `uint16_t` に合成してから `static_cast<int16_t>` する。
+  signed 16bit として読み出す意図を明示する
+- `Load(std::string path)` の `std::ifstream` を `std::ios::binary` で開く
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- data チャンクのサイズが `0xFFFFFFFF` と `0xFFFFFFF8` の WAV を
+  `--fake-audio-capture` に渡すと、`failed to load fake audio: path=... result=-10` を
+  標準エラー出力に出して終了コード 1 で終了する。修正前は同じ入力で `data.reserve` が
+  `std::length_error` を投げて SIGABRT (終了コード 134) になっていた
+- 正しい WAV は拒否されない
+- `uv run pytest -q` が通る
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+`test/test_readers.py` を追加し、異常なチャンクサイズの WAV が未捕捉例外にならず
+エラーになることを検証する。
+
+16bit PCM の符号付き変換は、負のサンプル値を pytest から直接観測できないため
+自動テストにしていない。変換式が明示的な符号付き変換になっていることをコード上の
+保証として確認する (issue 0043 の項目 5 でも扱う)。
+
+`CHANGES.md` の `## develop` に `[FIX]` のエントリを追加した。
