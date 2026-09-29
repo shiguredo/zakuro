@@ -1,7 +1,7 @@
 # CTest をやめて pytest に一本化する
 
-- Created: 2026-09-28
-- Completed: {YYYY-MM-DD}
+- Created: 2026-09-29
+- Completed: 2026-09-29
 - Branch: feature/remove-ctest
 - Polished: {YYYY-MM-DD}
 
@@ -39,3 +39,28 @@ CI に組み込まれておらず (`.github/workflows/build.yml` は `python3 ru
 - `CHANGES.md` に削除したテストの追加エントリが残っていないこと
 - `python3 run.py build macos_arm64` が成功すること
 - `uv run pytest` の結果が撤去前と同じ (20 passed / 1 skipped) であること
+
+## 解決方法
+
+2026-09-29 追記: CTest を撤去し、テストは pytest に一本化した。
+
+- `CMakeLists.txt` から `enable_testing()`、`zakuro_adm_test` と `zakuro_game_key_core_test` の定義、
+  `add_test`、`set_tests_properties` を削除した
+- `test/zakuro_audio_device_module_test.cpp` と `test/game_key_core_test.cpp` を削除した
+- `CHANGES.md` の `## develop` の `### misc` から、削除したテストの追加エントリ 2 件を削除した
+- `src/` のコードは変更していない
+
+検証:
+
+- `python3 run.py build macos_arm64` が成功し、ビルド対象が `zakuro` だけになった
+- `uv run pytest` が 20 passed / 1 skipped で、撤去前と同じ結果だった
+- ビルドディレクトリの古い生成物 (`CTestTestfile.cmake` とテスト実行ファイル) を削除した状態で
+  `ctest` を実行すると、テストが 1 件も登録されていないことを確認した
+
+撤去で失う検証について:
+
+- ADM の生成と破棄は pytest の E2E が起動のたびに通っている
+  (`src/zakuro.cpp` の `configure_dependencies` は `no-audio-device` でも `kDummyAudio` の
+  `ZakuroAudioDeviceModule` を生成して `dependencies.adm` に設定する)
+- ADM の `Init` の再入と `GameKeyCore` の競合はプロセス内部の呼び出し条件であり、
+  pytest では同じ形にできない。pytest での補い方はテスト拡充の issue (0043) で扱う
