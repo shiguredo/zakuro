@@ -1,7 +1,7 @@
 # README のバッジ・ヘルプが実装と乖離している (libwebrtc / --port)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/fix-readme-libwebrtc-badge-and-port-option
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -51,3 +51,12 @@ CI (`.github/workflows/build.yml`) のビルド対象と既に一致している
 - `README.md` の libwebrtc バッジが `m150.7871` かつリンク先が `branch-heads/7871` であること
   (DEPS の `WEBRTC_BUILD_VERSION` (`m150.7871.3.1`) のマイルストーンと branch-head に一致)
 - `README.md` ヘルプ抜粋に `--port` オプションが記載されていないこと
+
+## 解決方法
+
+`README.md` を設計方針どおり更新した。
+
+- libwebrtc バッジを `m150.7871` に更新し、リンク先を `branch-heads/7871` にした (`DEPS` の `WEBRTC_BUILD_VERSION=m150.7871.3.1` からマイルストーンと branch-head のみ抽出)
+- ヘルプ抜粋から実装に無い `--port` の 2 行を削除した
+
+`CHANGES.md` は shiguredo-changelog の規約 (`.md` 変更は変更履歴に載せない) に従い更新していない。ヘルプ全体の再生成や `--http-host` / `--http-port` の追記は本 issue の対象外とした。
