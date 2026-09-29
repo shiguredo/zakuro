@@ -104,14 +104,17 @@
   - accept エラーのログを ERROR から WARNING に変更し、再試行までの待ち時間を出す
   - @voluntas
 - [FIX] `WavReader` がチャンクサイズを signed で合成して未捕捉例外になる問題を修正する
-  - チャンクサイズを符号なしで合成し、`size_t` へ拡張してから比較する
+  - チャンクサイズとサンプルレートを符号なしで合成し、`size_t` へ拡張してから比較する
+  - fmt チャンクの長さとサンプルレートの範囲を検証し、入力バッファの外を読まないようにする
   - 16bit PCM を明示的に signed へ変換し、`std::ifstream` をバイナリモードで開く
   - @voluntas
 - [FIX] `Y4MReader` の `F` フィールドの分母が 0 のときに 0 除算になる問題を修正する
   - あわせて `fopen` の直後にファイルを RAII へ載せ、`file_size` の取得失敗時のリークをなくす
+  - 幅と高さが 0 以下、または 1 フレームが 1GiB を超える Y4M を拒否する
+  - 異常な Y4M を指定した場合に `Failed to Y4MReader::Open` を出す
   - @voluntas
-- [FIX] Y4M のフレームを `I420Buffer` のプレーン別 stride を考慮してコピーする
-  - `GetSize()` の一括書き込みが `I420Buffer` の内部レイアウトに依存していた
+- [FIX] `FakeVideoCapturer` が Y4M のフレームを `I420Buffer` の内部レイアウトに依存して書き込む問題を修正する
+  - `GetSize()` の一括書き込みをやめ、プレーン別 stride を考慮した行単位コピーにする
   - @voluntas
 
 ### misc

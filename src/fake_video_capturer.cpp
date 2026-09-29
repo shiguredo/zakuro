@@ -45,6 +45,9 @@ void FakeVideoCapturer::StartCapture() {
     if (config_.type == FakeVideoCapturerConfig::Type::Y4MFile) {
       int r = y4m_reader_.Open(config_.y4m_path);
       if (r != 0) {
+        // 失敗を黙って捨てると、映像が出ない理由がログから分からない
+        RTC_LOG(LS_ERROR) << "Failed to Y4MReader::Open: path="
+                          << config_.y4m_path << " result=" << r;
         return;
       }
       y4m_buffer_ = webrtc::I420Buffer::Create(y4m_reader_.GetWidth(),

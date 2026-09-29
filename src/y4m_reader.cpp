@@ -1,11 +1,16 @@
 #include "y4m_reader.h"
 
+#include <cstdint>
 #include <iostream>
 
 // boost
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
+
+// 1 フレームの大きさの上限 (バイト)
+// GetSize の int 計算がオーバーフローしない範囲に収める
+static constexpr int64_t kMaxFrameSize = 1024LL * 1024 * 1024;
 
 int Y4MReader::Open(std::string path) {
   FILE* fp = ::fopen(path.c_str(), "rb");
@@ -166,9 +171,18 @@ int Y4MReader::ReadHeader() {
     }
   }
 
-  // fps_den_ が 0 の場合は GetFrame の除算で 0 除算になる
-  if (width_ == 0 || height_ == 0 || fps_num_ == 0 || fps_den_ == 0) {
+  // fps_den_ が 0 の場合は GetFrame の除算で 0 除算になる。
+  // 幅と高さが負の場合も GetSize が負値になり I420Buffer の生成で落ちる
+  if (width_ <= 0 || height_ <= 0 || fps_num_ <= 0 || fps_den_ <= 0) {
     return -9;
+  }
+
+  // 極端に大きい寸法は GetSize の int 計算がオーバーフローし、フレームの
+  // 読み出し先の確保で未捕捉例外になる
+  int64_t frame_size = (int64_t)width_ * height_ +
+                       (int64_t)GetChromaWidth() * GetChromaHeight() * 2;
+  if (frame_size > kMaxFrameSize) {
+    return -13;
   }
 
   r = ::fseek(file_.get(), n1 + 1, SEEK_SET);
