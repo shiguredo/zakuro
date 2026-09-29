@@ -62,6 +62,9 @@ WAV_FMT_SIZE_ERROR_RESULT = "result=-11"
 # WavReader がサンプルレートの範囲外で返す値
 WAV_SAMPLE_RATE_ERROR_RESULT = "result=-12"
 
+# WavReader が data チャンクの空で返す値
+WAV_EMPTY_DATA_ERROR_RESULT = "result=-13"
+
 # 1 フレームが大きすぎる Y4M に対して返す値
 Y4M_FRAME_SIZE_ERROR_RESULT = "result=-13"
 
@@ -84,12 +87,16 @@ def _y4m(width: int, height: int, fps_num: int, fps_den: int, frames: int = 8) -
     return header.encode() + body
 
 
-def _wav(data_chunk_size: int, fmt_size: int = 16, sample_rate: int = 48000) -> bytes:
+def _wav(
+    data_chunk_size: int,
+    fmt_size: int = 16,
+    sample_rate: int = 48000,
+    body_size: int = 8,
+) -> bytes:
     """data チャンクのサイズを指定して WAV を作る
 
-    16bit / 1ch の PCM。data チャンクの中身は 8 バイトだけ入れる。
-    `fmt_size` と `sample_rate` を変えると fmt チャンクの長さとサンプルレートを
-    指定できる。
+    16bit / 1ch の PCM。`fmt_size` と `sample_rate` を変えると fmt チャンクの長さと
+    サンプルレートを、`body_size` を変えると data チャンクの中身の長さを指定できる。
     """
     fmt_body = struct.pack(
         "<HHIIHH",
@@ -103,7 +110,7 @@ def _wav(data_chunk_size: int, fmt_size: int = 16, sample_rate: int = 48000) -> 
     # fmt チャンクの長さを 16 未満にする場合は、その長さまで切り詰める
     fmt_body = fmt_body[:fmt_size]
     fmt = b"fmt " + struct.pack("<I", fmt_size) + fmt_body
-    data = b"data" + struct.pack("<I", data_chunk_size) + b"\x00\x00" * 4
+    data = b"data" + struct.pack("<I", data_chunk_size) + b"\x00\x00" * (body_size // 2)
     riff_size = 4 + len(fmt) + len(data)
     return b"RIFF" + struct.pack("<I", riff_size) + b"WAVE" + fmt + data
 
@@ -396,6 +403,32 @@ def test_wav_data_chunk_size_is_rejected(
     # data チャンクのサイズ検査で拒否されたことを固定する
     assert any(r in result.stderr for r in WAV_CHUNK_SIZE_ERROR_RESULTS), (
         f"{reason}: 拒否の理由がチャンクサイズではない: stderr={result.stderr!r}"
+    )
+
+
+def test_wav_with_empty_data_chunk_is_rejected(tmp_path: Path) -> None:
+    """data チャンクが空の WAV は受け付けられない
+
+    受理すると `FakeAudioData::data` が空のまま音声スレッドへ渡り、空の vector への
+    添字アクセスになる。
+    """
+    wav_path = tmp_path / "empty_data.wav"
+    wav_path.write_bytes(_wav(0, body_size=0))
+    instance = _instance()
+    instance["fake-audio-capture"] = str(wav_path)
+
+    result = _run_to_completion(instance, "wav_empty_data.jsonc", tmp_path)
+
+    assert result.returncode == 1, (
+        f"終了コードが 1 ではない: returncode={result.returncode}\n"
+        f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+    )
+    assert FAKE_AUDIO_ERROR_MARKER in result.stderr, (
+        f"fake audio の読み込み失敗が stderr に出ていない: stderr={result.stderr!r}"
+    )
+    # 空 data チャンクの検査で拒否されたことを固定する
+    assert WAV_EMPTY_DATA_ERROR_RESULT in result.stderr, (
+        f"拒否の理由が空 data チャンクではない: stderr={result.stderr!r}"
     )
 
 

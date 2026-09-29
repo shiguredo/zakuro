@@ -79,6 +79,14 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
       buf.resize(buf_size);
     }
 
+    // fake_audio_ の data が空の場合、下の分岐が data[index] を読むと
+    // 空の vector への添字アクセスになる。無音を送出し続ける
+    bool fake_audio_is_empty =
+        (config_.type == ZakuroAudioDeviceModuleConfig::Type::Safari ||
+         config_.type == ZakuroAudioDeviceModuleConfig::Type::FakeAudio) &&
+        fake_audio_ != nullptr && fake_audio_->data.empty();
+    std::vector<int16_t> silence(buf_size);
+
     auto prev_at = std::chrono::steady_clock::now();
     while (!audio_thread_stopped_) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -88,8 +96,14 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
           std::chrono::duration_cast<std::chrono::milliseconds>(now - prev_at)
               .count() /
           1000;
-      if (config_.type == ZakuroAudioDeviceModuleConfig::Type::Safari ||
-          config_.type == ZakuroAudioDeviceModuleConfig::Type::FakeAudio) {
+      if (fake_audio_is_empty) {
+        // 空の data を読まずに無音を送出する
+        device_buffer_->SetRecordedBuffer(silence.data(),
+                                          buf_size / config_.channels);
+        device_buffer_->DeliverRecordedData();
+      } else if (config_.type == ZakuroAudioDeviceModuleConfig::Type::Safari ||
+                 config_.type ==
+                     ZakuroAudioDeviceModuleConfig::Type::FakeAudio) {
         for (int i = 0; i < sample_count; i++) {
           for (int j = 0; j < config_.channels; j++) {
             buf.push_back(fake_audio_->data[index]);

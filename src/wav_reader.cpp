@@ -123,6 +123,11 @@ int WavReader::Load(const void* ptr, size_t size) {
       data.push_back(static_cast<int16_t>(u));
       p += 2;
     }
+    // data チャンクが空の WAV は入力として不正。受理すると読み出し側が
+    // 空の vector を添字アクセスする
+    if (data.empty()) {
+      return -13;
+    }
     return 0;
   }
 }

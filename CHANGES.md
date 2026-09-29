@@ -116,6 +116,10 @@
 - [FIX] `FakeVideoCapturer` が Y4M のフレームを `I420Buffer` の内部レイアウトに依存して書き込む問題を修正する
   - `GetSize()` の一括書き込みをやめ、プレーン別 stride を考慮した行単位コピーにする
   - @voluntas
+- [FIX] 空の data チャンクを持つ WAV を受理して音声スレッドが範囲外を読む問題を修正する
+  - `WavReader::Load` が空の data チャンクを拒否する
+  - `ZakuroAudioDeviceModule` は `fake_audio_->data` が空の場合に無音を送出する
+  - @voluntas
 
 ### misc
 
