@@ -2,6 +2,10 @@ name: ci
 
 on:
   push:
+    # tags-ignore だけを指定するとブランチへの push が未定義の ref 扱いになり
+    # ワークフローが実行されないため、全ブランチを対象にする branches も指定する
+    branches:
+      - '**'
     # タグ push は release.yml が担当するため ci.yml ではビルドしない
     tags-ignore:
       - '*'
