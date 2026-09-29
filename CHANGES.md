@@ -103,6 +103,16 @@
   - fd 枯渇などの永続エラーで accept を即座に再試行して CPU を占有していた
   - accept エラーのログを ERROR から WARNING に変更し、再試行までの待ち時間を出す
   - @voluntas
+- [FIX] `WavReader` がチャンクサイズを signed で合成して未捕捉例外になる問題を修正する
+  - チャンクサイズを符号なしで合成し、`size_t` へ拡張してから比較する
+  - 16bit PCM を明示的に signed へ変換し、`std::ifstream` をバイナリモードで開く
+  - @voluntas
+- [FIX] `Y4MReader` の `F` フィールドの分母が 0 のときに 0 除算になる問題を修正する
+  - あわせて `fopen` の直後にファイルを RAII へ載せ、`file_size` の取得失敗時のリークをなくす
+  - @voluntas
+- [FIX] Y4M のフレームを `I420Buffer` のプレーン別 stride を考慮してコピーする
+  - `GetSize()` の一括書き込みが `I420Buffer` の内部レイアウトに依存していた
+  - @voluntas
 
 ### misc
 

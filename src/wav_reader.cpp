@@ -7,7 +7,8 @@ int WavReader::Load(std::string path) {
   std::string buf;
   {
     std::stringstream ss;
-    std::ifstream fin(path);
+    // WAV はバイナリファイル。text mode で開くと Windows で CRLF 変換により壊れる
+    std::ifstream fin(path, std::ios::binary);
     ss << fin.rdbuf();
     buf = ss.str();
   }
@@ -25,12 +26,16 @@ static bool ReadChunk(const void* p,
   name = std::string((const char*)p, (const char*)p + 4);
 
   const uint8_t* buf = (const uint8_t*)p;
-  int csize = (int)buf[4] | ((int)buf[5] << 8) | ((int)buf[6] << 16) |
-              ((int)buf[7] << 24);
-  if (size < csize + 8) {
+  // チャンクサイズは符号なしの 4 バイト値。signed で合成すると MSB が立つ値が
+  // 負値になり、巨大なチャンクサイズを取りこぼす
+  uint32_t csize = (uint32_t)buf[4] | ((uint32_t)buf[5] << 8) |
+                   ((uint32_t)buf[6] << 16) | ((uint32_t)buf[7] << 24);
+  // 先に size_t へ拡張してから加算する。uint32_t のまま加算すると 2^32 で
+  // ラップして巨大なチャンクサイズが小さな値に化ける
+  if (size < (size_t)csize + 8) {
     return false;
   }
-  chunk_size = csize;
+  chunk_size = (size_t)csize;
   chunk_data = buf + 8;
   return true;
 }
@@ -100,7 +105,10 @@ int WavReader::Load(const void* ptr, size_t size) {
     data.reserve(n);
     p = (const uint8_t*)chunk_data;
     for (int i = 0; i < n; i++) {
-      data.push_back((int)p[0] | ((int)p[1] << 8));
+      // 16bit signed PCM として読み出す。unsigned の合成式のままだと
+      // int16_t への暗黙変換に意図が隠れる
+      uint16_t u = (uint16_t)p[0] | ((uint16_t)p[1] << 8);
+      data.push_back(static_cast<int16_t>(u));
       p += 2;
     }
     return 0;

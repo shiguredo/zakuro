@@ -12,13 +12,15 @@ int Y4MReader::Open(std::string path) {
   if (fp == nullptr) {
     return -1;
   }
+  // file_size の取得に失敗しても閉じられるよう、先に RAII へ載せる
+  file_.reset(fp, [](FILE* fp) { ::fclose(fp); });
+
   boost::system::error_code ec;
   file_size_ = boost::filesystem::file_size(boost::filesystem::path(path), ec);
   if (ec) {
     return -2;
   }
 
-  file_.reset(fp, [](FILE* fp) { ::fclose(fp); });
   return ReadHeader();
 }
 
@@ -164,7 +166,8 @@ int Y4MReader::ReadHeader() {
     }
   }
 
-  if (width_ == 0 || height_ == 0 || fps_num_ == 0) {
+  // fps_den_ が 0 の場合は GetFrame の除算で 0 除算になる
+  if (width_ == 0 || height_ == 0 || fps_num_ == 0 || fps_den_ == 0) {
     return -9;
   }
 
