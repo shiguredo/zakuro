@@ -24,10 +24,17 @@ STARTUP_WAIT_SECONDS = 3
 # このログを同期点にして検証が完了したことを確認する
 HTTP_SERVER_STARTED_MARKER = "HTTP server started on"
 
+# DataChannel の送信が始まったことを示すログの断片
+# 送信は DataChannels の解析が成功した後に始まるため、
+# 受け付けた data-channels が実際に使われたことの同期点になる
+DATA_CHANNELS_SENDING_MARKER = "Send DataChannel"
+
 # 設定ファイルの読み込みに失敗したときのエラーメッセージの断片
 CONFIG_ERROR_MARKER = "failed to load config file"
 
 # DataChannels の解析に失敗したときのエラーメッセージの断片
+# Zakuro::Run が解析の失敗を受けて stderr に出す。失敗の理由は別に
+# DATA_CHANNELS_MESSAGE_PREFIX のログとして ParseDataChannels が出す。
 # 実際の出力は "[<name>] failed to parse DataChannels" であり、
 # インスタンス名は設定によって変わるため共通部分だけを検査する
 DATA_CHANNELS_ERROR_MARKER = "failed to parse DataChannels"
@@ -37,6 +44,11 @@ VALUE_TYPE_ERROR_MARKER = "has an unexpected value type"
 
 # フラグオプションの値が真偽値でないときのエラーメッセージの断片
 BOOLEAN_ERROR_MARKER = "must be a boolean"
+
+# DataChannels の解析に失敗した理由を示すメッセージの接頭辞
+# ParseDataChannels は失敗の理由を RTC_LOG(LS_ERROR) で出力する
+# ログ行全体は "[000:001][1234] (<ファイル>:<行>): ParseDataChannels: ..." の形式になる
+DATA_CHANNELS_MESSAGE_PREFIX = "ParseDataChannels:"
 
 # 設定ファイルの異常入力を検証するときに使う有効なインスタンス設定
 # 実際には接続しないため、到達しない signaling URL を入れておく
