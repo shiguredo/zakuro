@@ -1,7 +1,7 @@
 # GitHub Actions build.yml の改善 (pytest 実行・apt-get update・可読性)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/refactor-ci-workflow-improvements
 - Polished: 2026-09-08
 
@@ -61,3 +61,29 @@ GitHub Actions の Ubuntu runner はパッケージリストが古い場合が�
 - `apt-get update` が明示的に実行されていること
 - build ステップに `name:` が付いていること
 - matrix の runner 選択が三項演算子ではなく `include` で表現されていること
+
+## 解決方法
+
+2026-09-29 追記: `build.yml` を検証用の `ci.yml` とリリース用の `release.yml` に分割し、`ci.yml` で pytest を実行するようにした。
+
+- `.github/workflows/build.yml` を削除し、push と PR の検証は `ci.yml`、タグ push のリリースは `release.yml` が担当する
+- `ci.yml` に `pytest` ジョブを追加した。`build_linux` の ubuntu-24.04_x86_64 がビルドした実行ファイルを artifact で渡し、
+  `test/` で `uv sync` のあと `uv run pytest -v` を実行する
+- 組織シークレット `TEST_SIGNALING_URLS` / `TEST_CHANNEL_ID_PREFIX` / `TEST_SECRET_KEY` を環境変数として渡す
+  (fork からの PR などシークレットが無い環境では `test/conftest.py` の `sora_config` が skip する)
+- `apt-get update` を `apt-get install` の前に実行するようにした
+- build ステップに `name:` を付け、matrix の runner 選択を三項演算子から `include` に変更した
+- `permissions` を明示した (`ci.yml` は `contents: read`、`release.yml` は `contents: write`)
+
+検証:
+
+- `actionlint` が `ci.yml` と `release.yml` で警告なし
+- CI (run 36517760388) でビルド 3 ジョブが成功し、`pytest` ジョブが起動して 20 passed / 1 failed になった。
+  失敗は `test_version` が実 Sora 接続時に SIGABRT するもので、CI への組み込み不備ではなく本体のバグのため 0067 として起票した
+- 手元 (macOS) で環境変数与えた `uv run pytest` は 21 passed。ただし signaling URL は実 Sora に接続できない値のため、
+  実接続の経路は CI で検証している
+
+補足:
+
+- `run.py --package` は `release.yml` のみで実行する (検証はビルドと pytest に絞る)
+- `--sora-signaling-url` を複数指定したときに abort する件は 0067 で扱う
