@@ -4,6 +4,7 @@
 - Completed: {YYYY-MM-DD}
 - Branch: feature/refactor-virtual-client-state-machine
 - Polished: 2026-09-08
+- Updated: 2026-09-29
 
 ## 目的
 
@@ -25,9 +26,9 @@
 - `closing_` かつ `on_close_ != nullptr` のときは `on_close("already closing");` を呼ぶ
 - `!closing_` かつ `signaling_ == nullptr` のときは `on_close("already closed");` を呼ぶ
 
-どちらも引数の `std::function` にガードがなく、`on_close` は `virtual_client.h` で default `nullptr` のため、
+どちらも引数の `std::function` にガードがなく、`on_close` は `src/virtual_client.h` で default `nullptr` のため、
 引数無し `Close()` が呼ばれると空の `std::function` を invoke して `std::bad_function_call` を投げる。
-`scenario_player.h` の OP_DISCONNECT が `Close()` を引数無しで呼ぶため、
+`src/scenario_player.h` の OP_DISCONNECT が `Close()` を引数無しで呼ぶため、
 接続状態と `on_close_` の登録状況の組み合わせ次第で踏みうる。
 
 ### raw this キャプチャ
@@ -38,8 +39,9 @@
 コールバックはメンバの `retry_timer_` に束縛されているため、`VirtualClient` の破棄と同時にハンドラも
 破棄される。現時点のスコープでは発火しないが、`Connect()` は `shared_from_this()` を呼ぶため、
 タイマーとオブジェクトの寿命が分離した瞬間に dangling する余地がある。
-なお、`retry_timer_` が `io_context` より長寿命になる UB
-(`issues/0007-bug-retry-timer-outlives-io-context.md` で対応) は本 issue の対象外とする。
+なお、`retry_timer_` が `io_context` より長寿命になる UB は
+`issues/closed/0007-bug-retry-timer-outlives-io-context.md` で対応済み (2026-09-25) であり、
+本 issue の対象外とする。
 
 ### 状態機械の暗黙性
 
@@ -71,14 +73,15 @@
 
 - `Closing` 中の `Close(callback)` は遷移せず、`on_close_` が空なら登録、登録済みなら
   `already closing` を通知する (ガードにより引数無し `Close()` は no-op)
-- 状態遷移の単体テストを追加する (Sora SDK モック不要な範囲で。`Close` の 2 段階呼び出し、`Connect` 再入等)。
-  C++ 単体テスト基盤 (GoogleTest / doctest / Catch2 のいずれか) は issues/0043 で整備予定のため、
-  基盤導入後に追加する
+- 状態遷移の単体テストは追加しない。C++ 単体テスト基盤 (GoogleTest / doctest / Catch2 のいずれか) の導入は
+  issues/0043 から外れ、issues/0066 で CTest を撤去してテストは実バイナリを起動する pytest に一本化する
+  方針になった。pytest からは `VirtualClient` の内部状態を観測できないため単体テストは対象外とする
+- 実バイナリ経由で観測できる範囲 (切断と再接続の挙動) の検証は issues/0043 の項目 3 に委ねる
 
 ## 完了条件
 
 - `Close` を任意の順序で複数回呼んでも `std::bad_function_call` が投げられないこと
 - `retry_timer_` のコールバックが raw `this` を保持しないこと
 - 状態遷移表 (上記) の遷移が State として実装され、コード内のコメントにも明記されていること
-- 状態遷移の代表的なシーケンスを覆う単体テストが追加されていること
-  (C++ 単体テスト基盤は issues/0043 で整備予定のため、基盤導入後に追加する)
+  (遷移そのものを検証する単体テストは C++ 単体テスト基盤の撤去 (issues/0066) により追加できないため対象外。
+  実バイナリ経由で観測できる範囲は issues/0043 の項目 3 が扱う)
