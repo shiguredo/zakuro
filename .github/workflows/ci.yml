@@ -75,10 +75,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name:
-          - macos_arm64
+        include:
+          # macos_arm64 は macOS 15 以降、macos-26_arm64 は macOS 26 以降が対象になる
+          - name: macos_arm64
+            runner: macos-15
+          - name: macos-26_arm64
+            runner: macos-26
     name: Build zakuro for ${{ matrix.name }}
-    runs-on: macos-26
+    runs-on: ${{ matrix.runner }}
     # 通常は 3 分程度で完了するため、ハングを検出できるよう余裕を持たせて 30 分で打ち切る
     timeout-minutes: 30
     steps:
@@ -108,6 +112,8 @@ jobs:
           - name: ubuntu-26.04_armv8
             runner: ubuntu-26.04-arm
           - name: macos_arm64
+            runner: macos-15
+          - name: macos-26_arm64
             runner: macos-26
     name: Run pytest for ${{ matrix.name }}
     needs:

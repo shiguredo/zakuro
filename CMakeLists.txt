@@ -7,6 +7,14 @@ cmake_policy(SET CMP0091 NEW)
 
 project(zakuro C CXX)
 
+# macOS 向けのビルド対象
+# run.py の MACOS_PLATFORMS と揃える
+# macos_arm64 は macOS 15 以降、macos-26_arm64 は macOS 26 以降が対象になる
+set(ZAKURO_MACOS_PLATFORMS
+  macos_arm64
+  macos-26_arm64
+)
+
 # Linux 向けのビルド対象
 # run.py の LINUX_X86_64_PLATFORMS / LINUX_ARMV8_PLATFORMS と揃える
 set(ZAKURO_LINUX_PLATFORMS
@@ -162,7 +170,7 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   string(REGEX REPLACE "[-.]" "_" file_name_linux "${file}")
 
   # バイナリの組み込み
-  if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
+  if (ZAKURO_PLATFORM IN_LIST ZAKURO_MACOS_PLATFORMS)
     target_link_options(zakuro PRIVATE "SHELL:-sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file}")
   elseif (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
     set(objfile ${file}.o)
@@ -196,7 +204,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/embedded_binary.generated.priv.h
   @ONLY)
 
-if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
+if (ZAKURO_PLATFORM IN_LIST ZAKURO_MACOS_PLATFORMS)
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)

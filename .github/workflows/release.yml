@@ -20,6 +20,11 @@ jobs:
             runner: ubuntu-22.04
           - name: ubuntu-24.04_x86_64
             runner: ubuntu-24.04
+          - name: ubuntu-26.04_x86_64
+            runner: ubuntu-26.04
+          # armv8 は x86_64 の runner から sysroot を使ってクロスコンパイルする
+          - name: ubuntu-26.04_armv8
+            runner: ubuntu-26.04
     name: Build zakuro for ${{ matrix.name }}
     # ビルドは apt と数 GB のダウンロードを伴うため ubuntu-slim は使わない
     runs-on: ${{ matrix.runner }}
@@ -32,6 +37,10 @@ jobs:
           # runner のパッケージリストが古いことがあるため先に更新する
           sudo apt-get update
           DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libx11-dev libxext-dev
+          # armv8 向けのクロスコンパイルでは aarch64 のリンカが必要になる
+          if [ "${{ matrix.name }}" = "ubuntu-26.04_armv8" ]; then
+            DEBIAN_FRONTEND=noninteractive sudo apt-get -y install binutils-aarch64-linux-gnu
+          fi
       - name: Build zakuro
         run: python3 run.py build ${{ matrix.name }} --package
       - name: Get package name
@@ -55,10 +64,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name:
-          - macos_arm64
+        include:
+          # macos_arm64 は macOS 15 以降、macos-26_arm64 は macOS 26 以降が対象になる
+          - name: macos_arm64
+            runner: macos-15
+          - name: macos-26_arm64
+            runner: macos-26
     name: Build zakuro for ${{ matrix.name }}
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
     # 通常は 3 分程度で完了するため、ハングを検出できるよう余裕を持たせて 30 分で打ち切る
     timeout-minutes: 30
     steps:
@@ -100,7 +113,16 @@ jobs:
           platform: ubuntu-24.04_x86_64
       - uses: ./.github/actions/download
         with:
+          platform: ubuntu-26.04_x86_64
+      - uses: ./.github/actions/download
+        with:
+          platform: ubuntu-26.04_armv8
+      - uses: ./.github/actions/download
+        with:
           platform: macos_arm64
+      - uses: ./.github/actions/download
+        with:
+          platform: macos-26_arm64
       - name: Env to output
         run: |
           echo "package_paths=$(cat package_paths.env | tr '\n' ' ')" >> "$GITHUB_OUTPUT"

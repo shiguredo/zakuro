@@ -74,7 +74,11 @@
   - @voluntas
 - [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
   - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする
-  - CI で両ターゲットと macOS 26 arm64 のビルドと pytest を実行する
+  - CI とリリースで両ターゲットをビルドし、pytest を実行する
+  - @voluntas
+- [ADD] macOS 26 (arm64) のビルドに対応する
+  - macos-26_arm64 は macOS 26 以降が対象になる
+  - macos_arm64 (macOS 15 以降) はこれまでどおりビルドする
   - @voluntas
 - [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
   - @voluntas
