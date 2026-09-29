@@ -30,6 +30,10 @@
   - CMAKE_VERSION を `4.4.2` に上げる
   - BOOST_VERSION を `1.92.0` に上げる
   - @torikizi
+- [UPDATE] Sora C++ SDK を `2026.2.2` に上げる
+  - `RTC_LOG` に暗黙変換が必要な文字列を渡すと SIGABRT する問題が修正されている
+  - 複数の signaling URL を指定して実 Sora に接続した場合に発生していた
+  - @voluntas
 - [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
   - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
   - @torikizi

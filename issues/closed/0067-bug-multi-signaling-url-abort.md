@@ -1,7 +1,7 @@
 # 複数の signaling URL を指定して実 Sora に接続すると SIGABRT する
 
 - Created: 2026-09-29
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/fix-multi-signaling-url-abort
 - Polished: {YYYY-MM-DD}
 
@@ -57,3 +57,44 @@ zakuro は `--sora-signaling-url` を複数指定でき (`src/util.cpp` の `app
 - signaling URL を複数指定して実 Sora に接続しても zakuro が SIGABRT しないこと
 - `.github/workflows/ci.yml` の `pytest` ジョブが成功すること
 - abort の原因が Sora C++ SDK 側か zakuro 側かがこの issue に記録されていること
+
+## 解決方法
+
+abort の原因は Sora C++ SDK 側であり、SDK の `2026.2.2` で修正されたため、
+zakuro は SDK を更新して暫定措置の `xfail` を外した。
+
+### 原因 (Sora C++ SDK 側)
+
+`Websocket::OnClose` が `reason().reason` (`boost::beast::static_string`) を `RTC_LOG` へ
+そのまま渡していた。libwebrtc のログ機構は引数を `MakeVal` で包むが、この型は
+`absl::string_view` への暗黙変換が選ばれ、変換で作られた一時オブジェクトへのポインタが
+`operator<<` を抜けた時点で破棄される。破棄後の領域をログが参照するため、
+libc++ の hardening assertion (`std::string::append` に nullptr) で SIGABRT していた。
+
+`Websocket::OnClose` は通常の切断でも通るため、シグナリング URL が 1 本でも同じ未定義動作が
+発生しうる。zakuro で必ず再現していたのは、複数の signaling URL を指定すると接続に敗れた側の
+WebSocket が必ず `OnClose` を通るためである。
+
+修正は `reason().reason.c_str()` を渡す形に変更され、同じ問題を持つ AMF のエンコーダ /
+デコーダも `c_str()` を経由するように直されている。SDK の `CHANGES.md` の `[FIX]` と
+`issues/closed/0108-bug-websocket-onclose-log-abort.md` に記録がある。
+
+### zakuro 側の変更
+
+- `DEPS` の `SORA_CPP_SDK_VERSION` を `2026.2.1` から `2026.2.2` に上げた。
+  `2026.2.2` の変更は `src/websocket.cpp` と AMF の 2 ファイル、`CHANGES.md`、`VERSION` のみで、
+  `DEPS` の他の依存 (WEBRTC_BUILD_VERSION / BOOST_VERSION / OPENH264_VERSION など) は
+  `2026.2.1` と同一である。zakuro 側のソース変更は不要だった
+- `test/test_zakuro.py` の `test_version` から `xfail` と、暫定措置である旨のコメントを削除した。
+  実 Sora に接続する経路が CI で検証されるようになる
+- `CHANGES.md` の `## develop` に `[UPDATE]` を追記した
+
+### 検証結果
+
+- `python3 run.py build macos_arm64` が成功し、`test/` 配下の pytest が
+  76 passed / 1 skipped で通ることを確認した (`test_version` は組織シークレットが無いため skip)
+- CI の `pytest` ジョブ (組織シークレットの signaling URL 2 本を使用) で
+  `test_zakuro.py::test_version` が `XFAIL` から `PASSED` に変わり、77 passed / skipped 0 で
+  成功することを確認した。SIGABRT は発生していない
+- 修正前は同じ CI で `RuntimeError: zakuro process exited unexpectedly with code -6` が
+  再現していたため、この経路は CI が毎回検証する
