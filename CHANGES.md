@@ -11,12 +11,9 @@
 
 ## develop
 
-- [ADD] HTTP サーバー機能を追加する
-  - `--http-port` オプションで HTTP サーバーを起動可能
-  - `--http-host` オプションでバインドするアドレスを指定可能
-  - @voluntas
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
+  - `--vp8-encoder` / `--vp9-encoder` / `--av1-encoder` / `--h264-encoder` / `--h265-encoder` の受付値 `nvidia_video_codec_sdk` は `nvidia_video_codec` に変更する
   - @torikizi
 - [CHANGE] 設定ファイル (JSONC) の値の型が想定と異なる場合はエラーにする
   - オブジェクトや配列を値に取らないオプションにこれらを指定した場合はエラーにする
@@ -29,21 +26,19 @@
   - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
   - CMAKE_VERSION を `4.4.2` に上げる
   - BOOST_VERSION を `1.92.0` に上げる
+  - AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
+  - run.py を修正し、clang を libwebrtc 提供のものに変更する
   - @torikizi
 - [UPDATE] Sora C++ SDK を `2026.2.2` に上げる
   - `RTC_LOG` に暗黙変換が必要な文字列を渡すと SIGABRT する問題が修正されている
   - 複数の signaling URL を指定して実 Sora に接続した場合に発生していた
   - @voluntas
-- [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
-  - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
-  - @torikizi
-- [UPDATE] run.py を修正し、clang を libwebrtc 提供のものに変更
-  - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
-  - @torikizi
 - [UPDATE] CLI11 を `2.6.2` に上げる
   - @torikizi
-- [UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` と `CMAKE_C_STANDARD` を 17 から 20 に上げる
-  - @torikizi
+- [ADD] HTTP サーバー機能を追加する
+  - `--http-port` オプションで HTTP サーバーを起動可能
+  - `--http-host` オプションでバインドするアドレスを指定可能
+  - @voluntas
 - [ADD] ヘルスチェック用 HTTP API `/.ok` を追加する
   - GET リクエストで 200 OK を返す
   - @voluntas
@@ -125,27 +120,19 @@
 
 ### misc
 
-- [ADD] pytest を使った E2E テストを追加する
-  - テスト基盤の共通部分を `test/conftest.py` に集約する
+- [CHANGE] `.github/copilot-instructions.md` を削除する
   - @voluntas
-- [ADD] CI で pytest を実行する
+- [CHANGE] `.github/workflows/claude.yml` を削除する
   - @voluntas
-- [ADD] prek のフックを追加する
-  - `ruff-format` / `ruff-check` / `ty` / `pytest` を prek 経由で実行する
-  - @voluntas
-- [ADD] CI で prek のフックを実行する
-  - @voluntas
-- [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
-  - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする
-  - CI とリリースで両ターゲットをビルドし、pytest を実行する
-  - @voluntas
-- [ADD] macOS 26 (arm64) のビルドに対応する
-  - macos-26_arm64 は macOS 26 以降が対象になる
-  - macos_arm64 (macOS 15 以降) はこれまでどおりビルドする
+- [UPDATE] blend2d のバージョンを `0.21.2` に上げる
+  - include を `<blend2d.h>` から `<blend2d/blend2d.h>` に変更する
   - @voluntas
 - [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
   - @voluntas
 - [UPDATE] GitHub Actions を検証用の ci.yml とリリース用の release.yml に分割する
+  - @voluntas
+- [UPDATE] GitHub Actions の公式アクションを SHA ピンで最新版に更新する
+  - `actions/checkout` / `actions/upload-artifact` / `actions/download-artifact` を SHA ピンにする
   - @voluntas
 - [UPDATE] `--sora-data-channels` に指定した DataChannels の解析に失敗した理由を `RTC_LOG(LS_ERROR)` で出力する
   - 従来はエラーパスの大半が `std::cout` に行番号だけを出力しており、原因がログから分からなかった
@@ -165,6 +152,31 @@
   - Zakuro と Sora C++ SDK の経路上に捕捉する catch が無いため、捕捉されなければ未捕捉例外で終了する点は変わらない (診断情報のみ改善する)
   - 例外メッセージに不正だった実装値を含める
   - 現行の実装では preference のデコーダが常に `kCustom_1` になるため、この分岐には到達しない
+  - @voluntas
+- [UPDATE] `CMakeLists.txt` の `set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)` で C / C++ 標準を 20 に上げる
+  - @torikizi
+- [UPDATE] buildbase.py を更新する
+  - Boost のアーカイブを SHA256 で検証する
+  - Android SDK の platform-tools をインストールする
+  - iOS ビルド用の clang 選択と blend2d のビルド引数を修正する
+  - @voluntas
+- [ADD] pytest を使った E2E テストを追加する
+  - テスト基盤の共通部分を `test/conftest.py` に集約する
+  - @voluntas
+- [ADD] CI で pytest を実行する
+  - @voluntas
+- [ADD] prek のフックを追加する
+  - `ruff-format` / `ruff-check` / `ty` / `pytest` を prek 経由で実行する
+  - @voluntas
+- [ADD] CI で prek のフックを実行する
+  - @voluntas
+- [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
+  - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする
+  - CI とリリースで両ターゲットをビルドし、pytest を実行する
+  - @voluntas
+- [ADD] macOS 26 (arm64) のビルドに対応する
+  - macos-26_arm64 は macOS 26 以降が対象になる
+  - macos_arm64 (macOS 15 以降) はこれまでどおりビルドする
   - @voluntas
 
 ## 2025.3.1
