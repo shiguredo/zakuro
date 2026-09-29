@@ -111,9 +111,9 @@ static bool ParseDataChannels(boost::json::value data_channels,
         }
         ch.interval = *interval;
         if (ch.interval <= 0) {
+          // 0 以下の値は送信間隔として成立しないため、このインスタンスの設定を拒否する
           RTC_LOG(LS_ERROR) << "ParseDataChannels: interval must be positive";
           return false;
-          obj.erase(it);
         }
       }
     }
