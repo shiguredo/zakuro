@@ -7,6 +7,16 @@ cmake_policy(SET CMP0091 NEW)
 
 project(zakuro C CXX)
 
+# Linux 向けのビルド対象
+# run.py の LINUX_X86_64_PLATFORMS / LINUX_ARMV8_PLATFORMS と揃える
+set(ZAKURO_LINUX_PLATFORMS
+  ubuntu-20.04_x86_64
+  ubuntu-22.04_x86_64
+  ubuntu-24.04_x86_64
+  ubuntu-26.04_x86_64
+  ubuntu-26.04_armv8
+)
+
 list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${SORA_DIR}/share/cmake)
 
@@ -143,7 +153,7 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   # バイナリの組み込み
   if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
     target_link_options(zakuro PRIVATE "SHELL:-sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file}")
-  elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+  elseif (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
       COMMAND ld
@@ -180,6 +190,6 @@ if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
-elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+elseif (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
 endif()
 

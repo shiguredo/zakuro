@@ -91,9 +91,9 @@ def get_zakuro_executable_path() -> str:
                 preferred = ["macos_x86_64", "macos_arm64"]
         elif system == "linux":
             if machine == "aarch64":
-                preferred = ["ubuntu-24.04_arm64", "ubuntu-22.04_arm64"]
+                preferred = ["ubuntu-26.04_armv8", "ubuntu-24.04_armv8", "ubuntu-22.04_armv8"]
             else:
-                preferred = ["ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
+                preferred = ["ubuntu-26.04_x86_64", "ubuntu-24.04_x86_64", "ubuntu-22.04_x86_64"]
         else:
             preferred = []
 

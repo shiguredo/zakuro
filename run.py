@@ -35,11 +35,21 @@ from buildbase import (
 
 logging.basicConfig(level=logging.DEBUG)
 
+# Linux 向けのビルド対象
+# x86_64 は x86_64 の runner、armv8 は arm64 の runner でネイティブにビルドする
+LINUX_X86_64_PLATFORMS = (
+    "ubuntu-22.04_x86_64",
+    "ubuntu-24.04_x86_64",
+    "ubuntu-26.04_x86_64",
+)
+LINUX_ARMV8_PLATFORMS = ("ubuntu-26.04_armv8",)
+LINUX_PLATFORMS = LINUX_X86_64_PLATFORMS + LINUX_ARMV8_PLATFORMS
+
 
 def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
     # クロスコンパイルの設定。
     # 本来は toolchain ファイルに書く内容
-    if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+    if platform in LINUX_PLATFORMS:
         return [
             f"-DCMAKE_C_COMPILER={webrtc_info.clang_dir}/bin/clang",
             f"-DCMAKE_CXX_COMPILER={webrtc_info.clang_dir}/bin/clang++",
@@ -130,7 +140,7 @@ def install_deps(
         webrtc_info = get_webrtc_info(platform, local_webrtc_build_dir, install_dir, debug)
 
         if (
-            platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64", "macos_arm64")
+            platform in (*LINUX_PLATFORMS, "macos_arm64")
             and local_webrtc_build_dir is None
         ):
             webrtc_version = read_version_file(webrtc_info.version_file)
@@ -166,8 +176,10 @@ def install_deps(
             "platform": "",
             "ext": "tar.gz",
         }
-        if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
+        if platform in LINUX_X86_64_PLATFORMS:
             install_cmake_args["platform"] = "linux-x86_64"
+        elif platform in LINUX_ARMV8_PLATFORMS:
+            install_cmake_args["platform"] = "linux-aarch64"
         elif platform == "macos_arm64":
             install_cmake_args["platform"] = "macos-universal"
         install_cmake(**install_cmake_args)
@@ -363,7 +375,7 @@ def main():
 
     # build コマンド
     bp = sp.add_parser("build")
-    bp.add_argument("target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"])
+    bp.add_argument("target", choices=["macos_arm64", *LINUX_PLATFORMS])
     bp.add_argument("--debug", action="store_true")
     bp.add_argument("--relwithdebinfo", action="store_true")
     bp.add_argument("--local-webrtc-build-dir", type=os.path.abspath)
