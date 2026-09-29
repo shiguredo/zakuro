@@ -1,7 +1,7 @@
 # doc/RPC.md のバージョン例と Notification 仕様の記述を修正する
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/fix-rpc-md-version-and-notification
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -63,3 +63,13 @@ JSON-RPC 2.0 標準の `-32602 (Invalid params)` が無い。現状の実装で�
 - `doc/RPC.md` のレスポンス例がプレースホルダで例示され、実値は `GetVersion` のレスポンスで確認できる旨が明記されていること
 - Notification の仕様が RPC.md に明記されていること (id フィールド無し → 204 No Content、エラー時もレスポンス無し)
 - エラーコード表が実装と一致していること (実装が返す `-32700` / `-32600` / `-32601` / `-32603` のみで、`-32602` の扱いも明示)
+
+## 解決方法
+
+`doc/RPC.md` を実装と設計方針に合わせて更新した。
+
+- `GetVersion` レスポンス例のバージョンを `X.Y.Z` / `X.Y.Z.W` のプレースホルダにし、実値は `GetVersion` で確認する旨と、`libwebrtc` が `m` プレフィックス無しである旨を注記した
+- Notification 節を追加し、`id` 無し → 204 No Content、`id` が `null` なら通常リクエスト、エラー時も JSON-RPC レスポンス無しを明記した。curl の使用例も追加した
+- エラーコード表は実装が返す 4 コードのみとし、JSON-RPC 2.0 標準の `-32602` は現在未使用である旨を表の下に注記した
+
+`CHANGES.md` は shiguredo-changelog の規約 (`.md` 変更は変更履歴に載せない) に従い更新していない。Notification 自体の `[ADD]` は既に `## develop` にある。
