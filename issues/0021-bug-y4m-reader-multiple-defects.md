@@ -1,7 +1,7 @@
 # Y4MReader の複数バグ (FILE* リーク・fps_den_ 0 除算・I420Buffer stride 前提)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/fix-y4m-reader-multiple-defects
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -74,3 +74,39 @@ libwebrtc の `I420Buffer::Create` が返す stride と Y/U/V の配置は API �
 - `Open` で `file_size` 取得失敗時に FILE* がリークしないこと (Valgrind で確認)
 - `fps_den_ == 0` の Y4M を渡した際に除算エラーではなくエラー返却で終わること
 - Y4M フレームが `y4m_buffer_` のプレーン別 stride (`StrideY()` / `StrideU()` / `StrideV()`) を考慮した行単位コピーで書き込まれており、`I420Buffer` への `GetSize()` 一括書き込みと stride == width 前提がコードに残っていないこと
+
+## 解決方法
+
+`src/y4m_reader.cpp` と `src/fake_video_capturer.cpp` を次のように修正した。
+
+- `Y4MReader::Open` は `fopen` の直後に `file_.reset(fp, ...)` を実行し、その後で
+  `file_size` を取得する。取得に失敗しても RAII で閉じられる
+- `Y4MReader::ReadHeader` の検証に `fps_den_ == 0` を追加する。`GetFrame` の
+  `fps_num_ / (1000 * fps_den_)` で 0 除算になるため
+- `FakeVideoCapturer` は `GetFrame` の書き込み先を `y4m_frame_buffer_`
+  (`std::vector<uint8_t>`) に変更し、`CopyY4MFrameToI420Buffer()` で
+  `StrideY()` / `StrideU()` / `StrideV()` を使った行単位コピーを行う。`GetFrame` が
+  `*updated = false` を返した場合はバッファに書き込まないため、コピーもしない
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- `Y4MReader` を直接呼ぶ一時的な検証で、`F30:0` の Y4M が `Open` で -9 を返すこと、
+  正常な Y4M (`5x3`) が `GetSize() = 27` を返し、同じ時刻の再要求で `updated = false`
+  になることを確認した
+- 実バイナリに `--fake-video-capture` で異常な Y4M を渡しても 0 除算のシグナル
+  (SIGFPE) で落ちないことを確認した
+- `uv run pytest -q` が通る
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+`test/test_readers.py` を追加した。奇数の幅と高さの Y4M を読み出しても異常終了しない
+ことと、`F` フィールドの分母が 0 の Y4M で 0 除算にならないことを検証する。
+
+FILE* リークは Valgrind を必要とするため自動テストにしていない。`fopen` の直後に
+RAII へ載せる構造にしたことをコード上の保証として確認する。
+
+0 除算についても、実バイナリの E2E では「0 除算に到達しない」ことを直接観測できない
+(`Open` がエラーを返すとログが出ない)。そのため完了条件はコード上の保証
+(`fps_den_ == 0` の検証) と、直接呼び出しの検証で確認した。
+
+`CHANGES.md` の `## develop` に `[FIX]` のエントリを 3 件追加した。
