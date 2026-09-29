@@ -59,7 +59,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive sudo apt-get -y install binutils-aarch64-linux-gnu
           fi
       - name: Build zakuro
-        run: python3 run.py build ${{ matrix.name }}
+        run: python3 run.py build ${{ matrix.name }} --package
       # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
       - name: Upload zakuro for pytest
         # pytest を実行するターゲットのみアップロードする
@@ -88,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build zakuro
-        run: python3 run.py build ${{ matrix.name }}
+        run: python3 run.py build ${{ matrix.name }} --package
       # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
       - name: Upload zakuro for pytest
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
