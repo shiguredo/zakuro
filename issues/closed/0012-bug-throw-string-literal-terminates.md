@@ -1,7 +1,7 @@
 # throw の対象が文字列リテラルで std::terminate に至る
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/fix-throw-string-literal-terminates
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -52,3 +52,42 @@ Sora SDK 側の `SoraVideoDecoderFactory::Create` (try/catch なし) を通過�
 - `src/zakuro.cpp` の `context_config.video_codec_factory_config.create_video_decoder` ラムダが
   `throw std::runtime_error(...)` を使うこと
 - ビルドに成功し、既存の E2E テスト (`test/test_zakuro.py`) が通ること
+
+## 解決方法
+
+`src/zakuro.cpp` の `context_config.video_codec_factory_config.create_video_decoder` ラムダの
+`throw "Invalid implementation";` を
+`throw std::runtime_error("Invalid implementation: " + boost::json::serialize(boost::json::value_from(implementation)));`
+に置き換えた。診断情報を改善するのが目的なので、不正だった実装値をメッセージに含める。
+あわせて推移的なインクルードに依存しないよう `#include <stdexcept>` を追加した。
+
+あわせて `preference` を構築している箇所に、全てのデコーダーを `kCustom_1` にするため
+`create_video_decoder` には常に `kCustom_1` が渡る旨のコメントを追加した。
+
+この分岐は現行のテスト構成では実行できない。ラムダは `Zakuro::Run` 内のローカル定義で
+外部から差し替えられず、CLI と設定ファイルにもデコーダーの実装を指定する経路が無い。
+そのため完了条件はコード上の保証 (`git grep` と実装の確認) で判定する。
+将来の回帰テストの候補として、SDK が `--log-level info` で出力する `VideoCodecPreference` を
+検査し、全コーデックの decoder が `custom_1` であることを固定する方法がある
+(SDK のログ形式に依存する)。
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- `git grep -n 'throw "' src/` が 0 件になる
+- `std::runtime_error` が `catch (const std::exception&)` で捕捉でき、`what()` に
+  `Invalid implementation` が入ることを一時的な検証プログラムで確認した。
+  `const char*` は同じ catch では捕捉できないこともあわせて確認した
+- この分岐が実行された場合は、Zakuro と Sora C++ SDK の経路上に捕捉する `catch` が
+  無いため未捕捉例外で終了する点は変わらない。変わるのは終了時の診断メッセージだけである
+  (libwebrtc の内部はソースが無く確認していない。捕捉する側に `std::exception` 派生が
+  必要である点は変わらない)
+- `uv run pytest -q` が 112 passed / 1 skipped で通る。skip された 1 件は
+  `test/test_zakuro.py` (実 Sora 接続) で、`TEST_SIGNALING_URLS` が未設定のためローカルでは
+  実行されない。CI は secrets を渡して実行している
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+この分岐は現行の実装では到達しない。デコーダの実装は preference 構築の最後で
+`kCustom_1` を Merge するため、preference 内のデコーダは常に `kCustom_1` になる。
+
+`CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。

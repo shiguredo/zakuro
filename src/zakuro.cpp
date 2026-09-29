@@ -5,6 +5,7 @@
 #include <csignal>
 #include <functional>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -488,7 +489,11 @@ int Zakuro::Run() {
               capability, sora::VideoCodecImplementation::kCiscoOpenH264));
         }
 
-        // デコーダーは常に NopVideoDecoder を使用する
+        // デコーダーは常に NopVideoDecoder を使用する。
+        // get_custom_engines が全てのコーデックを kCustom_1 のデコーダーとして登録し、
+        // ここで preference のデコーダーを全て kCustom_1 に上書きする。
+        // Sora C++ SDK は preference のデコーダーをそのまま create_video_decoder に
+        // 渡すため、kCustom_1 以外の分岐には到達しない
         preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
             capability, sora::VideoCodecImplementation::kCustom_1));
 
@@ -501,7 +506,13 @@ int Zakuro::Run() {
         if (implementation == sora::VideoCodecImplementation::kCustom_1) {
           return std::make_unique<NopVideoDecoder>();
         } else {
-          throw "Invalid implementation";
+          // この分岐は現状到達しない。到達した場合は捕捉する catch が経路上に無いため
+          // 未捕捉例外で終了するが、`std::runtime_error` なら終了時のメッセージに
+          // what() が残る。`const char*` は `std::exception` を継承した型ではないため
+          // `catch (const std::exception&)` では捕捉できない
+          throw std::runtime_error(
+              "Invalid implementation: " +
+              boost::json::serialize(boost::json::value_from(implementation)));
         }
       };
 
