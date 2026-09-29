@@ -114,6 +114,11 @@ int WavReader::Load(const void* ptr, size_t size) {
     }
 
     size_t n = chunk_size / 2;
+    // data チャンクが空の WAV は入力として不正。受理すると読み出し側が
+    // 空の vector を添字アクセスする
+    if (n == 0) {
+      return -13;
+    }
     data.reserve(n);
     p = (const uint8_t*)chunk_data;
     for (size_t i = 0; i < n; i++) {
