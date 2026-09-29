@@ -117,6 +117,11 @@
   - @voluntas
 - [UPDATE] GitHub Actions を検証用の ci.yml とリリース用の release.yml に分割する
   - @voluntas
+- [UPDATE] `--sora-data-channels` に指定した DataChannels の解析に失敗した理由を `RTC_LOG(LS_ERROR)` で出力する
+  - 従来はエラーパスの大半が `std::cout` に行番号だけを出力しており、原因がログから分からなかった
+  - @voluntas
+- [UPDATE] `ParseDataChannels` の `interval` 検証にある到達不能コードを削除する
+  - @voluntas
 
 ## 2025.3.1
 
