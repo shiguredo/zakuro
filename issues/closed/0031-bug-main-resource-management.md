@@ -1,7 +1,7 @@
 # main.cpp のリソース管理 (stats 非アトミック・Run 返り値捨て・RLIMIT_NOFILE・std::exit)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/fix-main-resource-management
 - Polished: 2026-09-29
 - Milestone: 2026.1.0
@@ -219,3 +219,74 @@ RLIMIT チェックは、いずれもこの方針に従う。
   (現状の 5 は libwebrtc の socket 多重化の実測値ではなく保守的な見積もりであり、
   この issue では根拠を確認できていない)
 
+## 解決方法
+
+4 項目を実装した。
+
+### stats 書き出しのアトミック化
+
+`src/main.cpp` に `WriteStatsFile` を追加し、出力先と同じディレクトリのテンポラリファイル
+(`<出力先>.tmp.<pid>`) へ書き切ってから `std::filesystem::rename` で置き換えるようにした。
+`std::ofstream` はバッファリングするため close してから失敗を判定し、失敗した場合は rename せず
+テンポラリファイルを削除する。出力先が既にある場合はそのパーミッションを引き継ぐ
+(`::open` で 0600 として開き、`::fstat` で得た出力先のモードを `::fchmod` で設定してから書き込む)。
+内容が書かれた緩いパーミッションのファイルが一時的にできることを避けるため、書き込みの前に
+パーミッションを確定させる。
+
+### Zakuro::Run の返り値の集約
+
+`main` に `std::atomic<bool> has_error` を追加し、各インスタンスのスレッドで
+`zakuro.Run() != 0` の場合に立てるようにした。`main` の末尾で `return has_error ? 1 : 0;` を返す。
+`Run` は 1 (capturer 生成失敗・fake audio 読み込み失敗・signaling URL 不正・client cert / key の
+読み込み失敗) と 2 (DataChannels パース失敗) を返すが、0 以外はすべてエラーとして扱う。
+
+### RLIMIT_NOFILE の必要数チェック
+
+`src/main.cpp` に `kFileDescriptorsPerVirtualClient` (5) と `EnsureFileDescriptorLimit` を追加した。
+`configs` を組み立てた後に全インスタンスの `vcs` の合計から必要数を求め、soft limit が不足する
+場合は `setrlimit` で hard limit まで昇格を試みる。昇格しても足りない場合は、必要数と現在の
+soft / hard limit を含む英語のメッセージを出して終了コード 1 で終了する。一律 1024 のチェックは
+置き換えた。実際に使える soft limit は `RTC_LOG(LS_INFO)` で残す (昇格が起きたことも分かる)。
+
+### Util::ParseArgs の戻り値化
+
+`src/util.h` に `ParseArgsResult` (`Code::Continue` / `ExitSuccess` / `ErrorExit` と `exit_code`) を
+追加し、`src/util.cpp` の `std::exit` 8 箇所を `return` に置き換えた。`main` は 2 箇所の呼び出しで
+`ExitSuccess` なら 0、`ErrorExit` なら `exit_code` を返す。CLI11 の検証エラーは `app.exit(e)` の
+戻り値 (105) を維持し、メッセージ出力と `--help` の出力も従来どおり `app.exit(e)` に担わせる。
+
+### テスト
+
+`test_main_resource.py` を追加し、`test_config_json.py` から資源管理系のテストを移した
+(共通ヘルパは `test_helpers.py`)。追加・変更したテストは次のとおり。
+
+- `test_stats_write_failure_keeps_previous_file`: ファイルサイズの上限を 1 バイトにした子プロセスで
+  書き込みを決定的に失敗させ、出力先の直前の内容が保たれることを検証する
+- `test_stats_file_is_valid_json_after_write` / `test_stats_file_preserves_permissions`:
+  inode の変化を待ってから、完全な JSON であることとパーミッションが変わらないことを検証する
+- `test_stats_write_failure_does_not_create_target`: 出力先のディレクトリが無い場合に出力先を作らない
+- `test_run_failure_exits_with_nonzero`: 0 バイトの WAV で `Zakuro::Run` を失敗させ、終了コード 1 を検証する
+- `test_file_descriptor_limit_is_rejected` / `test_file_descriptor_limit_is_raised` /
+  `test_file_descriptor_limit_sums_all_instances`: 拒否・昇格・全インスタンス合計の判定を検証する
+- `test_parse_args_early_exit_codes`: `--version` / `--show-video-codec-capability` / `--help` が 0、
+  必須オプション不足と `--openh264` の相対パスが 1 であることを検証する
+- `test_data_channels_type_error_exits_without_crash`: 期待する終了コードを 0 から 1 に見直した
+
+### 完了条件の確認
+
+- stats ファイルが部分書き込み状態で外部から読まれないこと: 書き込みを失敗させた場合に出力先が
+  置き換わらないことと、正常時に完全な JSON が書かれることを pytest で検証した
+- 1 Zakuro インスタンスが失敗した際に `main` が非ゼロ終了すること: DataChannels の解析失敗と
+  fake audio の読み込み失敗の経路で検証した
+- RLIMIT_NOFILE が不足する場合に明確なエラーメッセージで拒否すること: soft / hard limit を
+  1024 に下げた子プロセスで検証した。昇格できる場合に起動が継続することも検証した
+- CLI パースエラー時に `std::exit` ではなく `main` が return で終了コードを返すこと:
+  `src/` に `std::exit` が残っていないことを確認し、CLI11 の 105 と既存テストの終了コードが
+  維持されることを検証した
+- `python run.py build macos_arm64` が通り、pytest が 73 passed / 1 skipped で通ること
+
+### 実装時に記録すること
+
+1 VC あたりの必要 FD 数は 5 のままとした。libwebrtc の socket 多重化の実測値ではなく、
+WebSocket 用の 1 と ICE / DTLS 用の複数を見込んだ保守的な見積もりである。実測による置き換えは
+行っていない。
