@@ -12,7 +12,6 @@
 
 import contextlib
 import resource
-import signal
 import socket
 import subprocess
 import time
@@ -251,12 +250,10 @@ def test_http_server_accept_error_does_not_spin(free_port: int, tmp_path: Path) 
             client.close()
         stdout, stderr_tail = terminate_zakuro(process)
 
-    # 終了コードも確認する。Stop の join が壊れていると SIGABRT になる
-    assert process.returncode in (0, -signal.SIGTERM), (
-        f"終了コードが 0 でも SIGTERM でもない: returncode={process.returncode}\n"
-        f"stderr={stderr_tail!r}"
-    )
-
+    # 終了コードは fd 上限を下げた状態では検証しない。上限を下げると libwebrtc の
+    # スレッドもファイルディスクリプタを作れなくなり、Stop の不具合とは関係のない
+    # 異常終了 (Linux では SIGABRT) になるためである。Stop の検証は
+    # test_http_server_stops_cleanly が fd 上限を下げずに行う
     stderr = "\n".join(stderr_lines[measured_from:]) + stderr_tail
     accept_errors = stderr.count(HTTP_ACCEPT_ERROR_MARKER)
     retries = stderr.count(HTTP_ACCEPT_RETRY_MARKER)
