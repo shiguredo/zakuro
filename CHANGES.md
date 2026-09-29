@@ -11,13 +11,11 @@
 
 ## develop
 
-- [ADD] HTTP サーバー機能を追加する
-  - `--http-port` オプションで HTTP サーバーを起動可能
-  - `--http-host` オプションでバインドするアドレスを指定可能
-  - @voluntas
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
+  - `--vp8-encoder` / `--vp9-encoder` / `--av1-encoder` / `--h264-encoder` / `--h265-encoder` の受付値を `nvidia_video_codec_sdk` から `nvidia_video_codec` に変更する (設定ファイルの `vp8-encoder` なども同様)
   - @torikizi
+
 - [CHANGE] 設定ファイル (JSONC) の値の型が想定と異なる場合はエラーにする
   - オブジェクトや配列を値に取らないオプションにこれらを指定した場合はエラーにする
   - インスタンス配下のオプションは、従来は型が違っても空文字列や未指定として扱われていたものをエラーにする
@@ -25,65 +23,89 @@
   - `instance-num` に 0 以下または 1000 を超える値を指定した場合もエラーにする
   - `sora.signaling-url` に空配列を指定した場合もエラーにする
   - @Hexa
+
 - [UPDATE] Sora C++ SDK を `2026.2.1` に上げる
   - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
   - CMAKE_VERSION を `4.4.2` に上げる
   - BOOST_VERSION を `1.92.0` に上げる
+  - AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
+    - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
+  - run.py を修正し、clang を libwebrtc 提供のものに変更する
+    - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
   - @torikizi
+
 - [UPDATE] Sora C++ SDK を `2026.2.2` に上げる
   - `RTC_LOG` に暗黙変換が必要な文字列を渡すと SIGABRT する問題が修正されている
   - 複数の signaling URL を指定して実 Sora に接続した場合に発生していた
   - @voluntas
-- [UPDATE] AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
-  - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
-  - @torikizi
-- [UPDATE] run.py を修正し、clang を libwebrtc 提供のものに変更
-  - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
-  - @torikizi
+
 - [UPDATE] CLI11 を `2.6.2` に上げる
   - @torikizi
-- [UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` と `CMAKE_C_STANDARD` を 17 から 20 に上げる
-  - @torikizi
+
+- [UPDATE] blend2d のバージョンを `0.21.2` に上げる
+  - include を `<blend2d.h>` から `<blend2d/blend2d.h>` に変更する
+  - @voluntas
+
+- [ADD] HTTP サーバー機能を追加する
+  - `--http-port` オプションで HTTP サーバーを起動可能
+  - `--http-host` オプションでバインドするアドレスを指定可能
+  - @voluntas
+
 - [ADD] ヘルスチェック用 HTTP API `/.ok` を追加する
   - GET リクエストで 200 OK を返す
   - @voluntas
+
 - [ADD] JSON-RPC 2.0 エンドポイント `/rpc` を追加する
   - @voluntas
+
 - [ADD] JSON-RPC メソッド `GetVersion` を追加する
   - Zakuro のバージョン情報を取得する
   - @voluntas
+
 - [ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する
   - Notification の場合は 204 No Content を返す
   - @voluntas
+
 - [ADD] `--client-cert` と `--client-key` の片方だけを指定した場合はエラーにする
   - 設定ミスを起動時に検出するため
   - @voluntas
+
 - [ADD] `--client-cert` / `--client-key` に PEM の開始行を含まないファイルを指定した場合はエラーにする
   - SDK に渡す前に PEM の開始行を確認する
   - @voluntas
+
 - [FIX] ZakuroAudioDeviceModule::Init の再入で device_buffer_ を差し替えて UAF する問題を修正する
   - @Hexa
+
 - [FIX] ZakuroAudioDeviceModule::Terminate でオーディオスレッド停止前に device_buffer_ を破棄してセグフォする問題を修正する
   - @Hexa
+
 - [FIX] FakeAudioKeyTrigger が終了時に破棄済みの io_context へ post する問題を修正する
   - @Hexa
+
 - [FIX] VirtualClient の retry_timer_ が io_context より後に破棄されて未定義動作になる問題を修正する
   - @Hexa
+
 - [FIX] FileRotatingLogSink を RemoveLogToStream せずに破棄して終了時に use-after-free になる問題を修正する
   - @Hexa
+
 - [FIX] `--client-cert` / `--client-key` に指定した PEM ファイルを読み込んで Sora C++ SDK に渡すよう修正する
   - Sora C++ SDK 2025.1.0 でクライアント証明書と秘密鍵の設定値がファイルパスから PEM の内容に変更されたため
   - @voluntas
+
 - [FIX] GameKeyCore の keys_ のアクセスを mutex で保護し、キー入力の配送中に GameKey が破棄されるとクラッシュする問題を修正する
   - @voluntas
+
 - [FIX] 設定ファイルや Sora からの通知に想定外の JSON を渡された場合に、未捕捉例外でプロセスやスレッドが落ちる問題を修正する
   - 設定ファイルの読み込みと DataChannels の解析で、型不一致・キー欠落・整数でない数値や範囲外の値を検出する
   - Sora からの通知が不正な JSON や想定外の形式の場合は、警告を出力して無視する
   - @Hexa
+
 - [FIX] SoraClientContext の生成に失敗した場合に、nullptr をそのまま使ってクラッシュする問題を修正する
   - 利用できないビデオコーデック実装を指定した場合などに発生する
   - エラーメッセージを出力してそのインスタンスの接続を中止する
   - @voluntas
+
 - [FIX] main.cpp のリソース管理 (stats ファイルの書き出し・終了コード・ファイルディスクリプタ) を修正する
   - テンポラリファイルへ書き切ってから rename で置き換え、書き出しの途中の状態が外部から読まれないようにする
   - 置き換えるときは出力先のパーミッションを引き継ぐ
@@ -92,30 +114,37 @@
   - ファイルディスクリプタの下限チェックを一律 1024 から全インスタンスの `--vcs` の合計に基づく判定に変更し、不足する場合は `setrlimit` での昇格を試みる
   - ファイルディスクリプタが不足する場合のエラーメッセージを英語にする
   - @Hexa
+
 - [FIX] `Zakuro::Run` の `loop_index` が未初期化のまま使われる問題を修正する
   - 宣言時に初期化し、キー入力トリガー利用時 (`--fake-audio-capture` 未指定) は許容値以外の `scenario` をエラーにする
   - @voluntas
+
 - [FIX] HTTP サーバーの resolve と bind の失敗を検出して起動失敗として終了する
   - 失敗しても HTTP サーバーが起動したかのようなログを出していた
   - @voluntas
+
 - [FIX] HTTP サーバーの `Stop` を何度呼んでも安全にし、accept の永続エラーで再試行を待つ
   - `Stop` の二重呼び出しで `join` が二重実行される可能性があった
   - fd 枯渇などの永続エラーで accept を即座に再試行して CPU を占有していた
   - accept エラーのログを ERROR から WARNING に変更し、再試行までの待ち時間を出す
   - @voluntas
+
 - [FIX] `WavReader` がチャンクサイズを signed で合成して未捕捉例外になる問題を修正する
   - チャンクサイズとサンプルレートを符号なしで合成し、`size_t` へ拡張してから比較する
   - fmt チャンクの長さとサンプルレートの範囲を検証し、入力バッファの外を読まないようにする
   - 16bit PCM を明示的に signed へ変換し、`std::ifstream` をバイナリモードで開く
   - @voluntas
+
 - [FIX] `Y4MReader` の `F` フィールドの分母が 0 のときに 0 除算になる問題を修正する
   - あわせて `fopen` の直後にファイルを RAII へ載せ、`file_size` の取得失敗時のリークをなくす
   - 幅と高さが 0 以下、または 1 フレームが 1GiB を超える Y4M を拒否する
   - 異常な Y4M を指定した場合に `Failed to Y4MReader::Open` を出す
   - @voluntas
+
 - [FIX] `FakeVideoCapturer` が Y4M のフレームを `I420Buffer` の内部レイアウトに依存して書き込む問題を修正する
   - `GetSize()` の一括書き込みをやめ、プレーン別 stride を考慮した行単位コピーにする
   - @voluntas
+
 - [FIX] 空の data チャンクを持つ WAV を受理して音声スレッドが範囲外を読む問題を修正する
   - `WavReader::Load` が空の data チャンクを拒否する
   - `ZakuroAudioDeviceModule` は `fake_audio_->data` が空の場合に無音を送出する
@@ -125,41 +154,39 @@
 
 ### misc
 
-- [ADD] pytest を使った E2E テストを追加する
-  - テスト基盤の共通部分を `test/conftest.py` に集約する
+- [CHANGE] `.github/copilot-instructions.md` を削除する
   - @voluntas
-- [ADD] CI で pytest を実行する
+
+- [CHANGE] `.github/workflows/claude.yml` を削除する
   - @voluntas
-- [ADD] prek のフックを追加する
-  - `ruff-format` / `ruff-check` / `ty` / `pytest` を prek 経由で実行する
-  - @voluntas
-- [ADD] CI で prek のフックを実行する
-  - @voluntas
-- [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
-  - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする
-  - CI とリリースで両ターゲットをビルドし、pytest を実行する
-  - @voluntas
-- [ADD] macOS 26 (arm64) のビルドに対応する
-  - macos-26_arm64 は macOS 26 以降が対象になる
-  - macos_arm64 (macOS 15 以降) はこれまでどおりビルドする
-  - @voluntas
+
 - [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
   - @voluntas
+
 - [UPDATE] GitHub Actions を検証用の ci.yml とリリース用の release.yml に分割する
   - @voluntas
+
+- [UPDATE] GitHub Actions の公式アクションを SHA ピンで更新する
+  - `actions/checkout` を `v6.0.2`、`actions/upload-artifact` を `v7.0.1`、`actions/download-artifact` を `v8.0.1` にする
+  - @voluntas
+
 - [UPDATE] `--sora-data-channels` に指定した DataChannels の解析に失敗した理由を `RTC_LOG(LS_ERROR)` で出力する
   - 従来はエラーパスの大半が `std::cout` に行番号だけを出力しており、原因がログから分からなかった
   - @voluntas
+
 - [UPDATE] `ParseDataChannels` の `interval` 検証にある到達不能コードを削除する
   - @voluntas
+
 - [UPDATE] `ParseDataChannels` の `size-min` / `size-max` にある効果の無い `obj.erase(it);` を削除する
   - 解析結果は `DataChannels::Channel` にコピー済みで、削除した値を読み直す箇所が無かった
   - あわせて引数と解析対象の参照を const にして、値渡しのコピーを無くす
   - @voluntas
+
 - [UPDATE] `namespace std` に追加していた `to_string` を削除する
   - 名前空間 std への追加は C++ 標準で undefined behavior であり、CLI11 の既定値表示の経路が ADL 経由で実際に選択していた
   - 削除後は CLI11 自身のオーバーロードに解決され、返る値は変わらない
   - @voluntas
+
 - [UPDATE] `Zakuro::Run` の video decoder factory が投げる例外を `std::runtime_error` にする
   - `const char*` は `std::exception` を継承した型ではないため、`catch (const std::exception&)` で捕捉できない
   - Zakuro と Sora C++ SDK の経路上に捕捉する catch が無いため、捕捉されなければ未捕捉例外で終了する点は変わらない (診断情報のみ改善する)
@@ -167,6 +194,38 @@
   - 現行の実装では preference のデコーダが常に `kCustom_1` になるため、この分岐には到達しない
   - @voluntas
 
+- [UPDATE] `CMakeLists.txt` の C / C++ 標準を 17 から 20 に上げる
+  - `set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)` を設定する
+  - @torikizi
+
+- [UPDATE] buildbase.py と run.py を上流の buildbase に追随させる
+  - Boost のアーカイブを SHA256 で検証するオプション、Android SDK の platform-tools のインストール、iOS ビルド用の clang 選択と blend2d のビルド引数の修正を取り込む
+  - Zakuro のビルドでは Boost の SHA256 と Android の経路は未使用で、iOS 向けの変更も Zakuro の対象外
+  - @melpon
+
+- [ADD] pytest を使った E2E テストを追加する
+  - テスト基盤の共通部分を `test/conftest.py` に集約する
+  - @voluntas
+
+- [ADD] CI で pytest を実行する
+  - @voluntas
+
+- [ADD] prek のフックを追加する
+  - `ruff-format` / `ruff-check` / `ty` / `pytest` を prek 経由で実行する
+  - @voluntas
+
+- [ADD] CI で prek のフックを実行する
+  - @voluntas
+
+- [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
+  - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする
+  - CI とリリースで両ターゲットをビルドし、pytest を実行する
+  - @voluntas
+
+- [ADD] macOS 26 (arm64) のビルドに対応する
+  - macos-26_arm64 は macOS 26 以降が対象になる
+  - macos_arm64 (macOS 15 以降) はこれまでどおりビルドする
+  - @voluntas
 ## 2025.3.1
 
 **リリース日**: 2025-12-03
