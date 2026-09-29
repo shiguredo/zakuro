@@ -1,7 +1,7 @@
 # 空 WAV データで ZakuroAudioDeviceModule のオーディオスレッドが OOB 読み出しする
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/fix-empty-wav-oob-read
 - Polished: 2026-09-07
 - Updated: 2026-09-29
@@ -29,9 +29,9 @@
 
 以下の 2 つを実施する。片方だけでは完了条件を満たせない。
 
-1. `WavReader::Load` が data チャンクを読み込んだ直後に `if (data.empty()) return -11;` を返す。
+1. `WavReader::Load` が data チャンクを読み込んだ直後に `if (data.empty()) return -13;` を返す。
    空 data チャンクの WAV は入力として不正なので、エラーで弾く。
-   `-11` は既存のエラーコード (`-1`, `-4` 〜 `-10`, `1`) と衝突しない新規コードとする。
+   `-13` は既存のエラーコード (`-1`, `-4` 〜 `-12`, `1`) と衝突しない新規コードとする。
 2. `ZakuroAudioDeviceModule::StartAudioThread` の Safari / FakeAudio 分岐で、
    空 data を検出したら 0 (無音) を送るガードを追加する。
    10 ミリ秒分の無音バッファを生成し、通常どおり `SetRecordedBuffer` / `DeliverRecordedData` で送出する。
@@ -43,19 +43,46 @@
 なお、対処 2 の検証は `--fake-audio-capture` 経由では行えない。対処 1 により空 data チャンクの WAV は
 `WavReader::Load` で拒否されるため、空 data の `FakeAudioData` を直接構築して
 `ZakuroAudioDeviceModule` に渡す検証が必要になる。
-C++ 単体テスト基盤は issues/0066 で撤去済みで、テストは実バイナリを起動する pytest に一本化されており、
-この検証は pytest では行えない。検証方法 (コードレビューで担保する / 対象外とする) は実装時に決めて明記する。
+C++ 単体テスト基盤は撤去済みで、テストは実バイナリを起動する pytest に一本化されており、
+この検証は pytest では行えない。対処 2 はコード上の保証として確認する。
 
 ## 完了条件
 
 - `WavReader::Load` が空 data チャンクの WAV を成功として受理しないこと
-  (実バイナリを起動する pytest の E2E で、空 data チャンクの WAV を `--fake-audio-capture` に指定したときに
-  `failed to load fake audio` が標準エラー出力に出ることを確認する。`main` が `Zakuro::Run` の返り値を
-  捨てているため終了コードでは判定できない。issues/0031 で解消予定)
+  (実バイナリを起動する pytest の E2E で、空 data チャンクの WAV を `--fake-audio-capture` に
+  指定したときに `failed to load fake audio: path=... result=-13` が標準エラー出力に出て
+  終了コード 1 で終了することを確認する)
 - 空 data の `FakeAudioData` を `ZakuroAudioDeviceModule` に流し込んでも OOB 読み出しが発生せず、無音が送出されること
-  (空 data の `FakeAudioData` を直接構築する検証は C++ 単体テスト基盤の撤去 (issues/0066) により
-  pytest では行えない。検証方法を実装時に決めて明記する)
+  (空 data の `FakeAudioData` を直接構築する検証は C++ 単体テスト基盤が無いため pytest では行えない。
+  `fake_audio_->data` が空の場合に無音を送出する分岐があることをコード上の保証として確認する)
 - 空 data チャンクの WAV を `--fake-audio-capture` に指定して起動したときに、`WavReader::Load` の
   エラーログが出力されてオーディオスレッドが開始されないこと
-  (AddressSanitizer 有効ビルドの手段はリポジトリに無く、issues/0036 で追加が提案されている。
-  サニタイザでの確認は本 issue の完了条件に含めない)
+  (AddressSanitizer 有効ビルドの手段はリポジトリに無いため、サニタイザでの確認は本 issue の
+  完了条件に含めない)
+
+## 解決方法
+
+`src/wav_reader.cpp` と `src/zakuro_audio_device_module.cpp` を次のように修正した。
+
+- `WavReader::Load` は data チャンクを読み込んだ直後に `data.empty()` を確認し、空の場合は
+  -13 を返す
+- `ZakuroAudioDeviceModule::StartAudioThread` は `fake_audio_->data` が空の場合に
+  無音のバッファを `SetRecordedBuffer` / `DeliverRecordedData` で送出する分岐を追加した。
+  空のまま `data[index]` を読む経路をなくす
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- 空 data チャンクの WAV を `--fake-audio-capture` に指定すると
+  `failed to load fake audio: path=... result=-13` を標準エラー出力に出して終了コード 1 で
+  終了する。検査を外した実装では同じ入力でプロセスが応答しなくなる (テストが失敗する)
+- `uv run pytest -q` が通る
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+`test/test_readers.py` に空 data チャンクの WAV を拒否する E2E テストを追加した。
+
+対処 2 は、空 data の `FakeAudioData` を直接構築する C++ 単体テスト基盤が無いため E2E では
+検証していない。`fake_audio_->data` が空の場合に無音を送出する分岐があり、空の vector に
+添字アクセスしないことをコード上の保証として確認した。
+
+`CHANGES.md` の `## develop` に `[FIX]` のエントリを追加した。
