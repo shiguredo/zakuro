@@ -1,7 +1,7 @@
 # CHANGES.md ## develop の整合性 (順序・記載漏れ・粒度・misc 分類)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/refactor-changes-md-develop-consistency
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -62,3 +62,50 @@
 - misc に入るべき変更 (CMake の C / C++ 標準の引き上げ、copilot / claude.yml の削除、buildbase.py の更新、CI アクション更新) が本編ではなく misc セクションにあること
 - 派生変更 (AudioDeviceBuffer / run.py) が Sora C++ SDK エントリの子項目にまとめられていること
 - Notification (204 No Content) はすでに記載済みのため変更しないこと
+
+## 解決方法
+
+`CHANGES.md` の `## develop` を次のように整理した。並べ替えは見出し行と子項目の組を
+単位に行い、エントリの本文は変更していない。
+
+- 本編と `### misc` をどちらも凡例 (CHANGE → UPDATE → ADD → FIX) の順に並べ替えた
+  - 本編は 29 件で CHANGE → UPDATE → ADD → FIX
+  - `### misc` は 19 件で CHANGE → UPDATE → ADD
+- `[CHANGE] VideoCodecImplementation ...` の子項目に、`--vp8-encoder` などの受付値
+  `nvidia_video_codec_sdk` が `nvidia_video_codec` に変更になったことを追記した
+- `[UPDATE] blend2d のバージョンを `0.21.2` に上げる` を追加し、include の変更
+  (`<blend2d.h>` → `<blend2d/blend2d.h>`) を子項目に記した
+- `[UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` ...` を `### misc` へ移し、
+  実際の変更 (`set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`)
+  に合わせてシンボル名を修正した
+- `### misc` に次のエントリを追加した
+  - `[CHANGE] `.github/copilot-instructions.md` を削除する`
+  - `[CHANGE] `.github/workflows/claude.yml` を削除する`
+  - `[UPDATE] GitHub Actions の公式アクションを SHA ピンで最新版に更新する`
+  - `[UPDATE] buildbase.py を更新する`
+- `[UPDATE] AudioDeviceBuffer ...` と `[UPDATE] run.py ...` を独立エントリから
+  `[UPDATE] Sora C++ SDK を `2026.2.1` に上げる` の子項目へ統合した
+- `[ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する` は記載済みのため
+  変更していない
+
+検証したこと:
+
+- 本編と `### misc` の種別の並びが凡例順であること
+- 記載漏れの 6 項目 (blend2d の更新、受付値の変更、copilot-instructions.md と
+  claude.yml の削除、buildbase.py の更新、アクションの SHA ピン化) が記載されていること
+- CMake の C / C++ 標準、copilot / claude.yml の削除、buildbase.py の更新、
+  CI アクションの更新が `### misc` にあること
+- 派生変更 2 件が Sora C++ SDK の子項目にあり、独立エントリとして残っていないこと
+- 変更前後でエントリの欠落・重複がないこと (変更前の全エントリが変更後のいずれかに
+  存在するか、意図した統合・移動であることを機械的に確認した)
+- 各エントリの子項目が減っていないこと
+
+issue に記載した事実を実コードで再確認した。
+
+- `src/util.cpp` の `--*-encoder` の受付値は `nvidia_video_codec` のみ
+- `DEPS` の `BLEND2D_VERSION` は `0.21.2` で、include は `<blend2d/blend2d.h>`
+- `CMakeLists.txt` は `set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`
+- `.github/copilot-instructions.md` と `.github/workflows/claude.yml` は削除済み
+- `.github/workflows/*.yml` の公式アクションは SHA ピンで指定されている
+- `buildbase.py` の更新には Boost の SHA256 検証、Android SDK の platform-tools、
+  iOS ビルド用の clang 選択が含まれる
