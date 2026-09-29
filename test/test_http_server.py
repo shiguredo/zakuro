@@ -55,12 +55,14 @@ UNASSIGNABLE_HOST = "192.0.2.1"
 UNRESOLVABLE_HOST = "no-such-host.invalid"
 
 # fd 枯渇を再現するときに子プロセスへ設定するファイルディスクリプタの上限
-# zakuro の起動には vcs * 5 = 5 個あれば足りるため、起動はできて accept だけが失敗する
-FD_LIMIT_FOR_EXHAUSTION = 64
+# zakuro の起動には vcs * 5 = 5 個あれば足りるため、起動はできて accept だけが失敗する。
+# libwebrtc はプラットフォームによってスレッドとソケットを多く作るため、小さすぎる上限に
+# すると起動そのものが不安定になる。Linux と macOS の両方で accept だけを失敗させる値とする
+FD_LIMIT_FOR_EXHAUSTION = 256
 
 # fd を枯渇させるために張るクライアント接続の数
-# 上限 64 に対して十分な数を張り、accept が EMFILE で失敗する状態にする
-FD_EXHAUSTION_CONNECTIONS = 120
+# 上限に対して十分な数を張り、accept が EMFILE で失敗する状態にする
+FD_EXHAUSTION_CONNECTIONS = 256
 
 # accept エラーの発生を観測する時間 (秒)
 # バックオフが 1 秒なので、この間に数回だけエラーが出る
