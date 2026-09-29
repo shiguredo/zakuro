@@ -72,6 +72,8 @@
   - @voluntas
 - [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
   - @voluntas
+- [UPDATE] GitHub Actions を検証用の ci.yml とリリース用の release.yml に分割する
+  - @voluntas
 
 ## 2025.3.1
 
