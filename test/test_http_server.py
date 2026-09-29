@@ -193,6 +193,20 @@ def test_http_server_resolve_failure_exits_with_error(tmp_path: Path) -> None:
     _assert_start_failed(result, HTTP_RESOLVE_ERROR_MARKER)
 
 
+def _is_health_check_ok(port: int, timeout_seconds: int = 5) -> bool:
+    """`/.ok` が 200 を返すかどうかを確認する
+
+    ソケットで最小の HTTP リクエストを送り、応答の 1 行目だけを見る。
+    """
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=timeout_seconds) as s:
+            s.sendall(b"GET /.ok HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+            response = s.recv(64)
+    except OSError:
+        return False
+    return response.startswith(b"HTTP/1.1 200")
+
+
 def _start_http_server_with_low_fd_limit(
     config_path: Path, port: int, working_directory: Path
 ) -> tuple[subprocess.Popen[bytes], list[str]]:
@@ -271,18 +285,21 @@ def test_http_server_accept_error_does_not_spin(free_port: int, tmp_path: Path) 
         f"{FD_EXHAUSTION_WAIT_SECONDS} 秒以内に fd が枯渇しなかった: "
         f"stderr={chr(10).join(stderr_lines)!r} stdout={stdout!r}"
     )
+    # EMFILE による枯渇であることを固定する
+    assert FD_EXHAUSTION_ERROR_MARKER in "\n".join(stderr_lines), (
+        f"accept の失敗が fd 枯渇ではない: stderr={chr(10).join(stderr_lines)!r}"
+    )
 
     stderr = "\n".join(stderr_lines[measured_from:])
     accept_errors = stderr.count(HTTP_ACCEPT_ERROR_MARKER)
     retries = stderr.count(HTTP_ACCEPT_RETRY_MARKER)
-    # fd を枯渇させられていない場合は、この検証が成立しないため失敗させる
-    assert accept_errors > 0, (
-        f"accept が失敗しなかった (fd を枯渇させられていない): stderr={stderr!r} stdout={stdout!r}"
-    )
-    # EMFILE による失敗であることを固定する
-    assert FD_EXHAUSTION_ERROR_MARKER in stderr, (
-        f"accept の失敗が fd 枯渇ではない: stderr={stderr!r}"
-    )
+    if accept_errors == 0:
+        # 枯渇は起きたが観測時間内に再失敗しなかった場合 (再試行が成功した) は、
+        # サーバーが応答を返すことを確認して正常とする
+        assert _is_health_check_ok(free_port), (
+            f"accept が失敗せず、サーバーも応答しない: stderr={stderr!r} stdout={stdout!r}"
+        )
+        return
     assert accept_errors <= MAX_ACCEPT_ERRORS_IN_WINDOW, (
         f"{ACCEPT_ERROR_WINDOW_SECONDS} 秒間に accept エラーが {accept_errors} 件出た "
         f"(待たずに再試行している): stderr={stderr!r}"
