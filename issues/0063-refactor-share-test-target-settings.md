@@ -1,7 +1,7 @@
 # CMake のテストターゲット定義が重複している
 
 - Created: 2026-09-28
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/refactor-share-test-target-settings
 - Polished: {YYYY-MM-DD}
 
@@ -47,3 +47,9 @@
 - `ctest` が 2/2 通ること
 - 各ターゲットのビルド条件 (標準・include・リンク・コンパイル定義・macOS 向けオプション) が
   変更前と等価であること
+
+## 解決方法
+
+2026-09-29 追記: CTest を撤去してテストを pytest に一本化する方針 (issues/0066) により、
+共通化の対象である `zakuro_adm_test` と `zakuro_game_key_core_test` の定義が `CMakeLists.txt` から
+削除された。本 issue が扱う重複は解消済みであり、コードの修正は行わず closed とする。
