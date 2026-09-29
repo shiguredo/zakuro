@@ -14,6 +14,7 @@ set(ZAKURO_LINUX_PLATFORMS
   ubuntu-22.04_x86_64
   ubuntu-24.04_x86_64
   ubuntu-26.04_x86_64
+  ubuntu-26.04_armv8
 )
 
 list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR})

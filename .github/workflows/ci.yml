@@ -39,6 +39,9 @@ jobs:
             runner: ubuntu-24.04
           - name: ubuntu-26.04_x86_64
             runner: ubuntu-26.04
+          # armv8 は x86_64 の runner から sysroot を使ってクロスコンパイルする
+          - name: ubuntu-26.04_armv8
+            runner: ubuntu-26.04
     name: Build zakuro for ${{ matrix.name }}
     # ビルドは apt と数 GB のダウンロードを伴うため ubuntu-slim は使わない
     runs-on: ${{ matrix.runner }}
@@ -71,27 +74,41 @@ jobs:
         name:
           - macos_arm64
     name: Build zakuro for ${{ matrix.name }}
-    runs-on: macos-15
+    runs-on: macos-26
     # 通常は 3 分程度で完了するため、ハングを検出できるよう余裕を持たせて 30 分で打ち切る
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build zakuro
         run: python3 run.py build ${{ matrix.name }}
+      # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
+      - name: Upload zakuro for pytest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zakuro-${{ matrix.name }}
+          path: _build/${{ matrix.name }}/release/zakuro/zakuro
+          # 同一ワークフロー内の pytest ジョブでしか使わないため保持期間を短くする
+          retention-days: 1
 
   pytest:
     strategy:
       fail-fast: false
       matrix:
         # ビルドしたターゲットと同じ runner で実行する
+        # ubuntu-26.04_armv8 は arm64 の runner で実行する
         include:
           - name: ubuntu-24.04_x86_64
             runner: ubuntu-24.04
           - name: ubuntu-26.04_x86_64
             runner: ubuntu-26.04
+          - name: ubuntu-26.04_armv8
+            runner: ubuntu-26.04-arm
+          - name: macos_arm64
+            runner: macos-26
     name: Run pytest for ${{ matrix.name }}
     needs:
       - build_linux
+      - build_macos
     # ubuntu-slim は最小構成のイメージで libX11 などの実行時ライブラリが保証されず、
     # 実バイナリを 21 回起動する E2E の実行先としても不適切なため、ビルド対象と同じ runner を使う
     runs-on: ${{ matrix.runner }}
@@ -106,6 +123,8 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install runtime deps
+        # macOS ではパッケージの導入は不要
+        if: runner.os == 'Linux'
         run: |
           # runner のパッケージリストが古いことがあるため先に更新する
           sudo apt-get update

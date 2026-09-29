@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import shlex
 import shutil
+import sys
 import tarfile
 from typing import List, Optional
 
@@ -41,14 +42,22 @@ LINUX_X86_64_PLATFORMS = (
     "ubuntu-24.04_x86_64",
     "ubuntu-26.04_x86_64",
 )
-LINUX_PLATFORMS = LINUX_X86_64_PLATFORMS
+# Linux (armv8) 向けのビルド対象
+# x86_64 のホストからは sysroot を使ってクロスコンパイルする
+LINUX_ARMV8_PLATFORMS = ("ubuntu-26.04_armv8",)
+LINUX_PLATFORMS = LINUX_X86_64_PLATFORMS + LINUX_ARMV8_PLATFORMS
+
+
+def is_cross_build(platform: str) -> bool:
+    """x86_64 のホストから armv8 向けにビルドするかどうかを返す"""
+    return platform in LINUX_ARMV8_PLATFORMS and os.uname().machine != "aarch64"
 
 
 def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
     # クロスコンパイルの設定。
     # 本来は toolchain ファイルに書く内容
     if platform in LINUX_PLATFORMS:
-        return [
+        cmake_args = [
             f"-DCMAKE_C_COMPILER={webrtc_info.clang_dir}/bin/clang",
             f"-DCMAKE_CXX_COMPILER={webrtc_info.clang_dir}/bin/clang++",
             "-DCMAKE_CXX_FLAGS="
@@ -63,6 +72,18 @@ def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
                 ]
             ),
         ]
+        if is_cross_build(platform):
+            sysroot = os.path.join(install_dir, "rootfs")
+            cmake_args += [
+                "-DCMAKE_SYSTEM_NAME=Linux",
+                "-DCMAKE_SYSTEM_PROCESSOR=aarch64",
+                "-DCMAKE_C_COMPILER_TARGET=aarch64-linux-gnu",
+                "-DCMAKE_CXX_COMPILER_TARGET=aarch64-linux-gnu",
+                f"-DCMAKE_SYSROOT={sysroot}",
+                f"-DCMAKE_FIND_ROOT_PATH={sysroot}",
+                "-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER",
+            ]
+        return cmake_args
     elif platform == "macos_arm64":
         sysroot = cmdcap(["xcrun", "--sdk", "macosx", "--show-sdk-path"])
         clang_bin = os.path.join(webrtc_info.clang_dir, "bin")
@@ -100,6 +121,25 @@ def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
+def install_sysroot(config_path: str, install_dir: str) -> None:
+    """クロスコンパイル用の sysroot を sysroot_builder.py で構築する
+
+    buildbase の install_rootfs は multistrap 前提であるため使わず、
+    署名検証付きの sysroot_builder.py に一本化する。
+    再構築の要否は builder 側が設定と署名鍵の fingerprint で判断する。
+    """
+    cmd(
+        [
+            sys.executable,
+            os.path.join(BASE_DIR, "sysroot_builder.py"),
+            "--config",
+            config_path,
+            "--dest",
+            os.path.join(install_dir, "rootfs"),
+        ]
+    )
+
+
 def install_deps(
     platform: str,
     source_dir: str,
@@ -113,6 +153,14 @@ def install_deps(
 ):
     with cd(BASE_DIR):
         deps = read_version_file("DEPS")
+
+        # クロスコンパイル (x86_64 のホスト → armv8) のときだけ sysroot を構築する
+        # arm64 のホストでは CMake が cross build の分岐に入らないため sysroot は不要
+        if is_cross_build(platform):
+            install_sysroot(
+                config_path=os.path.join(BASE_DIR, "sysroot", f"{platform}.json"),
+                install_dir=install_dir,
+            )
 
         # WebRTC
         if local_webrtc_build_dir is None:
@@ -174,8 +222,11 @@ def install_deps(
             "platform": "",
             "ext": "tar.gz",
         }
-        if platform in LINUX_X86_64_PLATFORMS:
-            install_cmake_args["platform"] = "linux-x86_64"
+        if platform in LINUX_PLATFORMS:
+            # CMake はビルドするホストで動かすため、ホストの arch に合わせる
+            install_cmake_args["platform"] = (
+                "linux-aarch64" if os.uname().machine == "aarch64" else "linux-x86_64"
+            )
         elif platform == "macos_arm64":
             install_cmake_args["platform"] = "macos-universal"
         install_cmake(**install_cmake_args)

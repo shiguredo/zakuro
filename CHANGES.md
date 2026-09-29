@@ -72,8 +72,9 @@
   - @voluntas
 - [ADD] CI で pytest を実行する
   - @voluntas
-- [ADD] ubuntu-26.04_x86_64 のビルドに対応する
-  - CI でビルドと pytest を実行する
+- [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
+  - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする
+  - CI で両ターゲットと macOS 26 arm64 のビルドと pytest を実行する
   - @voluntas
 - [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
   - @voluntas
