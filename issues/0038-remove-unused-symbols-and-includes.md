@@ -33,6 +33,8 @@
 - `src/virtual_client.cpp`: `#include <iostream>` は `std::cerr` / `std::cout` を使っていないので不要
 - `src/virtual_client.cpp`: builtin_audio_decoder_factory / builtin_audio_encoder_factory / builtin_video_decoder_factory / builtin_video_encoder_factory / webrtc_media_engine / audio_device / audio_device_factory / audio_processing の各 include は本 TU 内でシンボルを直接使っていない (Sora 側で使うので不要)
 - `src/nop_video_decoder.cpp`: `libaom_av1_encoder.h` と `vp8.h` のエンコーダーヘッダーは不要 (本 TU で使うコーデック関係ヘッダーは `CreateH264Format` のための `h264.h` と `SupportedVP9Codecs()` を宣言する `vp9.h` のみ)
+- `src/util.cpp`: `#include <boost/beast/version.hpp>` は本 TU でシンボルを使っていない (`beast` の出現は include 行のみ)
+- `src/util.cpp`: `#include <boost/preprocessor/stringize.hpp>` は本 TU でシンボルを使っていない (`BOOST_PP` は `src/` 全体で参照 0 件)
 
 ## 設計方針
 
