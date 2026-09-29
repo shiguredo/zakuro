@@ -54,7 +54,9 @@ C++ 単体テスト基盤は撤去済みで、テストは実バイナリを起�
   終了コード 1 で終了することを確認する)
 - 空 data の `FakeAudioData` を `ZakuroAudioDeviceModule` に流し込んでも OOB 読み出しが発生せず、無音が送出されること
   (空 data の `FakeAudioData` を直接構築する検証は C++ 単体テスト基盤が無いため pytest では行えない。
-  `fake_audio_->data` が空の場合に無音を送出する分岐があることをコード上の保証として確認する)
+  また音声スレッドは Sora への接続が成立した後にしか開始されないため、実バイナリを起動する
+  E2E でも到達できない。`fake_audio_->data` が空の場合に無音を送出する分岐があることを
+  コード上の保証として確認する)
 - 空 data チャンクの WAV を `--fake-audio-capture` に指定して起動したときに、`WavReader::Load` の
   エラーログが出力されてオーディオスレッドが開始されないこと
   (AddressSanitizer 有効ビルドの手段はリポジトリに無いため、サニタイザでの確認は本 issue の
@@ -69,6 +71,11 @@ C++ 単体テスト基盤は撤去済みで、テストは実バイナリを起�
 - `ZakuroAudioDeviceModule::StartAudioThread` は `fake_audio_->data` が空の場合に
   無音のバッファを `SetRecordedBuffer` / `DeliverRecordedData` で送出する分岐を追加した。
   空のまま `data[index]` を読む経路をなくす
+- あわせて添字を `(index + 1) % data.size()` に変更した。`data` の要素数が `channels` の
+  倍数でない場合、従来は内側のチャンネルのループの途中で `data.size()` に達して
+  範囲外を読んでいた
+- `buf_size` (10 ミリ秒分の要素数) が 0 以下になる場合は音声スレッドを開始しない。
+  剰余算と 0 除算を避けるため
 
 検証したこと:
 
