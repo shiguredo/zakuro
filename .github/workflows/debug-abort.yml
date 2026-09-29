@@ -3,7 +3,9 @@ name: debug-abort
 # abort 時のバックトレースを取得する調査専用のワークフロー
 # feature/debug- ブランチ上でのみ使い、マージしない
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - 'feature/debug-multi-signaling-url-abort'
 
 jobs:
   debug:
