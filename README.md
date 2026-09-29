@@ -37,12 +37,12 @@ WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/
 
 ## 動作環境
 
-- macOS 15 arm64
 - macOS 26 arm64
-- Ubuntu 22.04 x86_64
-- Ubuntu 24.04 x86_64
+- macOS 15 arm64
 - Ubuntu 26.04 x86_64
 - Ubuntu 26.04 arm64
+- Ubuntu 24.04 x86_64
+- Ubuntu 22.04 x86_64
 
 ## 使ってみる
 

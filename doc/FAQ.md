@@ -29,9 +29,12 @@ Zakuro のスポットライト機能検証時に利用する音声ファイル�
 
 サーバーでの用途を前提としているため Linux での動作を想定しています。ただし簡易的な検証をできるように macOS arm64 でも利用できます。
 
+- Ubuntu 26.04 x86_64
+- Ubuntu 26.04 arm64
 - Ubuntu 24.04 x86_64
 - Ubuntu 22.04 x86_64
-- macOS arm64
+- macOS 26 arm64
+- macOS 15 arm64
 
 ## Zakuro は破壊的変更を行いますか？
 
