@@ -95,6 +95,14 @@
 - [FIX] `Zakuro::Run` の `loop_index` が未初期化のまま使われる問題を修正する
   - 宣言時に初期化し、キー入力トリガー利用時 (`--fake-audio-capture` 未指定) は許容値以外の `scenario` をエラーにする
   - @voluntas
+- [FIX] HTTP サーバーの resolve と bind の失敗を検出して起動失敗として終了する
+  - 失敗しても HTTP サーバーが起動したかのようなログを出していた
+  - @voluntas
+- [FIX] HTTP サーバーの `Stop` を何度呼んでも安全にし、accept の永続エラーで再試行を待つ
+  - `Stop` の二重呼び出しで `join` が二重実行される可能性があった
+  - fd 枯渇などの永続エラーで accept を即座に再試行して CPU を占有していた
+  - accept エラーのログを ERROR から WARNING に変更し、再試行までの待ち時間を出す
+  - @voluntas
 
 ### misc
 

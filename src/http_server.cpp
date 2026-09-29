@@ -25,26 +25,90 @@ HttpServer::~HttpServer() {
   Stop();
 }
 
-void HttpServer::Start() {
-  if (running_) {
-    return;
+bool HttpServer::Start() {
+  if (running_.exchange(true)) {
+    // すでに起動している。2 回目以降の Start は受け付けない
+    return false;
   }
 
-  running_ = true;
-  thread_.reset(new std::thread([this]() { Run(); }));
+  std::future<bool> future;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    // 1 回目だけを想定しているが、呼ばれても get_future の二重取得で落ちないよう作り直す
+    start_promise_ = std::promise<bool>();
+    start_result_set_ = false;
+    future = start_promise_.get_future();
+    thread_.reset(new std::thread([this]() { Run(); }));
+  }
+
+  // OnResolve が bind と accept 開始まで到達したか、Stop が呼ばれたら確定する。
+  // resolve が返らない場合に備えて待ち時間の上限を設ける
+  if (future.wait_for(std::chrono::seconds(kStartWaitSeconds)) ==
+      std::future_status::ready) {
+    return future.get();
+  }
+
+  RTC_LOG(LS_ERROR) << "HTTP server start timed out: host=" << host_
+                    << " port=" << port_;
+
+  // タイムアウトしたらワーカーを停止してから戻る。停止しないまま呼び出し元が
+  // このオブジェクトを破棄すると、ワーカーが破棄済みの io_context の中で動き続ける
+  std::unique_ptr<std::thread> thread;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    // 以後 OnResolve が確定しようとしても無視させる
+    start_result_set_ = true;
+    thread = std::move(thread_);
+  }
+  ioc_.stop();
+  if (thread) {
+    thread->join();
+  }
+  return false;
 }
 
 void HttpServer::Stop() {
-  if (!running_) {
+  if (!running_.exchange(false)) {
     return;
   }
-  assert(thread_ != nullptr);
 
-  running_ = false;
+  std::unique_ptr<std::thread> thread;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    // resolve より先に Stop が走った場合は OnResolve が実行されないため、ここで確定する
+    SetStartResult(false);
+    thread = std::move(thread_);
+  }
+
   ioc_.stop();
 
-  thread_->join();
-  thread_ = nullptr;
+  if (thread) {
+    thread->join();
+  }
+}
+
+void HttpServer::SetStartResult(bool started) {
+  if (start_result_set_) {
+    return;
+  }
+  start_result_set_ = true;
+  start_promise_.set_value(started);
+}
+
+void HttpServer::DoAcceptWithRetry() {
+  if (!accept_retry_timer_) {
+    accept_retry_timer_.reset(new boost::asio::steady_timer(ioc_));
+  }
+  accept_retry_timer_->expires_after(
+      std::chrono::milliseconds(kAcceptRetryDelayMs));
+  accept_retry_timer_->async_wait([this](boost::beast::error_code ec) {
+    if (ec == boost::asio::error::operation_aborted) {
+      return;
+    }
+    if (running_) {
+      DoAccept();
+    }
+  });
 }
 
 void HttpServer::Run() {
@@ -59,6 +123,9 @@ void HttpServer::Run() {
     ioc_.run();
   } catch (const std::exception& e) {
     RTC_LOG(LS_ERROR) << "HTTP server error: " << e.what();
+    // bind に到達していない場合に備えて、起動失敗として確定する
+    std::lock_guard<std::mutex> lock(mutex_);
+    SetStartResult(false);
   }
 }
 
@@ -67,16 +134,35 @@ void HttpServer::OnResolve(
     boost::asio::ip::tcp::resolver::results_type results) {
   if (ec) {
     RTC_LOG(LS_ERROR) << "Resolve error: " << ec.message();
+    std::lock_guard<std::mutex> lock(mutex_);
+    SetStartResult(false);
     return;
   }
 
   if (results.empty()) {
     RTC_LOG(LS_ERROR) << "Resolve error: no endpoints found";
+    std::lock_guard<std::mutex> lock(mutex_);
+    SetStartResult(false);
     return;
   }
 
-  const auto endpoint = results.begin()->endpoint();
-  acceptor_.reset(new boost::asio::ip::tcp::acceptor(ioc_, endpoint));
+  // bind の失敗は例外で通知されるため、ここで捕まえて呼び出し元へ伝える
+  try {
+    const auto endpoint = results.begin()->endpoint();
+    acceptor_.reset(new boost::asio::ip::tcp::acceptor(ioc_, endpoint));
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_ERROR) << "Bind error: " << e.what();
+    std::lock_guard<std::mutex> lock(mutex_);
+    SetStartResult(false);
+    return;
+  }
+
+  // acceptor の構築で bind と listen が済んでいるため、ここで起動成功として確定し、
+  // その後に accept を投入する
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    SetStartResult(true);
+  }
   DoAccept();
 }
 
@@ -90,14 +176,30 @@ void HttpServer::DoAccept() {
 void HttpServer::OnAccept(boost::beast::error_code ec,
                           boost::asio::ip::tcp::socket socket) {
   if (ec) {
-    RTC_LOG(LS_ERROR) << "Accept error: " << ec.message();
+    // 再試行する場合は下で警告として出すため、ここでは理由だけ記録する
+    RTC_LOG(LS_WARNING) << "Accept error: " << ec.message();
   } else {
     std::make_shared<HttpSession>(std::move(socket))->Run();
   }
 
-  if (running_) {
-    DoAccept();
+  if (!running_) {
+    return;
   }
+
+  if (!ec) {
+    DoAccept();
+    return;
+  }
+
+  // 停止による中断は再試行しない
+  if (ec == boost::asio::error::operation_aborted) {
+    return;
+  }
+
+  // fd 枯渇などの永続エラーで即座に再試行すると CPU を占有するため、一定時間待ってから再試行する
+  RTC_LOG(LS_WARNING) << "Accept failed, retrying after " << kAcceptRetryDelayMs
+                      << " ms";
+  DoAcceptWithRetry();
 }
 
 // ----------------------------

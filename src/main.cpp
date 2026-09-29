@@ -392,7 +392,13 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<HttpServer> http_server;
   if (http_host && http_port) {
     http_server.reset(new HttpServer(*http_host, *http_port));
-    http_server->Start();
+    if (!http_server->Start()) {
+      // HTTP サーバーの起動に失敗している。起動していないサーバーを起動済みとして
+      // 扱わないよう、ここで終了する
+      std::cerr << "failed to start HTTP server on " << *http_host << ":"
+                << *http_port << std::endl;
+      return 1;
+    }
     RTC_LOG(LS_INFO) << "HTTP server started on " << *http_host << ":"
                      << *http_port;
   } else if (http_host || http_port) {
