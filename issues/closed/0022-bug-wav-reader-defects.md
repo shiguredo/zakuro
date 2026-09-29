@@ -2,7 +2,7 @@
 
 - Created: 2026-08-27
 - Completed: 2026-09-30
-- Branch: feature/fix-wav-reader-defects
+- Branch: feature/fix-y4m-and-wav-reader-defects
 - Polished: 2026-09-08
 - Updated: 2026-09-29
 - Milestone: 2026.1.0
@@ -83,8 +83,8 @@ size_t へ拡張してから比較する。負値化と 32bit 加算のラップ
 ## 完了条件
 
 - chunk サイズ `0xFFFFFFFF` の data チャンクを含む WAV を `--fake-audio-capture` に指定して
-  起動してもシグナルで異常終了せず、`failed to load fake audio` が標準エラー出力に出ること
-  (`main` が `Zakuro::Run` の返り値を捨てているため終了コードでは判定できない。issues/0031 で解消予定)
+  起動してもシグナルで異常終了せず、`failed to load fake audio` が標準エラー出力に出て
+  終了コード 1 で終了すること
 - data チャンク読み込みの変換式が明示的な符号付き変換になっており、unsigned 合成値の
   暗黙変換がコードに残っていないこと
 - `WavReader::Load(std::string path)` の `std::ifstream` が `std::ios::binary` で open されていること
@@ -103,6 +103,12 @@ AddressSanitizer 有効ビルドの手段はリポジトリに無く、issues/00
 - `ReadChunk` のチャンクサイズを `uint32_t` で合成し、`size < (size_t)csize + 8` と
   `size_t` へ拡張してから比較する。signed での合成と `uint32_t` 同士の加算による
   2^32 のラップをどちらも排除する
+- fmt チャンクの長さが 16 バイト未満の場合は拒否する。長さを確認せずに `p[0]`〜`p[15]` を
+  読むと、入力バッファの外を読むため
+- サンプルレートも `uint32_t` で合成し、0 より大きく 1000000 以下であることを確認する。
+  signed で合成すると MSB が立つ値が負値になり、後段のバッファサイズ計算で未捕捉例外になる
+- data チャンクの要素数を `size_t` にする。チャンクサイズが符号なしであることと、
+  要素数の型を揃えるため
 - data チャンクの読み込みで `uint16_t` に合成してから `static_cast<int16_t>` する。
   signed 16bit として読み出す意図を明示する
 - `Load(std::string path)` の `std::ifstream` を `std::ios::binary` で開く
@@ -121,7 +127,7 @@ AddressSanitizer 有効ビルドの手段はリポジトリに無く、issues/00
 `test/test_readers.py` を追加し、異常なチャンクサイズの WAV が未捕捉例外にならず
 エラーになることを検証する。
 
-16bit PCM の符号付き変換は、負のサンプル値を実バイナリから直接観測できないため
+16bit PCM の符号付き変換は、負のサンプル値を pytest から直接観測できないため
 自動テストにしていない。変換式が明示的な符号付き変換になっていることをコード上の
 保証として確認する (issue 0043 の項目 5 でも扱う)。
 
