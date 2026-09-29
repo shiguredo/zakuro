@@ -499,6 +499,14 @@ int Zakuro::Run() {
       };
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
+  // 利用できないビデオコーデック実装を指定した場合など、環境によって nullptr が返る。
+  // ここで検査しないと、VirtualClient::Connect が config_.context を無条件に
+  // dereference してクラッシュする。
+  if (vc_config.context == nullptr) {
+    std::cerr << "[" << config_.name << "] failed to create Sora client context"
+              << std::endl;
+    return 1;
+  }
 
   // signaling URL のバリデーション
   for (const auto& url : config_.sora_signaling_urls) {
