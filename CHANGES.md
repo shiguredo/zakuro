@@ -13,7 +13,7 @@
 
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
-  - `--vp8-encoder` / `--vp9-encoder` / `--av1-encoder` / `--h264-encoder` / `--h265-encoder` の受付値 `nvidia_video_codec_sdk` は `nvidia_video_codec` に変更する
+  - `--vp8-encoder` / `--vp9-encoder` / `--av1-encoder` / `--h264-encoder` / `--h265-encoder` の受付値を `nvidia_video_codec_sdk` から `nvidia_video_codec` に変更する (設定ファイルの `vp8-encoder` なども同様)
   - @torikizi
 - [CHANGE] 設定ファイル (JSONC) の値の型が想定と異なる場合はエラーにする
   - オブジェクトや配列を値に取らないオプションにこれらを指定した場合はエラーにする
@@ -27,7 +27,9 @@
   - CMAKE_VERSION を `4.4.2` に上げる
   - BOOST_VERSION を `1.92.0` に上げる
   - AudioDeviceBuffer の変更に追随し、初期化時に env_ を渡すよう修正する
+    - libwebrtc アップデートによって AudioDeviceBuffer が env を直接参照するようになったため
   - run.py を修正し、clang を libwebrtc 提供のものに変更する
+    - libwebrtc のアップデートによって、clang を Xcode のものから libwebrtc 提供のものに変更されたため
   - @torikizi
 - [UPDATE] Sora C++ SDK を `2026.2.2` に上げる
   - `RTC_LOG` に暗黙変換が必要な文字列を渡すと SIGABRT する問題が修正されている
@@ -35,6 +37,9 @@
   - @voluntas
 - [UPDATE] CLI11 を `2.6.2` に上げる
   - @torikizi
+- [UPDATE] blend2d のバージョンを `0.21.2` に上げる
+  - include を `<blend2d.h>` から `<blend2d/blend2d.h>` に変更する
+  - @voluntas
 - [ADD] HTTP サーバー機能を追加する
   - `--http-port` オプションで HTTP サーバーを起動可能
   - `--http-host` オプションでバインドするアドレスを指定可能
@@ -124,15 +129,12 @@
   - @voluntas
 - [CHANGE] `.github/workflows/claude.yml` を削除する
   - @voluntas
-- [UPDATE] blend2d のバージョンを `0.21.2` に上げる
-  - include を `<blend2d.h>` から `<blend2d/blend2d.h>` に変更する
-  - @voluntas
 - [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
   - @voluntas
 - [UPDATE] GitHub Actions を検証用の ci.yml とリリース用の release.yml に分割する
   - @voluntas
-- [UPDATE] GitHub Actions の公式アクションを SHA ピンで最新版に更新する
-  - `actions/checkout` / `actions/upload-artifact` / `actions/download-artifact` を SHA ピンにする
+- [UPDATE] GitHub Actions の公式アクションを SHA ピンで更新する
+  - `actions/checkout` を `v6.0.2`、`actions/upload-artifact` を `v7.0.1`、`actions/download-artifact` を `v8.0.1` にする
   - @voluntas
 - [UPDATE] `--sora-data-channels` に指定した DataChannels の解析に失敗した理由を `RTC_LOG(LS_ERROR)` で出力する
   - 従来はエラーパスの大半が `std::cout` に行番号だけを出力しており、原因がログから分からなかった
@@ -153,13 +155,13 @@
   - 例外メッセージに不正だった実装値を含める
   - 現行の実装では preference のデコーダが常に `kCustom_1` になるため、この分岐には到達しない
   - @voluntas
-- [UPDATE] `CMakeLists.txt` の `set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)` で C / C++ 標準を 20 に上げる
+- [UPDATE] `CMakeLists.txt` の C / C++ 標準を 17 から 20 に上げる
+  - `set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)` を設定する
   - @torikizi
-- [UPDATE] buildbase.py を更新する
-  - Boost のアーカイブを SHA256 で検証する
-  - Android SDK の platform-tools をインストールする
-  - iOS ビルド用の clang 選択と blend2d のビルド引数を修正する
-  - @voluntas
+- [UPDATE] buildbase.py と run.py を上流の buildbase に追随させる
+  - Boost のアーカイブを SHA256 で検証するオプション、Android SDK の platform-tools のインストール、iOS ビルド用の clang 選択と blend2d のビルド引数の修正を取り込む
+  - Zakuro のビルドでは Boost の SHA256 と Android の経路は未使用で、iOS 向けの変更も Zakuro の対象外
+  - @melpon
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas

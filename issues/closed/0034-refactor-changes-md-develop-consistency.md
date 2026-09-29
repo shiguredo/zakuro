@@ -65,12 +65,18 @@
 
 ## 解決方法
 
-`CHANGES.md` の `## develop` を次のように整理した。並べ替えは見出し行と子項目の組を
-単位に行い、エントリの本文は変更していない。
+`CHANGES.md` の `## develop` を次のように整理した。並べ替えは見出し行と子項目 (入れ子を
+含む) の組を単位に行った。エントリの本文は、記載漏れの追記・表記の修正・統合に伴う
+書き換えを除いて変更していない。
+
+凡例の並びは `CHANGES.md` 冒頭の凡例と本リポジトリの過去リリース (2025.1.0 / 2025.3.0)
+に合わせて CHANGE → UPDATE → ADD → FIX とした。`shiguredo-changelog` スキルは
+CHANGE → ADD → UPDATE → FIX としており食い違うが、本 issue の設計方針のとおり
+リポジトリの凡例を正とした。
 
 - 本編と `### misc` をどちらも凡例 (CHANGE → UPDATE → ADD → FIX) の順に並べ替えた
-  - 本編は 29 件で CHANGE → UPDATE → ADD → FIX
-  - `### misc` は 19 件で CHANGE → UPDATE → ADD
+  - 本編は 30 件で CHANGE → UPDATE → ADD → FIX
+  - `### misc` は 18 件で CHANGE → UPDATE → ADD
 - `[CHANGE] VideoCodecImplementation ...` の子項目に、`--vp8-encoder` などの受付値
   `nvidia_video_codec_sdk` が `nvidia_video_codec` に変更になったことを追記した
 - `[UPDATE] blend2d のバージョンを `0.21.2` に上げる` を追加し、include の変更
@@ -84,7 +90,8 @@
   - `[UPDATE] GitHub Actions の公式アクションを SHA ピンで最新版に更新する`
   - `[UPDATE] buildbase.py を更新する`
 - `[UPDATE] AudioDeviceBuffer ...` と `[UPDATE] run.py ...` を独立エントリから
-  `[UPDATE] Sora C++ SDK を `2026.2.1` に上げる` の子項目へ統合した
+  `[UPDATE] Sora C++ SDK を `2026.2.1` に上げる` の子項目へ統合した。子項目だった理由の行も
+  入れ子の子項目として残した
 - `[ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する` は記載済みのため
   変更していない
 
@@ -98,7 +105,9 @@
 - 派生変更 2 件が Sora C++ SDK の子項目にあり、独立エントリとして残っていないこと
 - 変更前後でエントリの欠落・重複がないこと (変更前の全エントリが変更後のいずれかに
   存在するか、意図した統合・移動であることを機械的に確認した)
-- 各エントリの子項目が減っていないこと
+- 統合した 2 件の子項目 (理由の行) が統合先に入れ子の子項目として残っていること
+- 過去リリース (2025.1.0 / 2025.2.0 / 2025.3.0 / 2025.3.1) のエントリが
+  並べ替えの前後で完全に一致すること
 
 issue に記載した事実を実コードで再確認した。
 
@@ -107,5 +116,10 @@ issue に記載した事実を実コードで再確認した。
 - `CMakeLists.txt` は `set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`
 - `.github/copilot-instructions.md` と `.github/workflows/claude.yml` は削除済み
 - `.github/workflows/*.yml` の公式アクションは SHA ピンで指定されている
-- `buildbase.py` の更新には Boost の SHA256 検証、Android SDK の platform-tools、
-  iOS ビルド用の clang 選択が含まれる
+- `buildbase.py` の更新は上流の buildbase への追随で、Boost の SHA256 検証、
+  Android SDK の platform-tools、iOS ビルド用の clang 選択と blend2d のビルド引数の
+  修正を含む。Zakuro のビルドでは Boost の SHA256 と Android の経路は未使用で、
+  iOS 向けの変更も Zakuro の対象外である
+- 公式アクションのピン先は `actions/checkout` が `v6.0.2`、`actions/upload-artifact` が
+  `v7.0.1`、`actions/download-artifact` が `v8.0.1`
+- `buildbase.py` を更新したコミットの作者は melpon のため、担当者行を `@melpon` にした
