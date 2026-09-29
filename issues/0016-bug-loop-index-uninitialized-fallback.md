@@ -1,7 +1,7 @@
 # Zakuro::Run の loop_index が未初期化のまま使われる分岐がある
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/fix-loop-index-uninitialized-fallback
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -33,23 +33,73 @@ JSONC 設定ファイルも `Util::ParseInstanceToArgs` で CLI 引数へ変換�
 
 ## 設計方針
 
-以下 2 点を修正する。
+以下 3 点を修正する。
 
 - 宣言時に `int loop_index = 0;` で初期化する
-- if / else if チェーンの末尾に
-  `else { std::cerr << "unsupported scenario: " << config_.scenario << std::endl; return 1; }`
-  を追加する (メッセージは AGENTS.md の規約に従い英語で出す)
+- 想定外の scenario の検証を、`VirtualClient` を生成する前 (`vcs` の宣言と `io_context` の
+  ブロックより前) に置き、英語のメッセージを `std::cerr` に出して 0 以外を返す
+  (メッセージは AGENTS.md の規約に従い英語で出す)
+- if / else if チェーンを total にする。`scenario == ""` の分岐を最後の `else` にし、
+  `scenario == "reconnect"` の分岐をその直前に置く。検証により、キー入力トリガー利用時に
+  ここへ来る値は `""` か `"reconnect"` だけになる
+
+チェーンの末尾に `else { ... return 1; }` を置く案は採らない。`VirtualClient` を生成した後に
+早期 return すると `vcs.clear()` を飛ばし、`VirtualClient::retry_timer_` が `io_context` より
+後に破棄される未定義動作 (issue 0007 で修正済み) を再導入するためである。
 
 これで `Zakuro::Run` 単体で `loop_index` の初期化が保証され、想定外の scenario に対しては
 `Zakuro::Run` が明示的なエラーを返して後続処理を打ち切る。
 
-`Zakuro::Run` の戻り値を `main` が終了コードへ反映する変更は issue 0031 (main.cpp のリソース管理) で扱う。
-本 issue では `Zakuro::Run` が 0 以外を返すことまでを保証する。
-プロセスの非ゼロ終了の確認は issue 0031 の実装後になる点に注意する (同じ方針を issue 0011 が採っている)。
+`Zakuro::Run` の戻り値を `main` が終了コードへ反映する変更は issue 0031 (main.cpp のリソース管理)
+で扱い、0031 は完了済みである。そのため本 issue のエラーはプロセスの終了コード 1 として
+観測できる。ただし現行の entrypoint では CLI11 の `--scenario` のバリデータが許容値を
+`""` と `"reconnect"` に絞っているため、この検証は CLI 以外で `ZakuroConfig` を構築した場合の
+防御になる。
 
 ## 完了条件
 
 - `loop_index` が宣言時に初期化されていること
 - 3 分岐のいずれにも該当しない場合 (現行 entrypoint からは到達しないため、コード上の保証として確認する)
   に、`Zakuro::Run` が英語のエラーメッセージを `std::cerr` に出力して 0 以外を返すこと
+- if / else if チェーンが total であり、`loop_index` がどの経路でも代入されること
 - `-Wuninitialized` 相当を有効にしてもコンパイル警告が出ないこと
+- `--scenario` の許容値が CLI11 のバリデータで守られていること (許容値が増えたときに
+  `Zakuro::Run` 側の更新を忘れると、この前提が崩れるため)
+
+## 解決方法
+
+`src/zakuro.cpp` の `Zakuro::Run` を次のように修正した。
+
+- `int loop_index;` を `int loop_index = 0;` に変更した
+- 想定外の scenario の検証を、`std::vector<std::shared_ptr<VirtualClient>> vcs;` の宣言と
+  `boost::asio::io_context ioc{1};` のブロックより前に追加した。条件は
+  `fake_audio_key_trigger && config_.scenario != "" && config_.scenario != "reconnect"` で、
+  英語のメッセージ `[<name>] unsupported scenario: <値>` を `std::cerr` に出して 1 を返す
+- if / else if チェーンを total にした。`config_.scenario == "reconnect"` の分岐を先に置き、
+  `config_.scenario == ""` の分岐を最後の `else` にした。これにより、検証を通過した値
+  (`fake_audio_key_trigger` が真なら `""` か `"reconnect"` だけ) は必ずどれかの分岐に入り、
+  `loop_index` が必ず代入される
+
+チェーンの末尾に `else { ... return 1; }` を置く案は採らなかった。`VirtualClient` を生成した後に
+早期 return すると `vcs.clear()` と `vc->Clear()` を飛ばし、`VirtualClient::retry_timer_` が
+`io_context` より後に破棄される未定義動作 (issue 0007 で修正済み) を再導入するためである。
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- `-Wall -Wextra -Wuninitialized -Wsometimes-uninitialized -Wconditional-uninitialized` を
+  有効にしたコンパイルで、未初期化に関する警告が出ないこと
+  (修正前は `-Wconditional-uninitialized` で `loop_index` の警告が出る)
+- `Zakuro::Run` を直接呼ぶ一時的な検証プログラムをリンクして実行し、`scenario` が
+  `"unsupported-by-validator"` のときに英語のメッセージを出して 1 を返し、`""` と
+  `"reconnect"` では検証に掛からないことを確認した
+- `uv run pytest -q` が 91 passed / 1 skipped で通る (追加したテストを含む)
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+`test/test_config_json.py` に、`--scenario` の許容値が CLI11 のバリデータで守られていることを
+確認する `test_unsupported_scenario_exits_with_cli11_code` を追加した。バリデータを外した
+実装でこのテストが失敗することも確認している。あわせて既存の CLI11 検証テスト
+(`test_cli_validation_error_exits_with_cli11_code`) を、`sora` 配下のオプションを検証する形に
+整理した。
+
+`CHANGES.md` の `## develop` に `[FIX]` のエントリを追加した。
