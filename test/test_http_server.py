@@ -64,6 +64,11 @@ FD_LIMIT_FOR_EXHAUSTION = 256
 # 上限に対して十分な数を張り、accept が EMFILE で失敗する状態にする
 FD_EXHAUSTION_CONNECTIONS = 256
 
+# fd が実際に枯渇するまで待つ時間 (秒)
+# 接続を張っただけでは枯渇せず、バックログの接続が accept されてから枯渇する
+# ため、環境によっては数秒かかる
+FD_EXHAUSTION_WAIT_SECONDS = 30
+
 # accept エラーの発生を観測する時間 (秒)
 # バックオフが 1 秒なので、この間に数回だけエラーが出る
 ACCEPT_ERROR_WINDOW_SECONDS = 3
@@ -243,20 +248,31 @@ def test_http_server_accept_error_does_not_spin(free_port: int, tmp_path: Path) 
                 client.connect(("127.0.0.1", free_port))
             clients.append(client)
 
-        # 接続を張り終えるまでに出たログは計測対象から外す。接続処理自体に時間が
-        # かかった場合に、その間のエラーを観測時間内の件数と数えないためである
+        # 実際に fd が枯渇するまで待つ。接続を張っただけでは枯渇せず、バックログに
+        # 溜まった接続が accept されてから枯渇するため、環境によって数秒かかる
+        exhausted_lines, exhausted = wait_for_stderr_line(
+            process, HTTP_ACCEPT_ERROR_MARKER, FD_EXHAUSTION_WAIT_SECONDS
+        )
+        stderr_lines.extend(exhausted_lines)
+
+        # 枯渇してから観測時間の分だけログを読む。枯渇前のログを件数に数えないためである
         measured_from = len(stderr_lines)
         time.sleep(ACCEPT_ERROR_WINDOW_SECONDS)
     finally:
         for client in clients:
             client.close()
         stdout, stderr_tail = terminate_zakuro(process)
+        stderr_lines.extend(stderr_tail.splitlines())
 
     # 終了コードは fd 上限を下げた状態では検証しない。上限を下げると libwebrtc の
     # スレッドもファイルディスクリプタを作れなくなり、Stop の不具合とは関係のない
-    # 異常終了 (Linux では SIGABRT) になるためである。Stop の検証は
-    # test_http_server_stops_cleanly が fd 上限を下げずに行う
-    stderr = "\n".join(stderr_lines[measured_from:]) + stderr_tail
+    # 異常終了 (Linux では SIGABRT) になるためである
+    assert exhausted, (
+        f"{FD_EXHAUSTION_WAIT_SECONDS} 秒以内に fd が枯渇しなかった: "
+        f"stderr={chr(10).join(stderr_lines)!r} stdout={stdout!r}"
+    )
+
+    stderr = "\n".join(stderr_lines[measured_from:])
     accept_errors = stderr.count(HTTP_ACCEPT_ERROR_MARKER)
     retries = stderr.count(HTTP_ACCEPT_RETRY_MARKER)
     # fd を枯渇させられていない場合は、この検証が成立しないため失敗させる
