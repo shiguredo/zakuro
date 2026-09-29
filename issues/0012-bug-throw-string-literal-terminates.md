@@ -1,7 +1,7 @@
 # throw の対象が文字列リテラルで std::terminate に至る
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/fix-throw-string-literal-terminates
 - Polished: 2026-09-08
 - Milestone: 2026.1.0
@@ -52,3 +52,24 @@ Sora SDK 側の `SoraVideoDecoderFactory::Create` (try/catch なし) を通過�
 - `src/zakuro.cpp` の `context_config.video_codec_factory_config.create_video_decoder` ラムダが
   `throw std::runtime_error(...)` を使うこと
 - ビルドに成功し、既存の E2E テスト (`test/test_zakuro.py`) が通ること
+
+## 解決方法
+
+`src/zakuro.cpp` の `context_config.video_codec_factory_config.create_video_decoder` ラムダの
+`throw "Invalid implementation";` を `throw std::runtime_error("Invalid implementation");` に
+置き換えた。あわせて推移的なインクルードに依存しないよう `#include <stdexcept>` を追加した。
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- `git grep -n 'throw "' src/` が 0 件になる
+- `std::runtime_error` が `catch (const std::exception&)` で捕捉でき、`what()` に
+  `Invalid implementation` が入ることを一時的な検証プログラムで確認した。
+  `const char*` は同じ catch では捕捉できないこともあわせて確認した
+- `uv run pytest -q` が 112 passed / 1 skipped で通る
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+この分岐は現行の設定では到達しない。デコーダの実装は preference 構築の最後で
+`kCustom_1` を Merge するため、preference 内のデコーダは常に `kCustom_1` になる。
+
+`CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。
