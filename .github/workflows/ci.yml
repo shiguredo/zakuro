@@ -59,7 +59,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive sudo apt-get -y install binutils-aarch64-linux-gnu
           fi
       - name: Build zakuro
-        run: python3 run.py build ${{ matrix.name }} --package
+        run: python3 run.py build ${{ matrix.name }}
       # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
       - name: Upload zakuro for pytest
         # pytest を実行するターゲットのみアップロードする
@@ -88,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build zakuro
-        run: python3 run.py build ${{ matrix.name }} --package
+        run: python3 run.py build ${{ matrix.name }}
       # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
       - name: Upload zakuro for pytest
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -104,6 +104,9 @@ jobs:
       matrix:
         # ビルドしたターゲットと同じ runner で実行する
         # ubuntu-26.04_armv8 は arm64 の runner で実行する
+        # macos_arm64 (macOS 15) はビルドのみ検証する
+        # macos-15 の runner の openssl 1.1.1 が生成する鍵では TLS ハンドシェイクが
+        # 完了しないため、pytest は macos-26 の runner で実行する
         include:
           - name: ubuntu-24.04_x86_64
             runner: ubuntu-24.04
@@ -111,8 +114,6 @@ jobs:
             runner: ubuntu-26.04
           - name: ubuntu-26.04_armv8
             runner: ubuntu-26.04-arm
-          - name: macos_arm64
-            runner: macos-15
           - name: macos-26_arm64
             runner: macos-26
     name: Run pytest for ${{ matrix.name }}
