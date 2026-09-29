@@ -14,6 +14,7 @@
 #include <api/enable_media.h>
 #include <api/environment/environment_factory.h>
 #include <api/video_codecs/video_codec.h>
+#include <rtc_base/logging.h>
 
 // Sora C++ SDK
 #include <sora/camera_device_capturer.h>
@@ -50,17 +51,16 @@ struct DataChannels {
 static bool ParseDataChannels(boost::json::value data_channels,
                               DataChannels& m) {
   m = DataChannels();
-  boost::json::value& dcs = data_channels;
-  if (!dcs.is_array()) {
-    std::cout << __LINE__ << std::endl;
+  if (!data_channels.is_array()) {
+    RTC_LOG(LS_ERROR) << "ParseDataChannels: data channels must be an array";
     return false;
   }
-  for (auto& j : dcs.as_array()) {
+  for (auto& j : data_channels.as_array()) {
     DataChannels::Channel ch;
     sora::SoraSignalingConfig::DataChannel sch;
 
     if (!j.is_object()) {
-      std::cout << __LINE__ << std::endl;
+      RTC_LOG(LS_ERROR) << "ParseDataChannels: data channel must be an object";
       return false;
     }
     auto& obj = j.as_object();
@@ -69,11 +69,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("label");
       if (it == obj.end()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: label is missing";
         return false;
       }
       if (!it->value().is_string()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: label must be a string";
         return false;
       }
       ch.label = boost::json::value_to<std::string>(it->value());
@@ -85,11 +85,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("direction");
       if (it == obj.end()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: direction is missing";
         return false;
       }
       if (!it->value().is_string()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: direction must be a string";
         return false;
       }
       direction = boost::json::value_to<std::string>(it->value());
@@ -101,19 +101,19 @@ static bool ParseDataChannels(boost::json::value data_channels,
       auto it = obj.find("interval");
       if (it != obj.end()) {
         if (!it->value().is_number()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: interval must be a number";
           return false;
         }
         auto interval = boost::json::try_value_to<int>(it->value());
         if (interval.has_error()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: interval must be an integer";
           return false;
         }
         ch.interval = *interval;
         if (ch.interval <= 0) {
-          std::cout << __LINE__ << std::endl;
+          // 0 以下の値は送信間隔として成立しないため、このインスタンスの設定を拒否する
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: interval must be positive";
           return false;
-          obj.erase(it);
         }
       }
     }
@@ -126,17 +126,18 @@ static bool ParseDataChannels(boost::json::value data_channels,
       }
       if (it != obj.end()) {
         if (!it->value().is_number()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-min must be a number";
           return false;
         }
         auto size_min = boost::json::try_value_to<int>(it->value());
         if (size_min.has_error()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-min must be an integer";
           return false;
         }
         ch.size_min = *size_min;
         if (ch.size_min < MESSAGE_SIZE_MIN || ch.size_min > MESSAGE_SIZE_MAX) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: size-min out of range: " << ch.size_min;
           return false;
         }
         obj.erase(it);
@@ -151,14 +152,18 @@ static bool ParseDataChannels(boost::json::value data_channels,
       }
       if (it != obj.end()) {
         if (!it->value().is_number()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-max must be a number";
           return false;
         }
         auto size_max = boost::json::try_value_to<int>(it->value());
         if (size_max.has_error()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-max must be an integer";
           return false;
         }
         ch.size_max = *size_max;
         if (ch.size_max < MESSAGE_SIZE_MIN || ch.size_max > MESSAGE_SIZE_MAX) {
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: size-max out of range: " << ch.size_max;
           return false;
         }
         obj.erase(it);
@@ -175,7 +180,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
       if (it != obj.end()) {
         // value_to<bool> は真偽値以外で例外を投げるため、先に型を検査する
         if (!it->value().is_bool()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: ordered must be a boolean";
           return false;
         }
         sch.ordered = boost::json::value_to<bool>(it->value());
@@ -189,13 +194,15 @@ static bool ParseDataChannels(boost::json::value data_channels,
         // value_to<int32_t> は数値以外に加えて、整数でない値と int32_t の
         // 範囲外の値でも例外を投げるため、例外を投げない try_value_to で受ける
         if (!it->value().is_number()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_packet_life_time must be a number";
           return false;
         }
         auto max_packet_life_time =
             boost::json::try_value_to<int32_t>(it->value());
         if (max_packet_life_time.has_error()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_packet_life_time must be an integer";
           return false;
         }
         sch.max_packet_life_time = *max_packet_life_time;
@@ -209,12 +216,14 @@ static bool ParseDataChannels(boost::json::value data_channels,
         // value_to<int32_t> は数値以外に加えて、整数でない値と int32_t の
         // 範囲外の値でも例外を投げるため、例外を投げない try_value_to で受ける
         if (!it->value().is_number()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_retransmits must be a number";
           return false;
         }
         auto max_retransmits = boost::json::try_value_to<int32_t>(it->value());
         if (max_retransmits.has_error()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_retransmits must be an integer";
           return false;
         }
         sch.max_retransmits = *max_retransmits;
@@ -227,7 +236,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
       if (it != obj.end()) {
         // value_to<std::string> は文字列以外で例外を投げるため、先に型を検査する
         if (!it->value().is_string()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: protocol must be a string";
           return false;
         }
         sch.protocol = boost::json::value_to<std::string>(it->value());
@@ -240,7 +249,7 @@ static bool ParseDataChannels(boost::json::value data_channels,
       if (it != obj.end()) {
         // value_to<bool> は真偽値以外で例外を投げるため、先に型を検査する
         if (!it->value().is_bool()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: compress must be a boolean";
           return false;
         }
         sch.compress = boost::json::value_to<bool>(it->value());

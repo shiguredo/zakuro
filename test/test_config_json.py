@@ -23,12 +23,18 @@ from test_helpers import (
     BOOLEAN_ERROR_MARKER,
     CONFIG_ERROR_MARKER,
     DATA_CHANNELS_ERROR_MARKER,
+    DATA_CHANNELS_MESSAGE_PREFIX,
+    DATA_CHANNELS_SENDING_MARKER,
+    STARTUP_WAIT_SECONDS,
     VALID_INSTANCE,
     VALUE_TYPE_ERROR_MARKER,
     run_zakuro,
+    terminate_zakuro,
+    wait_for_stderr_line,
     write_config,
     write_config_object,
 )
+from zakuro import get_zakuro_executable_path
 
 
 def _assert_no_signal_exit(result: subprocess.CompletedProcess[str]) -> None:
@@ -43,6 +49,21 @@ def _assert_no_signal_exit(result: subprocess.CompletedProcess[str]) -> None:
         f"シグナルで強制終了した: returncode={result.returncode}\n"
         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
     )
+
+
+def _assert_stdout_is_cli_dump_only(stdout: str) -> None:
+    """標準出力が組み立てたコマンドラインの出力だけであることを検証する
+
+    zakuro は設定ファイルから組み立てた引数をインスタンスごとに標準出力へ 1 行ずつ
+    出力する。行番号を出すデバッグ出力が標準出力に戻ると、この行以外の行が現れるため、
+    その退行を検出する。インスタンスが 1 件の設定でのみ使える。
+    """
+    lines = stdout.splitlines()
+    assert lines, f"組み立てたコマンドラインの出力が無い: stdout={stdout!r}"
+    assert lines[0].startswith(get_zakuro_executable_path()), (
+        f"組み立てたコマンドラインの出力ではない: stdout={stdout!r}"
+    )
+    assert len(lines) == 1, f"コマンドラインの出力以外が標準出力に出ている: stdout={stdout!r}"
 
 
 def _assert_config_error(result: subprocess.CompletedProcess[str], marker: str) -> None:
@@ -268,81 +289,176 @@ def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("name", "data_channels"),
+    ("name", "data_channels", "reason"),
     [
-        # data-channels が配列でない場合は型検査で false を返す (例外ではない)
-        ("data_channels_not_array.jsonc", {"label": "test"}),
-        # label が無い場合はエラーになる
-        ("data_channels_missing_label.jsonc", [{"direction": "sendrecv"}]),
-        # label が文字列でない場合は型検査で false を返す
-        ("data_channels_bad_label.jsonc", [{"label": 1, "direction": "sendrecv"}]),
-        # direction が無い場合はエラーになる
-        ("data_channels_missing_direction.jsonc", [{"label": "test"}]),
+        # data-channels が配列でない場合は配列であることを求めて失敗する
+        ("data_channels_not_array.jsonc", {"label": "test"}, "data channels must be an array"),
+        # 配列の要素がオブジェクトでない場合は要素の型として失敗する
+        (
+            "data_channels_not_object.jsonc",
+            ["test"],
+            "data channel must be an object",
+        ),
+        # label が無い場合は欠落として失敗する
+        (
+            "data_channels_missing_label.jsonc",
+            [{"direction": "sendrecv"}],
+            "label is missing",
+        ),
+        # label が文字列でない場合は文字列であることを求めて失敗する
+        (
+            "data_channels_bad_label.jsonc",
+            [{"label": 1, "direction": "sendrecv"}],
+            "label must be a string",
+        ),
+        # direction が無い場合は欠落として失敗する
+        (
+            "data_channels_missing_direction.jsonc",
+            [{"label": "test"}],
+            "direction is missing",
+        ),
         # direction が文字列でない場合は型検査で false を返す
-        ("data_channels_bad_direction.jsonc", [{"label": "test", "direction": 1}]),
+        (
+            "data_channels_bad_direction.jsonc",
+            [{"label": "test", "direction": 1}],
+            "direction must be a string",
+        ),
         # ordered が真偽値でない場合は value_to<bool> が例外を投げていた
         (
             "data_channels_bad_ordered.jsonc",
             [{"label": "test", "direction": "sendrecv", "ordered": "yes"}],
+            "ordered must be a boolean",
         ),
         # interval が数値でない場合は value_to<int> が例外を投げていた
         (
             "data_channels_bad_interval.jsonc",
             [{"label": "test", "direction": "sendrecv", "interval": "500"}],
+            "interval must be a number",
         ),
         # interval が整数でない場合は value_to<int> が例外を投げていた
         (
             "data_channels_not_integer_interval.jsonc",
             [{"label": "test", "direction": "sendrecv", "interval": 1.5}],
+            "interval must be an integer",
+        ),
+        # interval が 0 の場合は送信間隔として成立しないため拒否する
+        (
+            "data_channels_zero_interval.jsonc",
+            [{"label": "test", "direction": "sendrecv", "interval": 0}],
+            "interval must be positive",
+        ),
+        # interval が負の値の場合も 0 と同じく拒否する
+        (
+            "data_channels_negative_interval.jsonc",
+            [{"label": "test", "direction": "sendrecv", "interval": -1}],
+            "interval must be positive",
+        ),
+        # size-min が数値でない場合は数値であることを求めて失敗する
+        (
+            "data_channels_bad_size_min.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size-min": "48"}],
+            "size-min must be a number",
         ),
         # size-min が整数でない場合は value_to<int> が例外を投げていた
         (
             "data_channels_not_integer_size_min.jsonc",
             [{"label": "test", "direction": "sendrecv", "size-min": 48.5}],
+            "size-min must be an integer",
+        ),
+        # size-min が下限 (48) 未満の場合は範囲外として失敗する
+        (
+            "data_channels_below_lower_bound_size_min.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size-min": 1}],
+            "size-min out of range: 1",
+        ),
+        # size-min が上限 (256000) を超える場合も範囲外として失敗する
+        (
+            "data_channels_above_upper_bound_size_min.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size-min": 256001}],
+            "size-min out of range: 256001",
+        ),
+        # 別名キーの size_min でも型検査の失敗を size-min の名前で報告する
+        (
+            "data_channels_bad_size_min_alias.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size_min": "48"}],
+            "size-min must be a number",
+        ),
+        # size-max が数値でない場合は数値であることを求めて失敗する
+        (
+            "data_channels_bad_size_max.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size-max": "48"}],
+            "size-max must be a number",
         ),
         # size-max が整数でない場合は value_to<int> が例外を投げていた
         (
             "data_channels_not_integer_size_max.jsonc",
             [{"label": "test", "direction": "sendrecv", "size-max": 48.5}],
+            "size-max must be an integer",
+        ),
+        # size-max が下限 (48) 未満の場合は範囲外として失敗する
+        (
+            "data_channels_below_lower_bound_size_max.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size-max": 1}],
+            "size-max out of range: 1",
+        ),
+        # size-max が上限 (256000) を超える場合も範囲外として失敗する
+        (
+            "data_channels_above_upper_bound_size_max.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size-max": 256001}],
+            "size-max out of range: 256001",
+        ),
+        # 別名キーの size_max でも型検査の失敗を size-max の名前で報告する
+        (
+            "data_channels_bad_size_max_alias.jsonc",
+            [{"label": "test", "direction": "sendrecv", "size_max": "48"}],
+            "size-max must be a number",
         ),
         # max_packet_life_time が数値でない場合は value_to<int32_t> が例外を投げていた
         (
             "data_channels_bad_max_packet_life_time.jsonc",
             [{"label": "test", "direction": "sendrecv", "max_packet_life_time": "10"}],
+            "max_packet_life_time must be a number",
         ),
         # max_packet_life_time が整数でない場合は value_to<int32_t> が例外を投げていた
         (
             "data_channels_not_integer_max_packet_life_time.jsonc",
             [{"label": "test", "direction": "sendrecv", "max_packet_life_time": 1.5}],
+            "max_packet_life_time must be an integer",
         ),
         # max_packet_life_time が int32_t の範囲外の場合は value_to<int32_t> が例外を投げていた
         (
             "data_channels_out_of_range_max_packet_life_time.jsonc",
             [{"label": "test", "direction": "sendrecv", "max_packet_life_time": 1e30}],
+            "max_packet_life_time must be an integer",
         ),
         # max_retransmits が数値でない場合は value_to<int32_t> が例外を投げていた
         (
             "data_channels_bad_max_retransmits.jsonc",
             [{"label": "test", "direction": "sendrecv", "max_retransmits": "3"}],
+            "max_retransmits must be a number",
         ),
         # max_retransmits が整数でない場合は value_to<int32_t> が例外を投げていた
         (
             "data_channels_not_integer_max_retransmits.jsonc",
             [{"label": "test", "direction": "sendrecv", "max_retransmits": 1.5}],
+            "max_retransmits must be an integer",
         ),
         # protocol が文字列でない場合は value_to<std::string> が例外を投げていた
         (
             "data_channels_bad_protocol.jsonc",
             [{"label": "test", "direction": "sendrecv", "protocol": 1}],
+            "protocol must be a string",
         ),
         # compress が真偽値でない場合は value_to<bool> が例外を投げていた
         (
             "data_channels_bad_compress.jsonc",
             [{"label": "test", "direction": "sendrecv", "compress": "true"}],
+            "compress must be a boolean",
         ),
     ],
     ids=[
         "data-channels-not-array",
+        "data-channel-not-object",
         "label-missing",
         "label-not-string",
         "direction-missing",
@@ -350,8 +466,18 @@ def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
         "ordered-not-bool",
         "interval-not-number",
         "interval-not-integer",
+        "interval-zero",
+        "interval-negative",
+        "size-min-not-number",
         "size-min-not-integer",
+        "size-min-below-lower-bound",
+        "size-min-above-upper-bound",
+        "size-min-alias-not-number",
+        "size-max-not-number",
         "size-max-not-integer",
+        "size-max-below-lower-bound",
+        "size-max-above-upper-bound",
+        "size-max-alias-not-number",
         "max-packet-life-time-not-number",
         "max-packet-life-time-not-integer",
         "max-packet-life-time-out-of-range",
@@ -361,12 +487,14 @@ def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
         "compress-not-bool",
     ],
 )
-def test_data_channels_type_error_exits_without_crash(
-    name: str, data_channels: object, tmp_path: Path
+def test_data_channels_error_exits_without_crash(
+    name: str, data_channels: object, reason: str, tmp_path: Path
 ) -> None:
-    """DataChannels の設定が想定と異なる場合も、例外で落ちずにエラー終了する
+    """DataChannels の設定が想定と異なる場合は、例外で落ちずに理由付きでエラー終了する
 
-    解析に失敗すると `Zakuro::Run` が 2 を返し、`main` がその戻り値を終了コードに反映する。
+    解析に失敗すると `Zakuro::Run` が 2 を返し、`main` がその戻り値を集約して 1 で終了する。
+    理由は `ParseDataChannels` がログ経路 (RTC_LOG) に出力する。ログレベルの指定は既定の
+    ままにして、利用者が実際に受け取る出力で理由が確認できることを検証する。
     """
     instance = dict(VALID_INSTANCE)
     instance["sora"] = dict(VALID_INSTANCE["sora"])
@@ -384,3 +512,67 @@ def test_data_channels_type_error_exits_without_crash(
         f"エラーメッセージが stderr に出ていない: "
         f"{DATA_CHANNELS_ERROR_MARKER!r}\nstderr: {result.stderr!r}"
     )
+    # 解析の失敗理由はログだけに出す。標準出力に行番号の出力が戻る退行を検出する
+    _assert_stdout_is_cli_dump_only(result.stdout)
+    message = f"{DATA_CHANNELS_MESSAGE_PREFIX} {reason}"
+    assert message in result.stderr, (
+        f"失敗の理由がログに出ていない: {reason!r}\n"
+        f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+    )
+
+
+def test_valid_data_channels_are_accepted(tmp_path: Path) -> None:
+    """有効な data-channels は拒否されず、解析を通過して実際に使われる
+
+    異常系だけを検証していると「常に失敗を返す」退行を検出できないため、境界値を含む
+    有効な設定が受理されることを確認する。接続先は到達しない URL なので、解析の後に
+    始まる DataChannel の送信を同期点にして、解析の通過と値の使用を確認する。
+    """
+    # 省略した場合 (既定値) と、指定した場合の両方を受理することを確認する。size_min /
+    # size_max は別名キーで、境界値の 48 と 256000 を受理する。ordered など任意キーも
+    # 有効値を受理する。受理した値そのものは接続後にしか観測できないため、値の使用は
+    # DataChannel の送信が始まることで確認する
+    instance = dict(VALID_INSTANCE)
+    instance["sora"] = dict(VALID_INSTANCE["sora"])
+    instance["sora"]["data-channels"] = [
+        {"label": "default", "direction": "sendrecv"},
+        {
+            "label": "explicit",
+            "direction": "sendrecv",
+            "interval": 1000,
+            "size_min": 48,
+            "size_max": 256000,
+            "ordered": True,
+            "max_packet_life_time": 10,
+            "max_retransmits": 3,
+            "protocol": "test",
+            "compress": True,
+        },
+    ]
+    config_path = write_config_object(
+        tmp_path, "data_channels_valid.jsonc", {"instances": [instance]}
+    )
+
+    process = subprocess.Popen(
+        [get_zakuro_executable_path(), "--config", str(config_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=tmp_path,
+    )
+    stderr_lines: list[str] = []
+    try:
+        # DataChannel の送信が始まるまで待つ
+        stderr_lines, sent = wait_for_stderr_line(
+            process, DATA_CHANNELS_SENDING_MARKER, STARTUP_WAIT_SECONDS
+        )
+    finally:
+        stdout, stderr_tail = terminate_zakuro(process)
+
+    stderr = "\n".join(stderr_lines) + stderr_tail
+    # 解析に失敗した場合は送信が始まる前に終了する
+    assert sent, f"有効な data-channels が使われなかった: stderr={stderr!r}"
+    assert DATA_CHANNELS_ERROR_MARKER not in stderr, (
+        f"有効な data-channels が拒否された: stderr={stderr!r}"
+    )
+    # 標準出力は組み立てたコマンドラインの 1 行だけである (行番号の出力が戻る退行を検出する)
+    _assert_stdout_is_cli_dump_only(stdout)

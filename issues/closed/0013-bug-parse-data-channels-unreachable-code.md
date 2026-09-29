@@ -1,7 +1,7 @@
 # ParseDataChannels の interval バリデーションに到達不能コードがある
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-29
 - Branch: feature/fix-parse-data-channels-unreachable-code
 - Polished: 2026-09-07
 - Milestone: 2026.1.0
@@ -24,7 +24,12 @@
       std::cout << __LINE__ << std::endl;
       return false;
     }
-    ch.interval = boost::json::value_to<int>(it->value());
+    auto interval = boost::json::try_value_to<int>(it->value());
+    if (interval.has_error()) {
+      std::cout << __LINE__ << std::endl;
+      return false;
+    }
+    ch.interval = *interval;
     if (ch.interval <= 0) {
       std::cout << __LINE__ << std::endl;
       return false;
@@ -73,7 +78,30 @@ if (ch.interval <= 0) {
 
 - `ParseDataChannels` に到達不能コードが 0 件であること (`interval` ブロックの `return false;` の後に
   `obj.erase(it);` が残っていないこと)。
-- `interval` の挙動が仕様として説明できること: 0 以下なら設定全体を拒否して `false` を返し
-  (`Zakuro::Run` は exit code 2 で終了)、指定なしなら既定値 500、正の値ならその値を使用する。
+- `interval` の挙動が仕様として説明できること: 0 以下ならこのインスタンスの data-channels を
+  拒否して `false` を返し (`Zakuro::Run` が 2 を返し、`main` が集約してプロセスは終了コード 1 で
+  終了する)、指定なしなら既定値 500、正の値ならその値を使用する。
 - 到達不能コードを検出するコンパイラ警告 (clang の `-Wunreachable-code`、MSVC の `/W4` の C4702) を
   有効にしても `ParseDataChannels` で警告が出ないこと (clang で同形のコードに警告が出ることを確認済み)。
+
+## 解決方法
+
+`src/zakuro.cpp` の `ParseDataChannels` の `interval` ブロックから、無条件の `return false;` の
+直後にあった到達不能な `obj.erase(it);` を削除した。削除後は `label` / `ordered` など
+erase を持たない多数の項目と同じ構造になっている。
+
+- 確認したこと: 削除前の `src/zakuro.cpp` を libwebrtc 提供の clang で `-Wunreachable-code` を
+  付けてコンパイルすると `warning: code will never be executed [-Wunreachable-code]` が
+  `obj.erase(it);` の行に出る。削除後は同じ条件で警告が出ない
+- 確認したこと: `data_channels` は値渡しのコピーで、解析後にこの JSON を参照する箇所が無いため、
+  erase の削除による挙動の変化は無い
+- 確認したこと: `size-min` / `size-max` の `obj.erase(it);` は到達可能であり、本 issue の
+  設計方針どおり変更していない
+
+`interval` の 0 以下を拒否する経路は `test/test_config_json.py` の
+`test_data_channels_error_exits_without_crash` が `interval-zero` / `interval-negative` の
+2 ケースで検証している。解析に失敗すると `Zakuro::Run` が 2 を返し、`main` が集約して
+プロセスは終了コード 1 で終了する。
+
+なお「コンパイラ警告を有効にしても警告が出ないこと」は、リポジトリのビルドに警告フラグが
+無いため自動検証していない (実装時に clang で手動確認した)。
