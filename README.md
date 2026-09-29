@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m141.7390-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7390)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m150.7871-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7871)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -71,8 +71,6 @@ Options:
   --config TEXT:FILE          JSONC config file path
   --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
                               Log severity level threshold
-  --port INT:INT in [-1 - 65535]
-                              Port number (default: -1)
   --output-file-connection-id TEXT
                               Output to specified file with connection IDs
   --instance-hatch-rate FLOAT:FLOAT in [0.1 - 100]
