@@ -46,7 +46,7 @@
 - `### misc` に以下のエントリを追加する (削除は後方互換のない変更なので `[CHANGE]` を使う。`[REMOVE]` という種別は存在しない)
   - `[CHANGE] .github/copilot-instructions.md を削除する`
   - `[CHANGE] .github/workflows/claude.yml を削除する`
-  - `[UPDATE] buildbase.py を更新する` (Boost の SHA256 検証、Android SDK platform-tools のサポート、blend2d の iOS ビルド修正、iOS ビルド用の clang 選択修正など)
+  - `[UPDATE] buildbase.py と run.py を上流の buildbase に追随させる` (Boost の SHA256 検証、Android SDK platform-tools のインストール、blend2d の iOS ビルド引数の修正、iOS ビルド用の clang 選択の修正など)
   - `[UPDATE] GitHub Actions の公式アクションを SHA ピンで最新版に更新する`
 - AudioDeviceBuffer / run.py の libwebrtc 派生エントリを `[UPDATE] Sora C++ SDK ...` の子項目に統合する
   - 2025.1.0 / 2025.2.0 の Sora C++ SDK エントリが派生対応を子項目として記載している流儀に合わせる
@@ -77,18 +77,20 @@ CHANGE → ADD → UPDATE → FIX としており食い違うが、本 issue の
 - 本編と `### misc` をどちらも凡例 (CHANGE → UPDATE → ADD → FIX) の順に並べ替えた
   - 本編は 30 件で CHANGE → UPDATE → ADD → FIX
   - `### misc` は 18 件で CHANGE → UPDATE → ADD
-- `[CHANGE] VideoCodecImplementation ...` の子項目に、`--vp8-encoder` などの受付値
-  `nvidia_video_codec_sdk` が `nvidia_video_codec` に変更になったことを追記した
+- `[CHANGE] VideoCodecImplementation ...` の子項目に、`--vp8-encoder` などの受付値を
+  `nvidia_video_codec_sdk` から `nvidia_video_codec` に変更したことを追記した
+  (設定ファイルの `vp8-encoder` なども同様)
 - `[UPDATE] blend2d のバージョンを `0.21.2` に上げる` を追加し、include の変更
   (`<blend2d.h>` → `<blend2d/blend2d.h>`) を子項目に記した
-- `[UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` ...` を `### misc` へ移し、
-  実際の変更 (`set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`)
-  に合わせてシンボル名を修正した
+- CMakeLists.txt の C / C++ 標準を上げるエントリを `### misc` へ移した。見出しから
+  実コードに無い `CMAKE_CXX_STANDARD` / `CMAKE_C_STANDARD` の表記をなくし、
+  実際の設定 (`set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`)
+  を子項目にした
 - `### misc` に次のエントリを追加した
   - `[CHANGE] `.github/copilot-instructions.md` を削除する`
   - `[CHANGE] `.github/workflows/claude.yml` を削除する`
-  - `[UPDATE] GitHub Actions の公式アクションを SHA ピンで最新版に更新する`
-  - `[UPDATE] buildbase.py を更新する`
+  - `[UPDATE] GitHub Actions の公式アクションを SHA ピンで更新する`
+  - `[UPDATE] buildbase.py と run.py を上流の buildbase に追随させる`
 - `[UPDATE] AudioDeviceBuffer ...` と `[UPDATE] run.py ...` を独立エントリから
   `[UPDATE] Sora C++ SDK を `2026.2.1` に上げる` の子項目へ統合した。子項目だった理由の行も
   入れ子の子項目として残した
