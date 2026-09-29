@@ -713,6 +713,7 @@ int Zakuro::Run() {
       data.Sleep(1000, 5000);
       loop_index = 0;
     } else {
+      // 検証により、キー入力トリガー利用時にここへ来る scenario は "" だけになる
       data.Reconnect();
       for (const auto& d : dcs_data) {
         data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);

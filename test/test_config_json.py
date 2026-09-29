@@ -285,7 +285,7 @@ def test_cli_validation_error_exits_with_cli11_code(tmp_path: Path) -> None:
     result = run_zakuro(config_path)
 
     _assert_cli11_validation_error(result)
-    assert "video-codec-type" in result.stderr, (
+    assert "--sora-video-codec-type:" in result.stderr, (
         f"弾かれた項目がエラーメッセージに出ていない: stderr={result.stderr!r}"
     )
 
@@ -305,7 +305,7 @@ def test_unsupported_scenario_exits_with_cli11_code(tmp_path: Path) -> None:
     result = run_zakuro(config_path)
 
     _assert_cli11_validation_error(result)
-    assert "scenario" in result.stderr, (
+    assert "--scenario:" in result.stderr, (
         f"弾かれた項目がエラーメッセージに出ていない: stderr={result.stderr!r}"
     )
 
