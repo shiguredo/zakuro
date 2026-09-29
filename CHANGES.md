@@ -119,6 +119,7 @@
 - [FIX] 空の data チャンクを持つ WAV を受理して音声スレッドが範囲外を読む問題を修正する
   - `WavReader::Load` が空の data チャンクを拒否する
   - `ZakuroAudioDeviceModule` は `fake_audio_->data` が空の場合に無音を送出する
+  - `data` の要素数がチャンネル数の倍数でない場合も添字が範囲内になるようにする
   - @voluntas
 
 ### misc

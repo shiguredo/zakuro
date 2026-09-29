@@ -92,25 +92,27 @@ def _wav(
     fmt_size: int = 16,
     sample_rate: int = 48000,
     body_size: int = 8,
+    channels: int = 1,
 ) -> bytes:
     """data チャンクのサイズを指定して WAV を作る
 
-    16bit / 1ch の PCM。`fmt_size` と `sample_rate` を変えると fmt チャンクの長さと
-    サンプルレートを、`body_size` を変えると data チャンクの中身の長さを指定できる。
+    16bit PCM。`fmt_size` と `sample_rate` を変えると fmt チャンクの長さと
+    サンプルレートを、`body_size` を変えると data チャンクの中身のバイト数を、
+    `channels` を変えるとチャンネル数を指定できる。
     """
     fmt_body = struct.pack(
         "<HHIIHH",
         1,
-        1,
+        channels,
         sample_rate & 0xFFFFFFFF,
-        (sample_rate * 2) & 0xFFFFFFFF,
-        2,
+        (sample_rate * channels * 2) & 0xFFFFFFFF,
+        channels * 2,
         16,
     )
     # fmt チャンクの長さを 16 未満にする場合は、その長さまで切り詰める
     fmt_body = fmt_body[:fmt_size]
     fmt = b"fmt " + struct.pack("<I", fmt_size) + fmt_body
-    data = b"data" + struct.pack("<I", data_chunk_size) + b"\x00\x00" * (body_size // 2)
+    data = b"data" + struct.pack("<I", data_chunk_size) + b"\x00" * body_size
     riff_size = 4 + len(fmt) + len(data)
     return b"RIFF" + struct.pack("<I", riff_size) + b"WAVE" + fmt + data
 

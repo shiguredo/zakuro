@@ -69,23 +69,26 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
   }
 
   StopAudioThread();
-  audio_thread_.reset(new std::thread([this]() {
-    int index = 0;
-    // 10 ミリ秒毎に送信
-    std::vector<int16_t> buf;
-    int buf_size = config_.sample_rate * config_.channels * 10 / 1000;
-    buf.reserve(buf_size);
-    if (config_.type == ZakuroAudioDeviceModuleConfig::Type::External) {
-      buf.resize(buf_size);
-    }
 
-    // fake_audio_ の data が空の場合、下の分岐が data[index] を読むと
-    // 空の vector への添字アクセスになる。無音を送出し続ける
-    bool fake_audio_is_empty =
-        (config_.type == ZakuroAudioDeviceModuleConfig::Type::Safari ||
-         config_.type == ZakuroAudioDeviceModuleConfig::Type::FakeAudio) &&
-        fake_audio_ != nullptr && fake_audio_->data.empty();
-    std::vector<int16_t> silence(buf_size);
+  // 10 ミリ秒分のバッファサイズ。sample_rate と channels が小さすぎる場合は 0 になり、
+  // 剰余算や 0 除算が起こるため、音声スレッドを開始しない
+  int buf_size = config_.sample_rate * config_.channels * 10 / 1000;
+  if (buf_size <= 0) {
+    return;
+  }
+
+  audio_thread_.reset(new std::thread([this, buf_size]() {
+    // 10 ミリ秒毎に送信
+    // index は BSD の関数名と衝突するため sample_index とする
+    int sample_index = 0;
+    std::vector<int16_t> buf;
+    buf.reserve(buf_size);
+
+    auto deliver = [this, buf_size](std::vector<int16_t>& b) {
+      device_buffer_->SetRecordedBuffer(b.data(), buf_size / config_.channels);
+      device_buffer_->DeliverRecordedData();
+      b.clear();
+    };
 
     auto prev_at = std::chrono::steady_clock::now();
     while (!audio_thread_stopped_) {
@@ -96,43 +99,39 @@ void ZakuroAudioDeviceModule::StartAudioThread() {
           std::chrono::duration_cast<std::chrono::milliseconds>(now - prev_at)
               .count() /
           1000;
-      if (fake_audio_is_empty) {
-        // 空の data を読まずに無音を送出する
-        device_buffer_->SetRecordedBuffer(silence.data(),
-                                          buf_size / config_.channels);
-        device_buffer_->DeliverRecordedData();
-      } else if (config_.type == ZakuroAudioDeviceModuleConfig::Type::Safari ||
-                 config_.type ==
-                     ZakuroAudioDeviceModuleConfig::Type::FakeAudio) {
+      prev_at = now;
+
+      if (config_.type == ZakuroAudioDeviceModuleConfig::Type::Safari ||
+          config_.type == ZakuroAudioDeviceModuleConfig::Type::FakeAudio) {
+        if (fake_audio_->data.empty()) {
+          // 空の data を読むと空の vector への添字アクセスになるため無音を送出する
+          buf.resize(buf_size, 0);
+          deliver(buf);
+          continue;
+        }
+        const int data_size = (int)fake_audio_->data.size();
         for (int i = 0; i < sample_count; i++) {
           for (int j = 0; j < config_.channels; j++) {
-            buf.push_back(fake_audio_->data[index]);
-            index += 1;
+            // data の要素数が channels の倍数でない場合も添字が範囲内になるようにする
+            buf.push_back(fake_audio_->data[sample_index]);
+            sample_index = (sample_index + 1) % data_size;
           }
-          if (buf.size() >= buf_size) {
-            device_buffer_->SetRecordedBuffer(buf.data(),
-                                              buf_size / config_.channels);
-            device_buffer_->DeliverRecordedData();
-            buf.clear();
-          }
-          if (index >= fake_audio_->data.size()) {
-            index = 0;
+          if ((int)buf.size() >= buf_size) {
+            deliver(buf);
           }
         }
       } else if (config_.type ==
                  ZakuroAudioDeviceModuleConfig::Type::External) {
         while (sample_count >= buf_size) {
           config_.render(buf);
-          device_buffer_->SetRecordedBuffer(buf.data(),
-                                            buf_size / config_.channels);
-          device_buffer_->DeliverRecordedData();
+          deliver(buf);
           sample_count -= buf_size;
         }
       }
-      prev_at = now;
     }
   }));
 }
+
 void ZakuroAudioDeviceModule::StopAudioThread() {
   if (audio_thread_) {
     audio_thread_stopped_ = true;
