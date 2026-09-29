@@ -36,15 +36,15 @@ std::string to_string(std::string str) {
 
 }  // namespace std
 
-void Util::ParseArgs(const std::vector<std::string>& cargs,
-                     std::string& config_file,
-                     int& log_level,
-                     std::optional<std::string>& http_host,
-                     std::optional<int>& http_port,
-                     std::string& connection_id_stats_file,
-                     double& instance_hatch_rate,
-                     ZakuroConfig& config,
-                     bool ignore_config) {
+ParseArgsResult Util::ParseArgs(const std::vector<std::string>& cargs,
+                                std::string& config_file,
+                                int& log_level,
+                                std::optional<std::string>& http_host,
+                                std::optional<int>& http_port,
+                                std::string& connection_id_stats_file,
+                                double& instance_hatch_rate,
+                                ZakuroConfig& config,
+                                bool ignore_config) {
   std::vector<std::string> args = cargs;
   std::reverse(args.begin(), args.end());
 
@@ -347,7 +347,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   try {
     app.parse(args);
   } catch (const CLI::ParseError& e) {
-    std::exit(app.exit(e));
+    // app.exit(e) は失敗メッセージの出力と --help の出力も行う
+    return ParseArgsResult::ErrorExit(app.exit(e));
   }
 
   if (version) {
@@ -356,7 +357,7 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
     std::cout << "WebRTC: " << ZakuroVersion::GetLibwebrtcName() << std::endl;
     std::cout << "Environment: " << ZakuroVersion::GetEnvironmentName()
               << std::endl;
-    std::exit(0);
+    return ParseArgsResult::ExitSuccess();
   }
 
   if (show_video_codec_capability) {
@@ -406,12 +407,12 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
       }
     }
 
-    std::exit(0);
+    return ParseArgsResult::ExitSuccess();
   }
 
   // 設定ファイルがある
   if (!ignore_config && !config_file.empty()) {
-    return;
+    return ParseArgsResult::Continue();
   }
 
   // 必須オプション。
@@ -419,15 +420,15 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   // エラーになってしまうので、ここでチェックする
   if (config.sora_signaling_urls.empty()) {
     std::cerr << "--sora-signaling-url is required" << std::endl;
-    std::exit(1);
+    return ParseArgsResult::ErrorExit(1);
   }
   if (config.sora_channel_id.empty()) {
     std::cerr << "--sora-channel-id is required" << std::endl;
-    std::exit(1);
+    return ParseArgsResult::ErrorExit(1);
   }
   if (config.sora_role.empty()) {
     std::cerr << "--sora-role is required" << std::endl;
-    std::exit(1);
+    return ParseArgsResult::ErrorExit(1);
   }
 
   // --client-cert と --client-key は両方指定する必要がある
@@ -436,13 +437,13 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   if (has_client_cert != has_client_key) {
     std::cerr << "--client-cert and --client-key must be specified together"
               << std::endl;
-    std::exit(1);
+    return ParseArgsResult::ErrorExit(1);
   }
 
   // --openh264 のパスは絶対パスである必要がある
   if (!config.openh264.empty() && config.openh264[0] != '/') {
     std::cerr << "--openh264 file path must be absolute path" << std::endl;
-    std::exit(1);
+    return ParseArgsResult::ErrorExit(1);
   }
 
   // メタデータのパース
@@ -468,6 +469,8 @@ void Util::ParseArgs(const std::vector<std::string>& cargs,
   if (!sora_video_h265_params.empty()) {
     config.sora_video_h265_params = boost::json::parse(sora_video_h265_params);
   }
+
+  return ParseArgsResult::Continue();
 }
 
 static std::string ConvertEnv(const std::string& input,
