@@ -68,10 +68,6 @@
 
 - [ADD] pytest を使った E2E テストを追加する
   - @voluntas
-- [ADD] ZakuroAudioDeviceModule の初期化再入を検証するテストを追加する
-  - @Hexa
-- [ADD] GameKeyCore のキー入力配送と登録解除が並行しても壊れないことを検証するテストを追加する
-  - @voluntas
 
 ## 2025.3.1
 
