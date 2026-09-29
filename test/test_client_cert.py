@@ -6,16 +6,15 @@ from pathlib import Path
 
 import pytest
 
-from zakuro import Zakuro, get_zakuro_executable_path
-
 from conftest import (
     CLIENT_CERT_COMMON_NAME,
-    MtlsCertificateVariants,
     MtlsCertificates,
+    MtlsCertificateVariants,
     TlsProbeServer,
     build_local_instance,
     wait_for_stderr,
 )
+from zakuro import Zakuro, get_zakuro_executable_path
 
 # クライアント証明書と秘密鍵を片方だけ指定した場合のエラーメッセージ
 PAIR_REQUIRED_MESSAGE = "--client-cert and --client-key must be specified together"
@@ -111,8 +110,9 @@ def test_client_cert_or_key_without_pair(
     else:
         client_key = mtls_certificates.client_key
 
-    with pytest.raises(RuntimeError) as excinfo:
-        with Zakuro(
+    with (
+        pytest.raises(RuntimeError) as excinfo,
+        Zakuro(
             instances=[
                 build_local_instance(
                     "wss://127.0.0.1:1/signaling",
@@ -121,8 +121,9 @@ def test_client_cert_or_key_without_pair(
                 )
             ],
             http_port=free_port,
-        ):
-            pass
+        ),
+    ):
+        pass
 
     # 設定ファイル経由の片方だけの指定でも非 0 で終了する
     error_output = str(excinfo.value)
@@ -228,8 +229,9 @@ def test_client_cert_or_key_load_failure(
     server.start()
     try:
         # 読み込みに失敗したインスタンスは接続せず、プロセスが終了する
-        with pytest.raises(RuntimeError, match=expected_message):
-            with Zakuro(
+        with (
+            pytest.raises(RuntimeError, match=expected_message),
+            Zakuro(
                 instances=[
                     build_local_instance(
                         f"wss://127.0.0.1:{server.port}/signaling",
@@ -239,8 +241,9 @@ def test_client_cert_or_key_load_failure(
                 ],
                 http_port=free_port,
                 log_level="info",
-            ):
-                pass
+            ),
+        ):
+            pass
     finally:
         server.stop()
     # stop() はサーバースレッドを join するため、ここでの読み出しは競合しない
@@ -336,8 +339,9 @@ def test_client_cert_or_key_not_pem(
     server.start()
     try:
         # 読み込みに失敗したインスタンスは接続せず、プロセスが終了する
-        with pytest.raises(RuntimeError, match=expected_message):
-            with Zakuro(
+        with (
+            pytest.raises(RuntimeError, match=expected_message),
+            Zakuro(
                 instances=[
                     build_local_instance(
                         f"wss://127.0.0.1:{server.port}/signaling",
@@ -347,8 +351,9 @@ def test_client_cert_or_key_not_pem(
                 ],
                 http_port=free_port,
                 log_level="info",
-            ):
-                pass
+            ),
+        ):
+            pass
     finally:
         server.stop()
     # stop() はサーバースレッドを join するため、ここでの読み出しは競合しない
@@ -368,7 +373,7 @@ def test_client_pem_formats(
     mtls_certificate_variants: MtlsCertificateVariants,
     free_port: int,
 ) -> None:
-    """RSA PRIVATE KEY / EC PRIVATE KEY 形式の秘密鍵と証明書チェーンでも mTLS のハンドシェイクが成立する"""
+    """RSA / EC 形式の秘密鍵と証明書チェーンでも mTLS のハンドシェイクが成立する"""
     # PEM の形式に応じて証明書と秘密鍵の組み合わせを選ぶ
     if pem_format == "rsa":
         client_cert = mtls_certificate_variants.rsa_client_cert

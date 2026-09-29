@@ -11,7 +11,9 @@ from zakuro import Zakuro
 # 実 Sora に接続したときに zakuro が SIGABRT する。SDK 側の修正が入るまでの暫定措置として
 # xfail にし、macOS など再現しない環境で成功した場合 (xpass) も失敗にしない
 @pytest.mark.xfail(
-    reason="Sora C++ SDK の Websocket::OnClose のログが原因で Linux では zakuro が SIGABRT するため",
+    reason=(
+        "Sora C++ SDK の Websocket::OnClose のログが原因で Linux では zakuro が SIGABRT するため"
+    ),
     strict=False,
 )
 def test_version(sora_config: SoraConfig, free_port: int) -> None:

@@ -92,8 +92,14 @@
 ### misc
 
 - [ADD] pytest を使った E2E テストを追加する
+  - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas
 - [ADD] CI で pytest を実行する
+  - @voluntas
+- [ADD] prek のフックを追加する
+  - `ruff-format` / `ruff-check` / `ty` / `pytest` を prek 経由で実行する
+  - @voluntas
+- [ADD] CI で prek のフックを実行する
   - @voluntas
 - [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
   - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする

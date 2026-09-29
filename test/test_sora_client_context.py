@@ -9,15 +9,13 @@ import json
 import subprocess
 from pathlib import Path
 
-import pytest
-
-from zakuro import Zakuro, get_zakuro_executable_path
-
 from conftest import (
     ServerCertificates,
     TlsProbeServer,
     build_local_instance,
 )
+from test_helpers import run_zakuro
+from zakuro import Zakuro, get_zakuro_executable_path
 
 # SoraClientContext の生成に失敗したときのエラーメッセージの断片
 # 実際の出力は "[<name>] failed to create Sora client context" であり、
@@ -31,32 +29,6 @@ CONTEXT_FAILURE_TIMEOUT_SECONDS = 10
 # 到達しない signaling URL
 # SoraClientContext の生成に失敗するため、接続処理には到達しない
 UNREACHABLE_SIGNALING_URL = "wss://127.0.0.1:1/signaling"
-
-
-def _run_with_config(config: dict[str, object], tmp_path: Path) -> subprocess.CompletedProcess[str]:
-    """設定ファイルを渡して zakuro を起動し、終了コードと stderr を返す
-
-    インスタンスの起動に失敗した場合はプロセスごと終了するため、HTTP サーバーが
-    起動しているかどうかに依存しない方法で結果を取得する。
-    `subprocess.run` は両方のパイプを同時に読むため、stderr が埋まって停止しない。
-    """
-    config_file = tmp_path / "zakuro_config.jsonc"
-    config_file.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
-    try:
-        return subprocess.run(
-            [get_zakuro_executable_path(), "--config", str(config_file)],
-            capture_output=True,
-            text=True,
-            timeout=CONTEXT_FAILURE_TIMEOUT_SECONDS,
-            # zakuro は作業ディレクトリに webrtc_logs_0 を作るため、ソースツリーを汚さない
-            cwd=tmp_path,
-        )
-    except subprocess.TimeoutExpired as e:
-        # ハング時も原因を追えるように、その時点までの stderr を失敗メッセージに含める
-        pytest.fail(
-            f"zakuro が {CONTEXT_FAILURE_TIMEOUT_SECONDS} 秒以内に終了しなかった: "
-            f"config={config_file.name} stderr={e.stderr!r}"
-        )
 
 
 def _build_cli_args(signaling_url: str, http_port: int) -> list[str]:
@@ -116,7 +88,14 @@ def test_context_failure_does_not_crash(
                 )
             ],
         }
-        result = _run_with_config(config, tmp_path)
+        config_file = tmp_path / "zakuro_config.jsonc"
+        config_file.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+        result = run_zakuro(
+            config_file,
+            CONTEXT_FAILURE_TIMEOUT_SECONDS,
+            # zakuro は作業ディレクトリに webrtc_logs_0 を作るため、ソースツリーを汚さない
+            working_directory=tmp_path,
+        )
     finally:
         # stop() はサーバースレッドを join するため、この後の読み出しは競合しない
         server.stop()

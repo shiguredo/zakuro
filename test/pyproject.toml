@@ -22,3 +22,34 @@ python_files = ["test_*.py"]
 
 [tool.ruff]
 line-length = 100
+# サポート対象の Python に合わせる
+target-version = "py314"
+
+[tool.ruff.lint]
+# 推奨セットを基本にする
+select = [
+  "E",
+  "W",
+  "F",
+  "I",
+  "B",
+  "UP",
+  "SIM",
+  "C4",
+  "PT",
+  "ANN",
+  "RUF",
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint.per-file-ignores]
+# ANN401 は Any の利用を禁止するが、次の 2 箇所だけは Any が必要になるため除外する
+# - conftest.py: SoraConfig.build_instance の **kwargs (設定キーごとに値の型が異なる)
+# - zakuro.py: RpcClient._call の params と戻り値 (JSON-RPC のメソッドごとに構造が異なる)
+"conftest.py" = ["ANN401"]
+"zakuro.py" = ["ANN401"]
+
+[tool.ty]

@@ -158,3 +158,24 @@ jobs:
         # 失敗しても全件の結果を確認できるよう -x は付けない
         working-directory: test
         run: uv run pytest -v
+
+  prek:
+    name: Run prek hooks
+    # ファイル単位の検査のみを行うため、apt とビルドを伴う他のジョブとは分ける
+    runs-on: ubuntu-slim
+    # prek の hook 環境の準備 (初回や cache miss) と Python のダウンロードを見込んで余裕を持たせる
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # ローカルフックが uv を呼ぶため uv を先に用意する
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Install test dependencies
+        # ty は pyproject.toml の依存を解決してから型検査するため、先に同期しておく
+        working-directory: test
+        run: uv sync
+      # prek.toml と test/prek.toml の hook をすべて実行する
+      # pytest はビルド済みの実バイナリを必要とするため、ここでは除外する
+      # (pytest は各ターゲットのジョブで実行する)
+      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        with:
+          extra-args: --all-files --skip pytest

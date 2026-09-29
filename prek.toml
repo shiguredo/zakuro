@@ -1,0 +1,44 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+# コミット前に実行する
+default_stages = ["pre-commit"]
+
+# prek 組み込みフック (オフラインで動作する Rust ネイティブ実装)
+[[repos]]
+repo = "builtin"
+
+# 行末の余分な空白を落とす
+# buildbase.py は melpon/buildbase のコピーテンプレートであり、パッチの文面を文字列で
+# 保持している。行末の空白がパッチの意味を持つため除外する
+[[repos.hooks]]
+id = "trailing-whitespace"
+exclude = '^buildbase\.py$'
+
+# ファイル末尾に改行を 1 つだけ入れる
+[[repos.hooks]]
+id = "end-of-file-fixer"
+
+# YAML の構文を検査する
+# .clang-format は 1 ファイルに複数の YAML ドキュメントを書く形式であり、
+# check-yaml は複数ドキュメントを扱えないため除外する
+[[repos.hooks]]
+id = "check-yaml"
+exclude = '^\.clang-format$'
+
+# TOML の構文を検査する
+[[repos.hooks]]
+id = "check-toml"
+
+# マージコンフリクトマーカーが残ったコミットを防ぐ
+[[repos.hooks]]
+id = "check-merge-conflict"
+
+# 秘密鍵の誤コミットを防ぐ
+[[repos.hooks]]
+id = "detect-private-key"
+
+# Python の hooks は test/prek.toml に置く
+# test ディレクトリが uv プロジェクトのルートであり、uv コマンドを作業ディレクトリから
+# 実行する必要があるため、config を分けている

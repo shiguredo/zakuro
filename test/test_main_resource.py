@@ -355,7 +355,7 @@ def test_file_descriptor_limit_is_rejected(tmp_path: Path) -> None:
     `--vcs` はインスタンスごとのオプションなので、コマンドラインから指定する。
     設定ファイルの `vcs` よりコマンドラインの `--vcs` が優先される。
     ソフトリミットは 1024 に下げ、ハードリミットも 1024 にして setrlimit による
-    昇格を防ぐ。必要数 (1000 VC × 5) は 1024 を超えるため必ず拒否される。
+    昇格を防ぐ。必要数 (1000 VC x 5) は 1024 を超えるため必ず拒否される。
     """
     config_path = write_config_object(tmp_path, "fd_limit.jsonc", {"instances": [VALID_INSTANCE]})
     args = [
@@ -390,7 +390,7 @@ def test_file_descriptor_limit_is_raised(free_port: int, tmp_path: Path) -> None
     """ソフトリミットが不足しても昇格できる場合は起動することを確認する
 
     ソフトリミットだけを 1024 に下げ、ハードリミットは継承した大きな値を残す。
-    必要数 (300 VC × 5 = 1500) はソフトリミットを超えるが、setrlimit で昇格できる。
+    必要数 (300 VC x 5 = 1500) はソフトリミットを超えるが、setrlimit で昇格できる。
     昇格したことを示すログを確認する。このログは昇格の処理を削除すると出力されないため、
     「エラーが出ずに起動した」だけで通ってしまうことを防ぐ。
     """
@@ -424,7 +424,7 @@ def test_file_descriptor_limit_is_raised(free_port: int, tmp_path: Path) -> None
     assert raised, (
         f"FD の昇格が行われなかった (昇格のログが出ていない): stdout={stdout!r} stderr={stderr!r}"
     )
-    # 必要数 (300 VC × 5 = 1500) を満たすように昇格していること
+    # 必要数 (300 VC x 5 = 1500) を満たすように昇格していること
     # libwebrtc のログが同じ stderr に割り込むことがあるため、空白を許容して照合する
     assert re.search(r"raised the file descriptor limit: required=\s*1500\b", stderr), (
         f"昇格後の必要数がログに出ていない: stderr={stderr!r}"
@@ -456,7 +456,7 @@ def test_file_descriptor_limit_sums_all_instances(tmp_path: Path) -> None:
         text=True,
         timeout=CONFIG_ERROR_TIMEOUT_SECONDS,
         cwd=tmp_path,
-        # 400 VC × 5 = 2000 は 2048 に収まるが、2 インスタンスの合計 4000 は収まらない
+        # 400 VC x 5 = 2000 は 2048 に収まるが、2 インスタンスの合計 4000 は収まらない
         preexec_fn=lambda: _file_descriptor_limit(soft=2048, hard=2048),
     )
 

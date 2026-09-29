@@ -87,12 +87,14 @@ class SoraConfig:
         vcs: int = 1,
         no_video_device: bool = True,
         no_audio_device: bool = True,
+        # 追加のキーは自由に受け取れるようにする。値は設定キーごとに型が異なるため
+        # 呼び出し側の設定をそのまま渡せるよう Any を使う
         **kwargs: Any,
     ) -> dict[str, Any]:
         """zakuro インスタンス設定を構築する
 
         Args:
-            channel_name: チャンネル名（channel_id の生成に使用）
+            channel_name: チャンネル名 (channel_id の生成に使用)
             role: Sora のロール (sendonly, recvonly, sendrecv)
             vcs: 仮想クライアント数
             no_video_device: ビデオデバイスを無効化
@@ -127,7 +129,7 @@ class SoraConfig:
 @pytest.fixture
 def sora_config() -> SoraConfig:
     """Sora 接続用の設定を提供するフィクスチャ"""
-    # 環境変数から設定を取得（必須）
+    # 環境変数から設定を取得 (必須)
     signaling_urls_str = os.environ.get("TEST_SIGNALING_URLS")
     if not signaling_urls_str:
         pytest.skip("TEST_SIGNALING_URLS environment variable is required")

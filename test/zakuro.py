@@ -1,5 +1,6 @@
 """Zakuro プロセスを管理するためのモジュール"""
 
+import contextlib
 import json
 import platform
 import shlex
@@ -23,8 +24,16 @@ class RpcClient:
         self._port = port
         self._request_id = 0
 
-    def _call(self, method: str, params: dict[str, Any] | None = None) -> Any:
-        """JSON-RPC メソッドを呼び出す"""
+    def _call(
+        self,
+        method: str,
+        # JSON-RPC の params はメソッドごとに構造が異なるため Any を使う
+        params: dict[str, Any] | None = None,
+    ) -> Any:
+        """JSON-RPC メソッドを呼び出す
+
+        戻り値はメソッドごとに構造が異なる JSON の値になるため Any を返す。
+        """
         self._request_id += 1
         url = f"http://{self._host}:{self._port}/rpc"
         payload: dict[str, Any] = {
@@ -192,7 +201,7 @@ class Zakuro:
         """コンテキストマネージャーの開始"""
         try:
             args = self._build_args()
-            cmd = [self._executable_path] + args
+            cmd = [self._executable_path, *args]
             quoted_cmd = " ".join(shlex.quote(arg) for arg in cmd)
             print(f"Starting zakuro: {quoted_cmd}")
 
@@ -336,8 +345,7 @@ class Zakuro:
 
         # 一時設定ファイルを削除
         if self._temp_config_file:
-            try:
+            # ファイルが既に無い場合の失敗は無視する
+            with contextlib.suppress(OSError):
                 Path(self._temp_config_file).unlink(missing_ok=True)
-            except OSError:
-                pass
             self._temp_config_file = None

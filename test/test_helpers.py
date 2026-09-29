@@ -7,6 +7,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from zakuro import get_zakuro_executable_path
 
 # 設定ファイルを読み込むだけで終了することを期待する待ち時間 (秒)
@@ -62,18 +64,32 @@ def write_config_object(tmp_path: Path, name: str, obj: object) -> Path:
     return write_config(tmp_path, name, json.dumps(obj, ensure_ascii=False, indent=2))
 
 
-def run_zakuro(config_path: Path) -> subprocess.CompletedProcess[str]:
-    """zakuro 実バイナリを設定ファイル付きで実行する"""
+def run_zakuro(
+    config_path: Path,
+    timeout_seconds: int = CONFIG_ERROR_TIMEOUT_SECONDS,
+    *,
+    working_directory: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """zakuro 実バイナリを設定ファイル付きで実行する
+
+    cwd を指定した場合は zakuro が作業ディレクトリに作る webrtc_logs_0 をそのディレクトリへ
+    逃がせる。上限時間を超えた場合はハングの退行とみなして失敗させる。
+    """
     args = [get_zakuro_executable_path(), "--config", str(config_path)]
     try:
         return subprocess.run(
-            args, capture_output=True, text=True, timeout=CONFIG_ERROR_TIMEOUT_SECONDS
+            args,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            cwd=working_directory,
         )
     except subprocess.TimeoutExpired as e:
-        raise AssertionError(
-            f"zakuro が {CONFIG_ERROR_TIMEOUT_SECONDS} 秒以内に終了しなかった: "
-            f"config={config_path.name}"
-        ) from e
+        # ハング時も原因を追えるように、その時点までの stderr を失敗メッセージに含める
+        pytest.fail(
+            f"zakuro が {timeout_seconds} 秒以内に終了しなかった: "
+            f"config={config_path.name} stderr={e.stderr!r}"
+        )
 
 
 def wait_for_stderr_line(
@@ -86,24 +102,27 @@ def wait_for_stderr_line(
     marker を同期点にすることで、起動が完了したことを確認できる。
     """
     lines: list[str] = []
+    # stderr=PIPE で起動しているため必ず非 None になる
+    assert process.stderr is not None
+    stderr = process.stderr
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        ready, _, _ = select.select([process.stderr], [], [], 0.1)
+        ready, _, _ = select.select([stderr], [], [], 0.1)
         if not ready:
             # プロセスが終了した場合は読み出すものが無くなる
             if process.poll() is not None:
                 break
             continue
-        ready, _, _ = select.select([process.stderr], [], [], 0)
+        ready, _, _ = select.select([stderr], [], [], 0)
         while ready:
-            line = process.stderr.readline()
+            line = stderr.readline()
             if line == b"":
                 return lines, False
             text = line.decode("utf-8", errors="replace").rstrip("\n")
             lines.append(text)
             if marker in text:
                 return lines, True
-            ready, _, _ = select.select([process.stderr], [], [], 0)
+            ready, _, _ = select.select([stderr], [], [], 0)
     return lines, False
 
 
@@ -116,9 +135,7 @@ def terminate_zakuro(process: subprocess.Popen[bytes]) -> tuple[str, str]:
         # 終了しない場合はプロセスを残さないようにしてから失敗させる
         process.kill()
         stdout_bytes, stderr_bytes = process.communicate()
-        raise AssertionError(
-            f"zakuro が終了しなかった: stdout={stdout_bytes!r} stderr={stderr_bytes!r}"
-        )
+        pytest.fail(f"zakuro が終了しなかった: stdout={stdout_bytes!r} stderr={stderr_bytes!r}")
     return (
         stdout_bytes.decode("utf-8", errors="replace"),
         stderr_bytes.decode("utf-8", errors="replace"),
