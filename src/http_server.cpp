@@ -111,8 +111,7 @@ boost::beast::http::response<boost::beast::http::string_body>
 HttpSession::HandleRequest(
     boost::beast::http::request<boost::beast::http::string_body> req) {
   // ヘルスチェックエンドポイント
-  if (req.target() == "/.ok" &&
-      req.method() == boost::beast::http::verb::get) {
+  if (req.target() == "/.ok" && req.method() == boost::beast::http::verb::get) {
     boost::beast::http::response<boost::beast::http::string_body> res{
         boost::beast::http::status::ok, req.version()};
     res.set(boost::beast::http::field::server, "Zakuro");

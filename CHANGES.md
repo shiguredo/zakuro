@@ -68,6 +68,8 @@
 
 - [ADD] pytest を使った E2E テストを追加する
   - @voluntas
+- [UPDATE] `src/http_server.cpp` の clang-format 違反を修正する
+  - @voluntas
 
 ## 2025.3.1
 
