@@ -522,16 +522,16 @@ def test_data_channels_error_exits_without_crash(
 
 
 def test_valid_data_channels_are_accepted(tmp_path: Path) -> None:
-    """有効な data-channels は拒否されず、解析を通過して実際に使われる
+    """有効な data-channels は拒否されず、解析を通過して送信が始まる
 
     異常系だけを検証していると「常に失敗を返す」退行を検出できないため、境界値を含む
     有効な設定が受理されることを確認する。接続先は到達しない URL なので、解析の後に
-    始まる DataChannel の送信を同期点にして、解析の通過と値の使用を確認する。
+    始まる DataChannel の送信を同期点にして、解析の通過を確認する。
     """
     # 省略した場合 (既定値) と、指定した場合の両方を受理することを確認する。size_min /
     # size_max は別名キーで、境界値の 48 と 256000 を受理する。ordered など任意キーも
-    # 有効値を受理する。受理した値そのものは接続後にしか観測できないため、値の使用は
-    # DataChannel の送信が始まることで確認する
+    # 有効値を受理する。受理した個々の値は接続後にしか観測できないため、ここでは
+    # 解析が通過したことだけを確認する
     instance = dict(VALID_INSTANCE)
     instance["sora"] = dict(VALID_INSTANCE["sora"])
     instance["sora"]["data-channels"] = [
