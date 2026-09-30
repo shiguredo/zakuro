@@ -1,7 +1,7 @@
 # Sora C++ SDK を 2026.2.1 に上げる
 
 - Created: 2026-08-20
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/update-sora-cpp-sdk-2026.2.1
 - Polished: 2026-08-26
 
@@ -80,4 +80,24 @@ pytest の E2E として追加する。
 
 ## 解決方法
 
-未着手
+Sora C++ SDK の `2026.2.1` への更新は `2026.2.2` の更新に取り込まれており、
+`DEPS` の `SORA_CPP_SDK_VERSION` は `2026.2.2` になっている。`CHANGES.md` の
+`## develop` には `2026.2.1` と `2026.2.2` の両方のエントリがある。
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- `ubuntu-22.04_x86_64` / `ubuntu-24.04_x86_64` / `ubuntu-26.04_x86_64` /
+  `ubuntu-26.04_armv8` / `macos_arm64` / `macos-26_arm64` のビルドは CI の
+  Build zakuro (12 チェック) が毎回検証している
+- `test/test_zakuro.py` の `test_version` が実 Sora に接続して pass している。
+  CI の成功ラン (`739930e`) で ubuntu-24.04_x86_64 / ubuntu-26.04_x86_64 /
+  ubuntu-26.04_armv8 / macos-26_arm64 のすべてで `PASSED` になっていることを確認した。
+  このテストは `DEPS` の `SORA_CPP_SDK_VERSION` / `WEBRTC_BUILD_VERSION` /
+  `BOOST_VERSION` と `GetVersion` の結果を突き合わせるため、`2026.2.2` に上がった
+  現在の `DEPS` でも通っている
+
+実 Sora に接続する検証は完了条件に含めない方針にしたため、当初 `## 完了条件` の
+「検証の内訳」に書いていた手動検証 (WebSocket / DataChannel シグナリングでの切断、
+`role` 3 種、`vcs` 1/2/3、`--duration` での切断) は実施していない。必要になった場合は
+実バイナリを起動する pytest の E2E として追加する。
