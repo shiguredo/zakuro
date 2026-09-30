@@ -1,7 +1,7 @@
 # コメントアウトされた古いコード・デバッグ痕跡の削除
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/remove-commented-out-code
 - Polished: 2026-09-08
 
@@ -49,3 +49,36 @@ git 履歴に残っているためコメントとして残しておく理由は�
 - フォントロード失敗時に `RTC_LOG(LS_ERROR)` でエラー内容がログに出ること
 - コードを読むときに「なぜこれがコメントアウトされているか」を検討する必要が無くなること
 - 削除後もビルド・テストが通ること (macOS arm64 / Ubuntu 22.04 / Ubuntu 24.04 のビルドと test_version)
+
+## 解決方法
+
+issue の「現状」に挙げられた削除対象をすべて削除した。
+
+- `src/game/game_key_core.h`: コメントアウトされた `PopKey` の実装 (9 行)
+- `src/fake_video_capturer.cpp`: Sandstorm の計測用の `auto now` / `auto now2` と
+  `RTC_LOG(LS_INFO) << "sandstorm "` のブロック (計 10 行)
+- `src/fake_video_capturer.cpp`: フォントのロード失敗時の `//printf(...)`
+- `src/fake_video_capturer.h`: コメントアウトされた
+  `//Random<uint32_t> random_{0, 256 * 256 * 256 - 1};`
+- `src/zakuro.cpp`: `ParseDataChannels` の型名とプロパティ名だけを書いた冗長なコメント
+  (`// boost::optional<...> <name>;` の 5 箇所)
+
+フォントのロード失敗は、無出力だった `if (err) { return; }` のパスに
+`RTC_LOG(LS_ERROR) << "Failed to load a font-face: err=" << err;` を追加した。
+フォントが読めないとキャプチャスレッドが終了して映像が一切出なくなるため、
+原因をログから確認できるようにする。同ファイルの Y4MReader のエラーパスと同じ形に
+合わせている。
+
+issue の「設計方針」で残すと決めたコメント (util.h のマクロ使用例、main.cpp の
+stats ファイルの JSON 例、y4m_reader.cpp の chroma フォーマット説明、
+zakuro_audio_device_module.h の `//webrtc::AudioDeviceModule`) はそのままにした。
+`buildbase.py` も対象外とした。
+
+検証したこと:
+
+- `git grep` で削除対象の記述が 0 件になること
+- `python3 run.py build macos_arm64` が成功すること
+- `uv run pytest -q` が 115 passed / 1 skipped で通ること
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さないこと
+
+`CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。
