@@ -113,7 +113,7 @@ ffmpeg -i in.mp4 -f wav -vn out.wav
 - AMD Advanced Media Framework (AMF) を利用する場合
   - `--h264-encoder amd_amf` を指定してください
 - 上記エンコーダーを利用しない場合は OpenH264 をダウンロードして利用してください
-  - [--openH264](https://github.com/shiguredo/zakuro/blob/master/doc/USE.md#openh264) を指定してください
+  - [--openh264](USE.md#openh264) を指定してください
 
 ## zakuro から送信した H.265 の映像が受信できません
 

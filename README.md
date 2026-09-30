@@ -56,6 +56,14 @@ Zakuro のビルドしたい人は [BUILD.md](doc/BUILD.md) をお読みくだ�
 
 [FAQ.md](doc/FAQ.md) をお読みください。
 
+## サポート
+
+[SUPPORT.md](doc/SUPPORT.md) をお読みください。
+
+## HTTP RPC
+
+Zakuro の HTTP サーバーが提供する JSON-RPC API は [RPC.md](doc/RPC.md) をお読みください。
+
 ## ヘルプ
 
 ```console
