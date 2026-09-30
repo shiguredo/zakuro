@@ -1,7 +1,7 @@
 # `--duration` を指定したプロセスの正常終了が SIGABRT になる
 
 - Created: 2026-09-30
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/fix-duration-exit-abort
 - Polished: {YYYY-MM-DD}
 
@@ -56,3 +56,35 @@
   (現状は `test/` に `--duration` を使うテストが無い)
 
 ## 解決方法
+
+`src/virtual_client.cpp` の `VirtualClient::Close` で、渡された `on_close` が空の
+`std::function` のときに呼ばないようにした。
+
+`Close` の `on_close` は既定で `nullptr` であり、シナリオの Disconnect のように
+切断だけを指示して結果を受け取らない呼び出しがある。一方 `Close` は
+`signaling_` が既に破棄されている場合に `on_close("already closed")` を無条件に
+呼んでいた。`--duration` を指定して接続に失敗したまま時間切れになると、
+`OnDisconnect` が `signaling_` を `reset()` 済みのため必ずこの経路に入り、
+空の `std::function` を呼んで `std::bad_function_call` が未捕捉になって
+SIGABRT で落ちていた。
+
+`closing_` が真の分岐にも同じ問題があり、`on_close` が空のときに `on_close_` が
+既に設定済みだと空の `std::function` を呼んでいたため、あわせて直した。
+
+原因の特定はデバッグ情報付きのビルド (`python3 run.py build macos_arm64
+--relwithdebinfo`) で `lldb` のバックトレースを取って行った。リリースビルドは
+LTO が有効で `__pthread_kill` までしか取れなかった。
+
+検証したこと:
+
+- 到達できないシグナリング URL と `duration` を 2 秒にした設定で、修正前は
+  3 回とも exit code 134 (Abort trap: 6)、修正後は 3 回とも exit code 0 になった
+- `vcs` 2、`data-channel-signaling`、`repeat-interval`、`role` の
+  `sendonly` / `recvonly` でも exit code 0 になった (`repeat-interval` を指定した
+  場合は再接続を繰り返すため終了しない。これは想定どおりの挙動)
+- `test/test_duration_exit.py` を追加した。修正を戻すと 3 件とも失敗し、
+  修正を入れると 3 件とも pass することを確認した
+- `uv run pytest -q` が 115 passed / 1 skipped で通る
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+`CHANGES.md` の `## develop` に `[FIX]` のエントリを追加した。
