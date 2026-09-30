@@ -171,6 +171,10 @@
 - [UPDATE] `CMakeLists.txt` の `ZAKURO_LINUX_PLATFORMS` から削除済みの `ubuntu-20.04_x86_64` を削除する
   - `run.py` のビルド対象と一致させる
   - @voluntas
+- [UPDATE] 未使用の `NopVideoDecoderFactory` を削除する
+  - デコードの破棄は `create_video_decoder` が `NopVideoDecoder` を返す経路で行われており、`webrtc::VideoDecoderFactory` の自前実装は通っていなかった
+  - あわせて `GetSupportedFormats` でしか使っていなかったコーデックの include を削除する
+  - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas
