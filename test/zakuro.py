@@ -197,31 +197,42 @@ class Zakuro:
         with self._stderr_lock:
             return "".join(self._stderr_lines)
 
+    def spawn(self) -> None:
+        """zakuro を起動し、stderr の読み取りを始める
+
+        HTTP サーバーの起動は待たない。`--duration` のように zakuro 自身が終了する
+        経路を検証する場合は、起動を待つ間にプロセスが終了してしまうため
+        `__enter__` ではなくこちらを使う。
+        """
+        if self._process is not None:
+            raise RuntimeError("zakuro is already running")
+        args = self._build_args()
+        cmd = [self._executable_path, *args]
+        quoted_cmd = " ".join(shlex.quote(arg) for arg in cmd)
+        print(f"Starting zakuro: {quoted_cmd}")
+
+        self._process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        print(f"Started zakuro process with PID: {self._process.pid}")
+
+        # stderr を読み続けるスレッドを開始する
+        # 読み取り対象のプロセスはスレッド開始時に固定する
+        # (クリーンアップで self._process が None になっても読み続けられるように)
+        with self._stderr_lock:
+            self._stderr_lines.clear()
+        self._stderr_thread = threading.Thread(
+            target=self._read_stderr, args=(self._process,), daemon=True
+        )
+        self._stderr_thread.start()
+
     def __enter__(self) -> Self:
         """コンテキストマネージャーの開始"""
         try:
-            args = self._build_args()
-            cmd = [self._executable_path, *args]
-            quoted_cmd = " ".join(shlex.quote(arg) for arg in cmd)
-            print(f"Starting zakuro: {quoted_cmd}")
-
-            self._process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            print(f"Started zakuro process with PID: {self._process.pid}")
-
-            # stderr を読み続けるスレッドを開始する
-            # 読み取り対象のプロセスはスレッド開始時に固定する
-            # (クリーンアップで self._process が None になっても読み続けられるように)
-            with self._stderr_lock:
-                self._stderr_lines.clear()
-            self._stderr_thread = threading.Thread(
-                target=self._read_stderr, args=(self._process,), daemon=True
-            )
-            self._stderr_thread.start()
+            self.spawn()
 
             self._wait_for_startup()
 
@@ -234,6 +245,17 @@ class Zakuro:
                 print(f"Cleaning up due to exception: {e}")
             self._cleanup()
             raise
+
+    def stop(self) -> None:
+        """プロセスを終了させ、一時ファイルと読み取りスレッドを片付ける
+
+        `spawn` で起動した場合に使う。`__exit__` はこれを呼ぶ。
+        """
+        self._rpc = None
+        if self._http_client:
+            self._http_client.close()
+            self._http_client = None
+        self._cleanup()
 
     def wait(self, timeout: int = 30) -> int:
         """プロセスが自力で終了するまで待ち、終了コードを返す
@@ -258,13 +280,7 @@ class Zakuro:
         _exc_tb: TracebackType | None,
     ) -> Literal[False]:
         """コンテキストマネージャーの終了"""
-        self._rpc = None
-
-        if self._http_client:
-            self._http_client.close()
-            self._http_client = None
-
-        self._cleanup()
+        self.stop()
         return False
 
     def _build_args(self) -> list[str]:

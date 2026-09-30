@@ -54,9 +54,16 @@ def test_duration_exits_cleanly_without_connection(free_port: int) -> None:
     シナリオの Disconnect は結果を受け取らない呼び出しであり、
     `VirtualClient::Close` に空の `std::function` が渡る。これを呼ぶと
     `std::bad_function_call` が未捕捉になって SIGABRT で落ちる退行があった。
+
+    `--duration` の経過で zakuro 自身が終了するため、HTTP サーバーの起動は
+    待たない (`Zakuro.__enter__` を使うと起動を待つ間にプロセスが終了しうる)。
     """
-    with Zakuro(instances=[_unreachable_instance(2)], http_port=free_port) as z:
+    z = Zakuro(instances=[_unreachable_instance(2)], http_port=free_port)
+    try:
+        z.spawn()
         returncode = z.wait(timeout=30)
+    finally:
+        z.stop()
 
     assert returncode == 0, (
         f"終了コードが 0 ではない: returncode={returncode} stderr={z.stderr_output!r}"
@@ -79,8 +86,12 @@ def test_duration_exits_cleanly_on_other_paths(
     """`--duration` の終了経路が他の設定でも正常終了する"""
     instance = _unreachable_instance(2, sora_options=sora_options, vcs=vcs)
 
-    with Zakuro(instances=[instance], http_port=free_port) as z:
+    z = Zakuro(instances=[instance], http_port=free_port)
+    try:
+        z.spawn()
         returncode = z.wait(timeout=30)
+    finally:
+        z.stop()
 
     assert returncode == 0, (
         f"{name}: 終了コードが 0 ではない: returncode={returncode} stderr={z.stderr_output!r}"
