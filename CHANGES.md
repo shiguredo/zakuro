@@ -11,6 +11,10 @@
 
 ## develop
 
+## 2026.1.0
+
+**リリース日**: 2026-09-30
+
 - [CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する
   - Sora C++ SDK のアップデートに伴う対応
   - `--vp8-encoder` / `--vp9-encoder` / `--av1-encoder` / `--h264-encoder` / `--h265-encoder` の受付値を `nvidia_video_codec_sdk` から `nvidia_video_codec` に変更する (設定ファイルの `vp8-encoder` なども同様)
@@ -190,9 +194,8 @@
   - `zakuro` を `/zakuro` にしてルートのバイナリだけを除外する
   - `/__pycache__` を `__pycache__/` にして任意の深さの生成物を除外する
   - @voluntas
-- [UPDATE] macOS 15 以降の arm64 向けバイナリの最小要件を macOS 15 に明示し、`macos-26_arm64` のビルドを削除する
+- [UPDATE] macOS arm64 向けバイナリの最小要件を macOS 15 に明示する
   - `CMAKE_OSX_DEPLOYMENT_TARGET` を指定していなかったため、ビルドに使った SDK のバージョンが最小要件になり macOS 26 以降でしか動かないバイナリになっていた
-  - ビルド対象とリリースバイナリを `macos_arm64` の 1 つにまとめる
   - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
@@ -207,10 +210,6 @@
 - [ADD] ubuntu-26.04_x86_64 と ubuntu-26.04_armv8 のビルドに対応する
   - ubuntu-26.04_armv8 は x86_64 のホストから sysroot を使ってクロスコンパイルする
   - CI とリリースで両ターゲットをビルドし、pytest を実行する
-  - @voluntas
-- [ADD] macOS 26 (arm64) のビルドに対応する
-  - macos-26_arm64 は macOS 26 以降が対象になる
-  - macos_arm64 (macOS 15 以降) はこれまでどおりビルドする
   - @voluntas
 
 ## 2025.3.1

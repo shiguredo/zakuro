@@ -14,7 +14,7 @@
 
 ```bash
 sudo apt update
-sudo apt install libnspr4 libnss3 libxext6 libx11-6 libdrm2 libva2 libva-drm2
+sudo apt install libnspr4 libnss3 libxext6 libx11-6
 ```
 
 ## 負荷をかけてみる
@@ -39,6 +39,24 @@ $ ./zakuro \
 
 上記コマンドを実行することで負荷が走ります。それぞれの項目については -h を見てください。
 おそらく Sora を理解していればわからないことは特に無いと思います。
+
+## HTTP サーバー
+
+`--http-host` と `--http-port` の両方を指定すると HTTP サーバーが起動します。片方だけを指定した場合はエラー終了します。JSONC 設定ファイルの `http-host` / `http-port` でも指定できます。
+
+```bash
+$ ./zakuro \
+    --http-host 127.0.0.1 \
+    --http-port 8000 \
+    --sora-signaling-url wss://example.com/signaling \
+    --sora-channel-id zakuro-test \
+    --vcs 5
+```
+
+- `GET /.ok`
+  - ヘルスチェック用のエンドポイントです。 200 OK を返します
+- `POST /rpc`
+  - JSON-RPC 2.0 エンドポイントです。 詳細は [RPC.md](RPC.md) をお読みください
 
 ## Zakuro 特有の機能
 
@@ -84,13 +102,13 @@ Zakuro では 1 秒間に起動する仮想クライアント数を指定でき�
 
 ### OpenH264
 
-`--openh264 /path/to/libopenh264-2.1.1-linux64.6.so`
+`--openh264 /path/to/libopenh264-2.6.0-linux64.8.so`
 
 Zakuro ではソフトウェアエンコーダを OpenH264 のライブラリを Dynamic Link することで利用できます。
 
 OpenH264 のバイナリの最新版は以下からダウンロードできます。
 
-<https://github.com/cisco/openh264/releases/tag/v2.1.1>
+<https://github.com/cisco/openh264/releases/tag/v2.6.0>
 
 ### 利用可能なエンコーダーとデコーダーの確認
 
@@ -126,7 +144,8 @@ Zakuro ではカメラからの映像入力の代わりに y4m ファイルを�
 ```jsonc
 {
   "log-level": "none",
-  "port": -1,
+  "http-host": "127.0.0.1",
+  "http-port": 8000,
   "instances": [
     {
       "name": "zakuro1",
@@ -197,13 +216,13 @@ Zakuro ではカメラからの映像入力の代わりに y4m ファイルを�
             // 省略時は 500 (ms)
             "interval": 1000,
             // 省略時は 48 (bytes)
-            "size_min": 100,
+            "size-min": 100,
             // 省略時は 48 (bytes)
-            "size_max": 5000
+            "size-max": 5000
             // 順番保証するか
             // "ordered": true,
             // 何ミリ秒間再送するか
-            // "max_packet_lifetime": 1,
+            // "max_packet_life_time": 1,
             // 何回再送するか
             // "max_retransmits": 1
           }
