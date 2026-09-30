@@ -3,7 +3,7 @@
 - Created: 2026-09-29
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-config-null-value
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
@@ -25,15 +25,19 @@ CLI11 のエラーになる。`null` は「未設定」を意味する値であ�
 
 | 指定箇所 | 実際の挙動 |
 | --- | --- |
-| トップレベル `http-host` | 文字列 `"null"` として受理され、`HTTP server started on null:<port>` を出力して起動が継続する |
+| トップレベル `http-host` | 文字列 `"null"` として受理され、`--http-host null` として CLI11 へ渡る。ホスト名 `null` が名前解決できる環境では `HTTP server started on null:<port>` を出力して起動が継続する。解決できない環境では `failed to start HTTP server on null:<port>` を出力して終了コード 1 になる |
 | トップレベル `output-file-connection-id` | 文字列 `"null"` として受理され、ファイル名 `null` に接続 ID が書き出される |
 | トップレベル `log-level` / `http-port` / `instance-hatch-rate` | 文字列 `"null"` が CLI11 の検証で弾かれ、終了コード 105 になる |
 | インスタンス配下 (`name` / `vcs` / `initial-mute-video` など) | `has an unexpected value type` を出力して終了コード 1 |
 | `sora` 配下 (`channel-id` など) | `sora-channel-id has an unexpected value type` を出力して終了コード 1 |
 
-`http-host` に `null` を指定した場合、HTTP サーバーはホスト名 `null` の名前解決に失敗して
-機能しないが、起動そのものは継続するため設定ミスに気付けない。`log-level` などの
-終了コード 105 になる場合も、エラーメッセージからは `null` が原因であることが読み取りにくい。
+`http-host` に `null` を指定した場合、設定値 `null` はホスト名 `"null"` として解釈される。
+ホスト名 `null` が名前解決できる環境では、`HTTP server started on null:<port>` を出力して
+起動が継続するため設定ミスに気付けない。解決できない環境では
+`failed to start HTTP server on null:<port>` を出力して終了コード 1 になるが、これは
+設定値に `null` を書いたことを直接伝えるエラーではなく、原因が読み取りにくい。
+`log-level` などの終了コード 105 になる場合も、エラーメッセージからは `null` が原因である
+ことが読み取りにくい。
 
 再現手順:
 
@@ -60,7 +64,9 @@ CLI11 のエラーになる。`null` は「未設定」を意味する値であ�
 2. `zakuro --config <file>` を実行する
 
 期待: `http-host` の値が不正であることを示すエラーを出力して終了する
-実際: `HTTP server started on null:18080` を出力して起動が継続する
+実際: `--http-host null` として受理され、ホスト名 `null` の名前解決に失敗する環境では
+`failed to start HTTP server on null:18080` を出力して終了コード 1 になる。ホスト名
+`null` が名前解決できる環境では `HTTP server started on null:18080` を出力して起動が継続する
 
 ## 設計方針
 
