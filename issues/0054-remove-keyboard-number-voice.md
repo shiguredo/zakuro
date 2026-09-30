@@ -41,12 +41,32 @@
 
 ## 設計方針
 
-- キーボード操作: `src/fake_audio_key_trigger.h` / `src/game/game_key.h` / `src/game/game_key_core.h` を削除する。`ZakuroConfig::key_core` と `src/main.cpp` の `GameKeyCore` 生成・各 config への代入も削除する。`src/main.cpp` の `fake_audio_key_trigger.h` / `scenario_player.h` の include と、`src/zakuro.h` の `game/game_key_core.h` の include も不要になるため削除する。
+- キーボード操作: `src/fake_audio_key_trigger.h` / `src/game/game_key.h` /
+  `src/game/game_key_core.h` を削除する。`ZakuroConfig::key_core` と `src/main.cpp` の
+  `GameKeyCore` 生成・各 config への代入も削除する。`src/main.cpp` の
+  `fake_audio_key_trigger.h` / `scenario_player.h` の include と、`src/zakuro.h` の
+  `game/game_key_core.h` の include も不要になるため削除する。
 - 数字音声: `src/voice_number_reader.h` / `src/game/game_audio.h` を削除する。`resource/num*.wav` (44 ファイル) を削除し、`CMakeLists.txt` の `RESOURCE_FILES` から `num*.wav` の登録を削除する (`Kosugi-Regular.ttf` は残す)。
-- オーディオ経路: `VirtualClientConfig::AudioType::External` と `render_audio` / `sample_rate` / `channels` (いずれも External 専用) を削除する。`ZakuroAudioDeviceModuleConfig` は `Type::External` と `render` のみ削除し、`sample_rate` / `channels` は Safari / FakeAudio でも使うため残す (`ZakuroAudioDeviceModule` のコンストラクタ、`InitRecording`、音声スレッドで参照している)。`src/zakuro.cpp` の `GameAudioManager` 生成と External 分岐 (`configure_dependencies` の External ケースを含む) を削除する。
+- オーディオ経路: `VirtualClientConfig::AudioType::External` と `render_audio` /
+  `sample_rate` / `channels` (いずれも External 専用) を削除する。
+  `ZakuroAudioDeviceModuleConfig` は `Type::External` と `render` のみ削除し、
+  `sample_rate` / `channels` は Safari / FakeAudio でも使うため残す
+  (`ZakuroAudioDeviceModule` のコンストラクタ、`InitRecording`、音声スレッドで
+  参照している)。`src/zakuro.cpp` の `GameAudioManager` 生成と External 分岐
+  (`configure_dependencies` の External ケースを含む) を削除する。
 - デフォルト音声: `--fake-audio-capture` 未指定時は、`External` を削除することで既存の到達不能分岐 `AudioType::AutoGenerateFakeAudio` (Safari) が選ばれるようにする。新しい実装は不要。デフォルトの音声は、シナリオの `PlayVoiceNumberClient` とキーボード操作による数字音声から Safari の擬似音声に変わるが、削除対象機能の一部なので許容する。
-- シナリオ: `src/scenario_player.h` から `OpPlayVoiceNumberClient` / `voice_reader_` / `ScenarioPlayerConfig::gam` と、不要になる include (`game/game_audio.h` / `voice_number_reader.h`) を削除する。`src/zakuro.cpp` の `fake_audio_key_trigger` 条件分岐と `scenario` の検証ブロックを削除して、シナリオを Reconnect → DataChannel サブシナリオ → `add_reconnect_scenario` の一本にまとめる。
-- `--scenario`: 参照箇所が無くなるため、CLI オプション (`src/util.cpp` の `Util::ParseArgs`) と `ZakuroConfig::scenario`、JSONC の `scenario` (`ParseInstanceToArgs`) を削除する。あわせて、`--scenario` を前提にした `test/test_config_json.py` の `test_unsupported_scenario_exits_with_cli11_code` を削除する。README のヘルプ抜粋に残る `--scenario` の行は 0071 (README のヘルプ抜粋の再生成) の対象とし、`zakuro --help` の再実行とあわせて消す。
+- シナリオ: `src/scenario_player.h` から `OpPlayVoiceNumberClient` / `voice_reader_` /
+  `ScenarioPlayerConfig::gam` と、不要になる include (`game/game_audio.h` /
+  `voice_number_reader.h`) を削除する。`src/zakuro.cpp` の
+  `fake_audio_key_trigger` 条件分岐と `scenario` の検証ブロックを削除して、
+  シナリオを Reconnect → DataChannel サブシナリオ → `add_reconnect_scenario` の
+  一本にまとめる。
+- `--scenario`: 参照箇所が無くなるため、CLI オプション (`src/util.cpp` の
+  `Util::ParseArgs`) と `ZakuroConfig::scenario`、JSONC の `scenario`
+  (`ParseInstanceToArgs`) を削除する。あわせて、`--scenario` を前提にした
+  `test/test_config_json.py` の `test_unsupported_scenario_exits_with_cli11_code` を
+  削除する。README のヘルプ抜粋に残る `--scenario` の行は 0071 (README のヘルプ抜粋の
+  再生成) の対象とし、`zakuro --help` の再実行とあわせて消す。
 - 後始末: 0005 / 0006 はすでに closed 済みであり、本 issue での追加の状態遷移は不要 (修正内容は削除で消える)。0025 / 0038 / 0040 / 0041 / 0062 / 0065 は実装時に反映状況を確認する。0018 は UI オプション廃止によりすでに closed で対象外。0071 はヘルプ抜粋の再生成で `--scenario` の行が消えることを確認する。pending/0050 は `GameAudioManager` 前提の設計を見直す。
 
 ## 完了条件
