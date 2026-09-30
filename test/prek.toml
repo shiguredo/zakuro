@@ -36,8 +36,9 @@ hooks = [
 repo = "local"
 
 # pytest: 実バイナリを起動する E2E テスト
-# ビルド済みの zakuro が _build に無い場合は失敗するため、事前に
-# python3 run.py build <target> を実行しておくこと
+# コミット時には実行しない。CI の pytest ジョブで実行する。
+# 手元で実行する場合は、事前に python3 run.py build <target> を実行したうえで
+# prek run pytest を実行する
 [[repos.hooks]]
 id = "pytest"
 name = "pytest"
@@ -45,4 +46,6 @@ entry = "uv run pytest"
 language = "system"
 types = ["python"]
 pass_filenames = false
+# コミット時には実行せず、prek run pytest による手動実行だけにする
+stages = ["manual"]
 priority = 30
