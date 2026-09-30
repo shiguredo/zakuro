@@ -168,6 +168,9 @@
   - Boost のアーカイブを SHA256 で検証するオプション、Android SDK の platform-tools のインストール、iOS ビルド用の clang 選択と blend2d のビルド引数の修正を取り込む
   - Zakuro のビルドでは Boost の SHA256 と Android の経路は未使用で、iOS 向けの変更も Zakuro の対象外
   - @melpon
+- [UPDATE] `CMakeLists.txt` の `ZAKURO_LINUX_PLATFORMS` から削除済みの `ubuntu-20.04_x86_64` を削除する
+  - `run.py` のビルド対象と一致させる
+  - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas
