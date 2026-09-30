@@ -3,12 +3,13 @@
 - Created: 2026-09-29
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-parse-data-channels-int-range-message
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
 `src/zakuro.cpp` の `ParseDataChannels` は、数値のオプションを `boost::json::try_value_to<int>`
-で整数に変換し、失敗した場合は「整数でなければならない」というメッセージをログに出す。
+または `boost::json::try_value_to<int32_t>` で整数に変換し、失敗した場合は
+「整数でなければならない」というメッセージをログに出す。
 しかしこの変換は「整数でない」場合と「整数だが `int` (または `int32_t`) の範囲外」の場合を
 区別しないため、範囲外の値に対して原因と食い違うメッセージが出る。
 
@@ -57,6 +58,7 @@
 - 範囲外の場合は実際の値がメッセージに含まれること
 - `test/test_config_json.py` の data-channels のテストが、非整数と範囲外の両方のケースを
   検証していること (期待値がメッセージと一致し、コメントと矛盾しないこと)
+- `CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリが追加されていること
 - `python3 run.py build macos_arm64` などのビルドが通ること
 
 ## 解決方法
