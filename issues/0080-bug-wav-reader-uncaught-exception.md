@@ -3,14 +3,14 @@
 - Created: 2026-09-30
 - Completed: {YYYY-MM-DD}
 - Branch: feature/fix-wav-reader-uncaught-exception
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
-`WavReader::Load` がサンプル用の領域を確保できなかった場合、`std::bad_alloc` が
-`Zakuro::Run` まで伝播して未捕捉例外となり、`std::terminate` を経て SIGABRT で
-プロセスが強制終了する。確保に失敗しても読み込み失敗として扱い、設定ミスや
-異常な入力と同じくエラー終了できるようにする。
+`WavReader::Load(std::string path)` がサンプル用の領域を確保できなかった場合、
+`std::bad_alloc` が `Zakuro::Run` まで伝播して未捕捉例外となり、`std::terminate` を
+経て SIGABRT でプロセスが強制終了する。確保に失敗しても読み込み失敗として扱い、
+設定ミスや異常な入力と同じくエラー終了できるようにする。
 
 ## 現状
 
@@ -26,8 +26,9 @@
 `size_t n = chunk_size / 2;` を計算して `data.reserve(n)` を呼ぶ。チャンクサイズの
 検査は `ReadChunk` の `if (size < (size_t)csize + 8)` で行われ、`chunk_size` は
 残りの実ファイルサイズ以下に制限される。そのため `n` は実ファイルサイズの半分以下に
-収まるが、`data.reserve(n)` と `data` の保持で実ファイルサイズの半分の領域を
-確保するため、**実ファイルサイズの 2 倍程度のメモリが必要**になる。
+収まるが、`data` は `n` 個の `int16_t` を保持するためそのバイト数はチャンクサイズ
+(`n * 2` バイト) と同程度となり、読み込んだ `buf` と合わせて
+**実ファイルサイズの 2 倍程度のメモリが必要**になる。
 
 確保に失敗すると `std::bad_alloc` が投げられる。`std::vector::reserve` は
 `n > max_size()` の場合に `std::length_error` を投げるが、`n` は size_t で
@@ -43,6 +44,11 @@
 
 ## 設計方針
 
+- 対象はユーザーが指定する WAV ファイル (`--fake-audio-capture`) の読み込み経路
+  (`WavReader::Load(std::string path)`) のみとする。`src/voice_number_reader.h` の
+  `Concat` が呼ぶ `Load(const void*, size_t)` は、ビルド時に固定される数十 KB の
+  埋め込み音声番号 WAV が対象で、`Concat` にはエラーの受け渡し経路が無い
+  (debug ビルドの `assert` のみ) ため、今回の対処からは外す
 - `src/wav_reader.cpp` の `WavReader::Load(std::string path)` で `Load(ptr, size)` を
   try / catch で包み、`std::bad_alloc` などの例外を捕捉して読み込み失敗として扱う
 - 捕捉した場合は英語のログを出してから非ゼロを返す。戻り値は 0 以外なら呼び出し側が
@@ -58,8 +64,8 @@
 
 ## 完了条件
 
-- `WavReader::Load` が領域の確保に失敗した場合に、未捕捉例外で強制終了せず
-  非ゼロの戻り値を返すこと
+- `WavReader::Load(std::string path)` が領域の確保に失敗した場合に、未捕捉例外で
+  強制終了せず非ゼロの戻り値を返すこと
 - 確保に失敗した場合の戻り値が、既存の戻り値の意味と衝突しないこと
 - `src/wav_reader.h` に戻り値の一覧がコメントされていること
 - `python3 run.py build macos_arm64` が通ること
