@@ -3,7 +3,7 @@
 - Created: 2026-09-29
 - Completed: {YYYY-MM-DD}
 - Branch: feature/refactor-split-test-harness
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
@@ -14,10 +14,16 @@
 - ローカル接続用のインスタンス設定の構築
 - 実 Sora 接続用の設定
 
-pytest の `conftest.py` はフィクスチャを定義するためのファイルであり、テストコードが
-`from conftest import ...` でヘルパーを取り出す構成は pytest の import モードに依存する。
-実際に `pytest --import-mode=importlib` で起動すると `ModuleNotFoundError` になる。
-役割ごとにモジュールを分け、テストからは専用モジュールを import する形に直す。
+pytest の `conftest.py` はフィクスチャを定義するためのファイルである。しかし現在は
+フィクスチャだけでなく共有ヘルパーも抱えており、テストコードが `from conftest import ...`
+でヘルパーを取り出している。さらに `test/conftest.py` と多数のテストファイルが
+`from zakuro import ...` / `from test_helpers import ...` のトップレベル import をしており、
+この構成は pytest の既定である prepend モードがテストディレクトリ (`test/`) を sys.path
+へ挿入することに依存している。`--import-mode=importlib` ではテストディレクトリが
+sys.path へ挿入されないため `ModuleNotFoundError` になる (実際に失敗するのは
+`test/conftest.py` の `from zakuro import Zakuro` であり、`from conftest import ...`
+自体は importlib モードでも動作する)。役割ごとにモジュールを分け、import を import
+モードに依存しない形に直す。
 
 ## 現状
 
@@ -42,6 +48,12 @@ pytest の `conftest.py` はフィクスチャを定義するためのファイ�
   `build_local_instance`
 - `test/test_zakuro.py`: `SoraConfig` / `get_deps_versions` / `get_zakuro_version`
 
+`from conftest import ...` だけでなく、`test/` 直下モジュールのトップレベル import 全てが
+同じ依存を持つ。`from zakuro import ...` は 11 ファイル (conftest.py を含む)、
+`from test_helpers import ...` は 6 ファイルにある。実際に `test/` で
+`uv run pytest --import-mode=importlib --collect-only` を実行すると、`test/conftest.py`
+の `from zakuro import Zakuro` が `ModuleNotFoundError: No module named 'zakuro'` になる。
+
 `test/zakuro.py` (プロセス管理) と `test/test_helpers.py` (設定ファイル付きの実行と待機) は
 共有ヘルパーのモジュールとして既に `test/` 直下に置かれている。共有ヘルパーを専用モジュールへ
 置く作法は、この 2 ファイルで既に使われている。
@@ -59,14 +71,26 @@ pytest の `conftest.py` はフィクスチャを定義するためのファイ�
 `test/test_helpers.py` に寄せるか、証明書と TLS サーバーを新しいモジュールにする。
 
 - 証明書と TLS サーバー (openssl の呼び出し、dataclass、`TlsProbeServer`)
-- 実 Sora 接続用の設定と `build_local_instance` / `wait_for_stderr`
+- 実 Sora 接続用の設定 (`SoraConfig` / `get_zakuro_version` / `get_deps_versions`) と
+  `build_local_instance` / `wait_for_stderr`
 
 `from conftest import` を全廃し、テストからは移設先のモジュールを import する。
-`test/pyproject.toml` の `pythonpath` や import モードの設定に依存しない形にする。
+
+ただし、移設先のモジュールを `from <モジュール名> import ...` で import するだけでは
+importlib モードで動かない。`test/` 直下のモジュールは prepend モードの sys.path 挿入で
+しか import できないため、import モードに依存しない仕組みを次のどちらか 1 つ選ぶ
+(両案とも prepend / importlib の両モードで動作することを確認済み)。
+
+- 案 A: `test/pyproject.toml` の `[tool.pytest.ini_options]` に `pythonpath = ["."]`
+  を追加し、`test/` を sys.path へ載せる。import はトップレベルのままでよい。
+  変更が小さい
+- 案 B: `test/` をパッケージ化 (`__init__.py` を追加) し、`from zakuro import` を
+  `from .zakuro import` のような相対 import に書き換える。pytest 設定の追加は不要
 
 ## 完了条件
 
-- `test/conftest.py` にフィクスチャと、フィクスチャが直接使う最小限の定義だけが残っていること
+- `test/conftest.py` にはフィクスチャと、フィクスチャを機能させるために必要な最小限の
+  記述 (移設先モジュールからの import や `.env` の読み込みなど) だけが残っていること
 - テストから `from conftest import` している箇所が無いこと
 - `pytest --import-mode=importlib` でテストが起動し、`test/` 配下のテストが全て pass すること
   (実 Sora 接続のテストは環境変数が無い場合 skip される)
