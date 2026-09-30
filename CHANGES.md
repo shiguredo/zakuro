@@ -175,6 +175,10 @@
   - デコードの破棄は `create_video_decoder` が `NopVideoDecoder` を返す経路で行われており、`webrtc::VideoDecoderFactory` の自前実装は通っていなかった
   - あわせて `GetSupportedFormats` でしか使っていなかったコーデックの include を削除する
   - @voluntas
+- [UPDATE] README から `SUPPORT.md` と `RPC.md` へリンクし、`doc/FAQ.md` のリンクを直す
+  - `doc/RPC.md` と `doc/SUPPORT.md` が README から参照されていなかった
+  - `doc/FAQ.md` の `--openH264` のリンクを `--openh264` に直し、ブランチ名 `master` の絶対 URL から相対リンクにする
+  - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas
