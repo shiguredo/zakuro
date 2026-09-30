@@ -74,7 +74,6 @@ class FakeVideoCapturer : public sora::ScalableVideoTrackSource {
   BLFont bipbop_font_;
   BLFont stats_font_;
   uint32_t frame_;
-  //Random<uint32_t> random_{0, 256 * 256 * 256 - 1};
   Xorshift random_;
   Y4MReader y4m_reader_;
   webrtc::scoped_refptr<webrtc::I420Buffer> y4m_buffer_;

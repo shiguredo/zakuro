@@ -34,7 +34,9 @@ void FakeVideoCapturer::StartCapture() {
 
       // We must handle a possible error returned by the loader.
       if (err) {
-        //printf("Failed to load a font-face (err=%u)\n", err);
+        // フォントが読めないとキャプチャスレッドが終了して映像が出なくなるため、
+        // 原因を確認できるようエラーを残す
+        RTC_LOG(LS_ERROR) << "Failed to load a font-face: err=" << err;
         return;
       }
 
@@ -179,8 +181,6 @@ void FakeVideoCapturer::UpdateImage(
 
     ctx.end();
   } else if (config_.type == FakeVideoCapturerConfig::Type::Sandstorm) {
-    //auto now = std::chrono::high_resolution_clock::now();
-
     // ランダムピクセル
     BLImageData data;
     image_.get_data(&data);
@@ -190,13 +190,6 @@ void FakeVideoCapturer::UpdateImage(
         p[x] = 0xff000000 | random_.Get();
       }
     }
-
-    //auto now2 = std::chrono::high_resolution_clock::now();
-    //RTC_LOG(LS_INFO) << "sandstorm "
-    //                 << std::chrono::duration_cast<std::chrono::milliseconds>(
-    //                        now2 - now)
-    //                        .count()
-    //                 << " ms";
   } else if (config_.type == FakeVideoCapturerConfig::Type::External) {
     BLContext ctx(image_);
 

@@ -107,16 +107,6 @@ class GameKeyCore {
     keys_.erase(it, keys_.end());
   }
 
-  //int PopKey() {
-  //  std::lock_guard<std::mutex> guard(mutex_);
-  //  if (queue_.empty()) {
-  //    return -1;
-  //  }
-  //  uint8_t c = queue_.front();
-  //  queue_.pop();
-  //  return c;
-  //}
-
  private:
   // 背景スレッドのキー入力待ちループから呼ばれる。
   // 走査中に Unregister が走ると iterator invalidation を起こし、消えた要素の

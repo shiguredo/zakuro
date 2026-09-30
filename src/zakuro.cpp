@@ -173,7 +173,6 @@ static bool ParseDataChannels(const boost::json::value& data_channels,
       ch.size_max = ch.size_min;
     }
 
-    // boost::optional<bool> ordered;
     {
       auto it = obj.find("ordered");
       if (it != obj.end()) {
@@ -186,7 +185,6 @@ static bool ParseDataChannels(const boost::json::value& data_channels,
       }
     }
 
-    // boost::optional<int32_t> max_packet_life_time;
     {
       auto it = obj.find("max_packet_life_time");
       if (it != obj.end()) {
@@ -208,7 +206,6 @@ static bool ParseDataChannels(const boost::json::value& data_channels,
       }
     }
 
-    // boost::optional<int32_t> max_retransmits;
     {
       auto it = obj.find("max_retransmits");
       if (it != obj.end()) {
@@ -229,7 +226,6 @@ static bool ParseDataChannels(const boost::json::value& data_channels,
       }
     }
 
-    // boost::optional<std::string> protocol;
     {
       auto it = obj.find("protocol");
       if (it != obj.end()) {
@@ -242,7 +238,6 @@ static bool ParseDataChannels(const boost::json::value& data_channels,
       }
     }
 
-    // boost::optional<bool> compress;
     {
       auto it = obj.find("compress");
       if (it != obj.end()) {
