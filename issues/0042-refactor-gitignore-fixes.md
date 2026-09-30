@@ -1,7 +1,7 @@
 # .gitignore の修正 (webrtc_logs_* / .env / /zakuro 限定 / __pycache__ 統一)
 
 - Created: 2026-08-27
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/refactor-gitignore-fixes
 - Polished: 2026-09-08
 
@@ -53,3 +53,31 @@ zakuro バイナリが生成されるのはルート (`./zakuro`。doc/UI.md / d
 - `git check-ignore` でルート `.env` と `test/.env` がマッチし、`test/.env.template` は引き続き追跡対象であること
 - `git check-ignore` で `doc/zakuro` のようなサブディレクトリの `zakuro` がマッチしないこと、かつルートの `zakuro` は引き続きマッチすること
 - `git check-ignore` で `__pycache__/` と `test/__pycache__/` がマッチすること (ルートの `__pycache__/` エントリでカバー)
+
+## 解決方法
+
+`.gitignore` を次のように変更した。
+
+- `webrtc_logs_0` を `webrtc_logs_*` に変更 (`FileRotatingLogSink` は
+  `./webrtc_logs` に `_0` 〜 `_9` を生成するため、ローテートで作られる分も除外する)
+- `.env` を追加 (`test/conftest.py` の `load_dotenv()` が読むシークレットの誤コミットを防ぐ。
+  スラッシュ無しのためルート `.env` と `test/.env` の両方にマッチする)
+- `zakuro` を `/zakuro` に変更 (ルートのバイナリだけを除外し、
+  `doc/zakuro` のようなサブディレクトリの同名ファイルを除外しない)
+- `/__pycache__` を `__pycache__/` に変更 (任意の深さの `__pycache__` を除外する)
+
+あわせて `*.jsonc` の除外から `.markdownlint.jsonc` を戻す `!.markdownlint.jsonc` を
+追加した。markdownlint-cli2 の設定ファイルであり追跡する必要があるが、
+`*.jsonc` の除外に引っかかって `git add -f` を使わないと追加できない状態だった。
+
+検証したこと (すべて `git check-ignore` で確認):
+
+- `webrtc_logs_0` / `webrtc_logs_1` / `webrtc_logs_9` がマッチする
+- ルート `.env` と `test/.env` がマッチし、`test/.env.template` はマッチしない
+- ルートの `zakuro` がマッチし、`doc/zakuro` はマッチしない
+- `__pycache__/` と `test/__pycache__/` がマッチする
+- `test/foo.jsonc` (新規の設定ファイル) がマッチし、`.markdownlint.jsonc` は
+  マッチせず追跡対象のままになる
+- `uvx prek run --files .gitignore` が pass する
+
+`CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。
