@@ -3,7 +3,7 @@
 - Created: 2026-09-10
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-jsonc-encoder-settings
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
@@ -20,7 +20,7 @@ Ubuntu で HWA Encoder (ハードウェアエンコーダー) を JSONC 設定�
 
 ## 設計方針
 
-- 主に Ubuntu で HWA Encoder (Intel VPL / NVIDIA Video Codec / AMD AMF) を JSONC 設定ファイルで指定して動作確認する。`--show-video-codec-capability` で利用可能なエンコーダーを確認し、指定したエンコーダーで送信できることを確かめる。
+- 主に Ubuntu で HWA Encoder (Intel VPL / NVIDIA Video Codec / AMD AMF) を JSONC 設定ファイルで指定して動作確認する。`--show-video-codec-capability` で利用可能なエンコーダーを確認し、指定したエンコーダーで Sora サーバーへ接続して映像を送信できることを確かめる。
 - 確認結果を基に `doc/USE.md` の JSONC 設定節へ `h264-encoder` / `h265-encoder` の指定例を追加する。キーが `sora` の下ではなく instance 直下であることを明記する。
 
 ```jsonc
@@ -37,14 +37,15 @@ Ubuntu で HWA Encoder (ハードウェアエンコーダー) を JSONC 設定�
 }
 ```
 
-- `doc/FAQ.md` の H.264 / H.265 の項目に JSONC での指定方法への言及を追加するかは、USE.md の記載内容を見て判断する。
+- `doc/FAQ.md` の H.264 / H.265 の項目に、JSONC でもエンコーダーを指定できることと `doc/USE.md` の「利用するエンコーダーの指定」・「JSONC 設定」節への参照を追加する。
 - ハードウェアエンコーダーごとの前提条件 (ドライバー / ライブラリ) や同時ストリーム数の制限は、確認できた範囲で記載する。未確認の内容は書かない。
-- `doc/USE.md` は issues/0019 も JSONC 設定例とランタイム依存の更新を行うため、実装時に issues/0019 の反映状況を確認する。
+- 追加する JSONC 設定例は、`doc/USE.md` の「JSONC 設定」節の既存例 (ルートの `log-level` / `http-host` / `http-port` と `instances`) に合わせる。
 
 ## 完了条件
 
 - Ubuntu で JSONC 設定ファイルに `h264-encoder` / `h265-encoder` を指定したときの動作確認が完了していること
 - `doc/USE.md` に JSONC での `h264-encoder` / `h265-encoder` の指定方法 (キーの位置を含む) が記載されていること
+- `doc/FAQ.md` の H.264 / H.265 の項目から上記の JSONC での指定方法に辿れること
 - 記載内容が実装 (`src/util.cpp` の `Util::ParseInstanceToArgs`) と動作確認の結果に一致していること
 
 ## 解決方法
