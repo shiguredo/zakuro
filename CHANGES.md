@@ -11,6 +11,11 @@
 
 ## develop
 
+- [FIX] `--log-level` がログの出力を絞り込めていない問題を修正する
+  - `LogMessage::LogToDebug` を `InitializeLogging` に置き換え、stderr とログファイルの両方へ指定したログレベルを適用する
+  - `--log-level` 未指定の場合は従来どおり `LS_INFO` 以上のログを出力する
+  - @voluntas
+
 ## 2026.1.0
 
 **リリース日**: 2026-09-30

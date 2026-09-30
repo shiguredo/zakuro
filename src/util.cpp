@@ -30,7 +30,7 @@
 
 ParseArgsResult Util::ParseArgs(const std::vector<std::string>& cargs,
                                 std::string& config_file,
-                                int& log_level,
+                                std::optional<int>& log_level,
                                 std::optional<std::string>& http_host,
                                 std::optional<int>& http_port,
                                 std::string& connection_id_stats_file,
