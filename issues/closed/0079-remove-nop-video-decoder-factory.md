@@ -1,7 +1,7 @@
 # 未使用の NopVideoDecoderFactory を削除する
 
 - Created: 2026-09-30
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/remove-nop-video-decoder-factory
 - Polished: {YYYY-MM-DD}
 
@@ -61,3 +61,23 @@ issues/0038 は未使用シンボルと include の棚卸しを扱っている�
 - ビルドに成功し、既存のテストが通ること
 
 ## 解決方法
+
+`src/nop_video_decoder.h` から `NopVideoDecoderFactory` の宣言を、
+`src/nop_video_decoder.cpp` から `GetSupportedFormats` と `Create` の定義を削除した。
+`NopVideoDecoder` 本体は `create_video_decoder` から使われているため残している。
+
+あわせて `GetSupportedFormats` の実装でしか使っていなかった include
+(`media/base/media_constants.h`、`modules/video_coding/codecs/` 配下の av1 / h264 /
+vp8 / vp9) と、Factory の基底クラスでしか使っていなかった
+`api/video_codecs/video_decoder_factory.h` を削除した。
+
+検証したこと:
+
+- `git grep -n 'NopVideoDecoderFactory'` が `src/` で 0 件になる
+- `NopVideoDecoder` 本体は残り、`src/zakuro.cpp` の `create_video_decoder` が
+  引き続き `NopVideoDecoder` を返す
+- `python3 run.py build macos_arm64` が成功する
+- `uv run pytest -q` が 115 passed / 1 skipped で通る
+- `clang-format -style=file` が `src/` の全ファイルで差分を出さない
+
+`CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。
