@@ -18,7 +18,6 @@ set(ZAKURO_MACOS_PLATFORMS
 # Linux 向けのビルド対象
 # run.py の LINUX_X86_64_PLATFORMS / LINUX_ARMV8_PLATFORMS と揃える
 set(ZAKURO_LINUX_PLATFORMS
-  ubuntu-20.04_x86_64
   ubuntu-22.04_x86_64
   ubuntu-24.04_x86_64
   ubuntu-26.04_x86_64

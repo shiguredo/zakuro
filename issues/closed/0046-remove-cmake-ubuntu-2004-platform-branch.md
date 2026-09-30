@@ -1,7 +1,7 @@
 # CMakeLists.txt から Ubuntu 20.04 x86_64 の ZAKURO_PLATFORM 分岐を削除する
 
 - Created: 2026-09-08
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/remove-ubuntu-2004-branch
 - Polished: 2026-09-08
 
@@ -37,3 +37,24 @@ elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQU
 
 - リソース組み込み部分の `ZAKURO_PLATFORM` 判定から `ubuntu-20.04_x86_64` が除去されていること
 - ubuntu-22.04 / ubuntu-24.04 / macOS のビルドが通ること
+
+## 解決方法
+
+`CMakeLists.txt` の `ZAKURO_LINUX_PLATFORMS` から `ubuntu-20.04_x86_64` を削除した。
+
+issue の「現状」が引用していた
+`elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ...)` の条件分岐は、
+その後のリファクタリングで `ZAKURO_LINUX_PLATFORMS` の一覧を使う形に変わっており
+現存しない。実際に残っていたのは一覧の中の 1 行で、`run.py` の
+`LINUX_X86_64_PLATFORMS` / `LINUX_ARMV8_PLATFORMS` (22.04 / 24.04 / 26.04 /
+26.04_armv8 の 4 つ) と一致していなかった。この 1 行を削除して一致させた。
+
+検証したこと:
+
+- `CMakeLists.txt` の `ZAKURO_LINUX_PLATFORMS` と `run.py` の `LINUX_PLATFORMS` が
+  一致すること (22.04 / 24.04 / 26.04 x86_64 と 26.04 armv8)
+- `python3 run.py build macos_arm64` が成功する
+- `git grep -n 'ubuntu-20.04' CMakeLists.txt` の結果が 0 件になる
+- ubuntu-22.04 / ubuntu-24.04 のビルドは CI の Build zakuro が検証する
+
+`CHANGES.md` の `## develop` の `### misc` に `[UPDATE]` のエントリを追加した。
