@@ -3,13 +3,13 @@
 - Created: 2026-09-26
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-pem-begin-line-check
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
 `--client-cert` / `--client-key` に指定したファイルの PEM 開始行を行頭一致で確認し、BOM 付きや行頭以外に `-----BEGIN` を含むファイルをエラーとして検出する。
 
-現在の検証は部分一致のため、これらのファイルは検証を通過する。しかし Sora C++ SDK (BoringSSL) は PEM ヘッダを行頭一致でしか認識しないため、SDK 側で読み込みに失敗してクライアント証明書なしで接続を試みる。既定のログレベルでは警告も見えないため、mTLS 接続の失敗原因が分かりにくい。
+現在の検証は部分一致のため、これらのファイルは検証を通過する。しかし Sora C++ SDK (BoringSSL) は PEM ヘッダを行頭一致でしか認識しないため、SDK 側で読み込みに失敗してクライアント証明書なしで接続を試みる。失敗は警告どまりで接続は継続し、`--log-level none` では警告が stderr に出力されないため、mTLS 接続の失敗原因が分かりにくい。
 
 ## 現状
 
