@@ -179,6 +179,11 @@
   - `doc/RPC.md` と `doc/SUPPORT.md` が README から参照されていなかった
   - `doc/FAQ.md` の `--openH264` のリンクを `--openh264` に直し、ブランチ名 `master` の絶対 URL から相対リンクにする
   - @voluntas
+- [UPDATE] コメントアウトされた古い実装とデバッグ痕跡を削除する
+  - `GameKeyCore` の `PopKey`、`FakeVideoCapturer` の Sandstorm の計測ログ、`random_` の宣言を削除する
+  - フォントのロード失敗時の `printf` を `RTC_LOG(LS_ERROR)` に置き換え、無出力だったエラーパスに原因を残す
+  - `ParseDataChannels` の型名だけを書いた冗長なコメントを削除する
+  - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas
