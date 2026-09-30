@@ -39,6 +39,16 @@ id = "check-merge-conflict"
 [[repos.hooks]]
 id = "detect-private-key"
 
+# markdownlint-cli2: Markdown の構文とスタイルを検査する
+# 設定はリポジトリルートの .markdownlint.jsonc を読む
+# rev は prek auto-update で更新する
+[[repos]]
+repo = "https://github.com/DavidAnson/markdownlint-cli2"
+rev = "v0.23.3"
+hooks = [
+  { id = "markdownlint-cli2" },
+]
+
 # Python の hooks は test/prek.toml に置く
 # test ディレクトリが uv プロジェクトのルートであり、uv コマンドを作業ディレクトリから
 # 実行する必要があるため、config を分けている
