@@ -8,18 +8,6 @@ git clone git@github.com:shiguredo/zakuro.git
 
 ## macOS (arm64) 向けバイナリを作成する
 
-### macOS 26 (arm64) 向けバイナリを作成する
-
-build ディレクトリ以下で `python3 run.py build macos-26_arm64` と打つことで Zakuro の macOS 26 以降の arm64 向けバイナリが生成されます。
-
-```shell
-python3 run.py build macos-26_arm64
-```
-
-うまくいかない場合は `git clean -ffdx && python3 run.py build macos-26_arm64` を試してみてください。
-
-### macOS 15 (arm64) 向けバイナリを作成する
-
 build ディレクトリ以下で `python3 run.py build macos_arm64` と打つことで Zakuro の macOS 15 以降の arm64 向けバイナリが生成されます。
 
 ```shell

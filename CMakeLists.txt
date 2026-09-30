@@ -9,10 +9,8 @@ project(zakuro C CXX)
 
 # macOS 向けのビルド対象
 # run.py の MACOS_PLATFORMS と揃える
-# macos_arm64 は macOS 15 以降、macos-26_arm64 は macOS 26 以降が対象になる
 set(ZAKURO_MACOS_PLATFORMS
   macos_arm64
-  macos-26_arm64
 )
 
 # Linux 向けのビルド対象

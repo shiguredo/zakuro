@@ -47,14 +47,18 @@ LINUX_X86_64_PLATFORMS = (
 LINUX_ARMV8_PLATFORMS = ("ubuntu-26.04_armv8",)
 LINUX_PLATFORMS = LINUX_X86_64_PLATFORMS + LINUX_ARMV8_PLATFORMS
 # macOS 向けのビルド対象
-# macos_arm64 は macOS 15 以降、macos-26_arm64 は macOS 26 以降が対象になる
-MACOS_PLATFORMS = ("macos_arm64", "macos-26_arm64")
+MACOS_PLATFORMS = ("macos_arm64",)
+# macOS 向けバイナリが対応する最小の macOS
+# 依存パッケージ (sora-cpp-sdk / webrtc-build) はこれより古い macOS 向けに
+# ビルドされているが、対応範囲はこの値で揃える
+MACOS_DEPLOYMENT_TARGET = "15"
 
 
 def get_deps_platform(platform: str) -> str:
     """依存パッケージが公開されているプラットフォーム名を返す
 
-    macOS は OS バージョンごとのパッケージが無いため macos_arm64 を使う。
+    依存パッケージは sora-cpp-sdk と webrtc-build が公開している `macos_arm64` を
+    使う (ビルド対象の名前と一致する)。
     """
     if platform in MACOS_PLATFORMS:
         return "macos_arm64"
@@ -374,6 +378,12 @@ def _build(args):
         cmake_args = []
         cmake_args.append(f"-DCMAKE_BUILD_TYPE={configuration}")
         cmake_args.append(f"-DZAKURO_PLATFORM={args.target}")
+        if platform in MACOS_PLATFORMS:
+            # 指定しないとビルドに使った SDK のバージョンが最小要件になり、
+            # 古い macOS で動かないバイナリができる
+            cmake_args.append(
+                f"-DCMAKE_OSX_DEPLOYMENT_TARGET={MACOS_DEPLOYMENT_TARGET}"
+            )
         cmake_args.append(f"-DZAKURO_VERSION={zakuro_version}")
         cmake_args.append(f"-DZAKURO_COMMIT={zakuro_commit}")
         cmake_args.append(f"-DWEBRTC_BUILD_VERSION={webrtc_version['WEBRTC_BUILD_VERSION']}")

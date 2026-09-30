@@ -190,6 +190,10 @@
   - `zakuro` を `/zakuro` にしてルートのバイナリだけを除外する
   - `/__pycache__` を `__pycache__/` にして任意の深さの生成物を除外する
   - @voluntas
+- [UPDATE] macOS 15 以降の arm64 向けバイナリの最小要件を macOS 15 に明示し、`macos-26_arm64` のビルドを削除する
+  - `CMAKE_OSX_DEPLOYMENT_TARGET` を指定していなかったため、ビルドに使った SDK のバージョンが最小要件になり macOS 26 以降でしか動かないバイナリになっていた
+  - ビルド対象とリリースバイナリを `macos_arm64` の 1 つにまとめる
+  - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas

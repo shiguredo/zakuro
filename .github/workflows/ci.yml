@@ -76,11 +76,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macos_arm64 は macOS 15 以降、macos-26_arm64 は macOS 26 以降が対象になる
+          # macOS 15 以降の arm64 向けバイナリを作る
           - name: macos_arm64
             runner: macos-15
-          - name: macos-26_arm64
-            runner: macos-26
     name: Build zakuro for ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
     # 通常は 3 分程度で完了するため、ハングを検出できるよう余裕を持たせて 30 分で打ち切る
@@ -104,9 +102,8 @@ jobs:
       matrix:
         # ビルドしたターゲットと同じ runner で実行する
         # ubuntu-26.04_armv8 は arm64 の runner で実行する
-        # macos_arm64 (macOS 15) はビルドのみ検証する
         # macos-15 の runner の openssl 1.1.1 が生成する鍵では TLS ハンドシェイクが
-        # 完了しないため、pytest は macos-26 の runner で実行する
+        # 完了しないため、macos_arm64 の検証は macos-26 の runner で実行する
         include:
           - name: ubuntu-24.04_x86_64
             runner: ubuntu-24.04
@@ -114,7 +111,7 @@ jobs:
             runner: ubuntu-26.04
           - name: ubuntu-26.04_armv8
             runner: ubuntu-26.04-arm
-          - name: macos-26_arm64
+          - name: macos_arm64
             runner: macos-26
     name: Run pytest for ${{ matrix.name }}
     needs:
