@@ -144,8 +144,9 @@ def test_log_level_error_suppresses_info_logs(tmp_path: Path) -> None:
     assert result.returncode == 1, (
         f"終了コードが 1 ではない: returncode={result.returncode}\nstderr={result.stderr!r}"
     )
-    stderr_lines = _log_lines(result.stderr)
-    assert any(DATA_CHANNELS_MESSAGE_PREFIX in line for line in stderr_lines), (
+    # stderr には別スレッドの std::cerr 出力が行単位で割り込むことがあるため
+    # 部分一致で確認する
+    assert DATA_CHANNELS_MESSAGE_PREFIX in result.stderr, (
         f"LS_ERROR のログが出ていない: stderr={result.stderr!r}"
     )
     assert FILE_DESCRIPTOR_MARKER not in result.stderr, (
@@ -178,6 +179,8 @@ def test_log_level_info_matches_default(tmp_path: Path) -> None:
     default_result = _run_zakuro(config_path, [], default_dir)
     info_result = _run_zakuro(config_path, ["--log-level", "info"], info_dir)
 
+    # stderr には別スレッドの std::cerr 出力が行単位で割り込むことがあるため、
+    # 行を組み立てる検証は割り込みの起きないログファイルで行う
     for result in (default_result, info_result):
         assert result.returncode == 1, (
             f"終了コードが 1 ではない: returncode={result.returncode}\nstderr={result.stderr!r}"
@@ -190,29 +193,28 @@ def test_log_level_info_matches_default(tmp_path: Path) -> None:
             f"LS_ERROR のログが出ていない: stderr={result.stderr!r}"
         )
 
+    default_log_lines = _log_lines(_log_file_text(default_dir))
+    info_log_lines = _log_lines(_log_file_text(info_dir))
+
     # ログの形式が現行どおり [タイムスタンプ][スレッド ID] (ファイル:行): で始まること
     assert any(
         re.match(r"^\[\d+:\d+\]\[\d+\] \(main\.cpp:\d+\): file descriptor limit:", line)
-        for line in _log_lines(default_result.stderr)
-    ), f"ログの形式が変わっている: stderr={default_result.stderr!r}"
+        for line in default_log_lines
+    ), f"ログの形式が変わっている: lines={default_log_lines!r}"
+
+    # ログファイルにも LS_INFO と LS_ERROR の両方が出ること
+    for log_lines in (default_log_lines, info_log_lines):
+        assert any(FILE_DESCRIPTOR_MARKER in line for line in log_lines), (
+            f"ログファイルに LS_INFO のログが出ていない: lines={log_lines!r}"
+        )
+        assert any(DATA_CHANNELS_MESSAGE_PREFIX in line for line in log_lines), (
+            f"ログファイルに LS_ERROR のログが出ていない: lines={log_lines!r}"
+        )
 
     # 未指定と info の出力が一致すること (差分はタイムスタンプとスレッド ID のみ)
-    assert _normalize_log_lines(_log_lines(default_result.stderr)) == _normalize_log_lines(
-        _log_lines(info_result.stderr)
-    ), (
-        f"未指定と info の出力が異なる: default={default_result.stderr!r} "
-        f"info={info_result.stderr!r}"
+    assert _normalize_log_lines(default_log_lines) == _normalize_log_lines(info_log_lines), (
+        f"未指定と info の出力が異なる: default={default_log_lines!r} info={info_log_lines!r}"
     )
-
-    # ログファイルにも stderr と同じ絞り込みが適用されること
-    for work_dir in (default_dir, info_dir):
-        log_text = _log_file_text(work_dir)
-        assert FILE_DESCRIPTOR_MARKER in log_text, (
-            f"ログファイルに LS_INFO のログが出ていない: log={log_text!r}"
-        )
-        assert DATA_CHANNELS_MESSAGE_PREFIX in log_text, (
-            f"ログファイルに LS_ERROR のログが出ていない: log={log_text!r}"
-        )
 
 
 def test_log_level_verbose_outputs_verbose_logs(tmp_path: Path) -> None:
@@ -232,24 +234,27 @@ def test_log_level_verbose_outputs_verbose_logs(tmp_path: Path) -> None:
 
     info_stderr = _capture_startup_stderr(config_path, ["--log-level", "info"], info_dir)
     verbose_stderr = _capture_startup_stderr(config_path, ["--log-level", "verbose"], verbose_dir)
-    info_lines = _log_lines(info_stderr)
-    verbose_lines = _log_lines(verbose_stderr)
 
-    assert info_lines, f"info のログが出ていない: stderr={info_stderr!r}"
-    assert verbose_lines, f"verbose のログが出ていない: stderr={verbose_stderr!r}"
-    # LS_INFO 以上のログは info でも verbose でも出ること
-    assert any(FILE_DESCRIPTOR_MARKER in line for line in info_lines), (
+    # stderr には別スレッドの std::cerr 出力が行単位で割り込むことがあるため、
+    # 行を組み立てる検証は割り込みの起きないログファイルで行う
+    assert FILE_DESCRIPTOR_MARKER in info_stderr, (
         f"info に LS_INFO のログが出ていない: stderr={info_stderr!r}"
     )
-    assert any(FILE_DESCRIPTOR_MARKER in line for line in verbose_lines), (
+    assert FILE_DESCRIPTOR_MARKER in verbose_stderr, (
         f"verbose に LS_INFO のログが出ていない: stderr={verbose_stderr!r}"
     )
+
+    info_lines = _log_lines(_log_file_text(info_dir))
+    verbose_lines = _log_lines(_log_file_text(verbose_dir))
+
+    assert info_lines, f"info のログが出ていない: lines={info_lines!r}"
+    assert verbose_lines, f"verbose のログが出ていない: lines={verbose_lines!r}"
     # LS_VERBOSE のログは verbose でだけ出ること
     assert not any(any(marker in line for marker in VERBOSE_LOG_MARKERS) for line in info_lines), (
-        f"info に LS_VERBOSE のログが出ている: stderr={info_stderr!r}"
+        f"info に LS_VERBOSE のログが出ている: lines={info_lines!r}"
     )
     assert any(any(marker in line for marker in VERBOSE_LOG_MARKERS) for line in verbose_lines), (
-        f"verbose に LS_VERBOSE のログが出ていない: stderr={verbose_stderr!r}"
+        f"verbose に LS_VERBOSE のログが出ていない: lines={verbose_lines!r}"
     )
     assert len(verbose_lines) > len(info_lines), (
         f"verbose が info より多くのログを出していない: "
