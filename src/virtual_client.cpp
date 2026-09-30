@@ -92,10 +92,12 @@ void VirtualClient::Connect() {
 }
 
 void VirtualClient::Close(std::function<void(std::string)> on_close) {
+  // on_close は既定で nullptr であり、切断だけを指示して結果を受け取らない呼び出し
+  // (シナリオの Disconnect) があるため、渡されたときだけ呼ぶ
   if (closing_) {
     if (on_close_ == nullptr) {
       on_close_ = on_close;
-    } else {
+    } else if (on_close != nullptr) {
       on_close("already closing");
     }
     return;
@@ -104,7 +106,7 @@ void VirtualClient::Close(std::function<void(std::string)> on_close) {
     closing_ = true;
     on_close_ = on_close;
     signaling_->Disconnect();
-  } else {
+  } else if (on_close != nullptr) {
     on_close("already closed");
   }
 }

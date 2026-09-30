@@ -235,6 +235,22 @@ class Zakuro:
             self._cleanup()
             raise
 
+    def wait(self, timeout: int = 30) -> int:
+        """プロセスが自力で終了するまで待ち、終了コードを返す
+
+        `--duration` のように zakuro 自身が終了する場合に使う。終了しない場合は
+        終了させたうえで失敗させる。
+        """
+        if self._process is None:
+            raise RuntimeError("zakuro is not running")
+        try:
+            return self._process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self._cleanup()
+            raise AssertionError(
+                f"zakuro が {timeout} 秒以内に終了しなかった: stderr={self.stderr_output!r}"
+            ) from None
+
     def __exit__(
         self,
         _exc_type: type[BaseException] | None,
