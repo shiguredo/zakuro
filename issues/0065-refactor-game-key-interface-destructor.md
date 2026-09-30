@@ -3,7 +3,7 @@
 - Created: 2026-09-28
 - Completed: {YYYY-MM-DD}
 - Branch: feature/refactor-game-key-interface-destructor
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
@@ -35,4 +35,4 @@
 
 - `GameKeyInterface*` 経由の削除が安全であるか、削除しない設計であることがコードとコメントで明確であること
 - `-Wdelete-non-abstract-non-virtual-dtor` を有効にしても `GameKey` の破棄で警告が出ないこと
-- `python3 run.py build macos_arm64` と `ctest` が通ること
+- `python3 run.py build macos_arm64` と `uv run pytest` が通ること
