@@ -3,7 +3,7 @@
 - Created: 2026-09-26
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-config-unknown-key-warning
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 - Updated: 2026-09-28
 
 ## 目的
