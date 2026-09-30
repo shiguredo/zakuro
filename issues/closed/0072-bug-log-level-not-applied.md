@@ -1,7 +1,7 @@
 # `--log-level` がログの出力を絞り込めていない
 
 - Created: 2026-09-29
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-09-30
 - Branch: feature/fix-log-level-not-applied
 - Polished: 2026-09-30
 
@@ -199,4 +199,33 @@ void LogMessage::LogToDebug(LoggingSeverity min_sev) {
 
 ## 解決方法
 
-{YYYY-MM-DD} に記入
+`src/main.cpp` の `LogMessage::LogToDebug` / `LogTimestamps` / `LogThreads` を
+`webrtc::InitializeLogging` に置き換え、`LoggingConfig` に `set_min_severity` /
+`set_debug_severity` / `set_log_timestamp(true)` / `set_log_thread(true)` を設定した。
+設定が反映されるのはログ機構の初期化 1 回だけのため、引数解析の直後 (ログファイルの
+シンクを作る前) で一度だけ呼ぶ。
+
+`log_level` を `std::optional<int>` にし、「`--log-level` 未指定」と
+「`none` (= `LS_NONE`)」を区別できるようにした。未指定の実効値は `LS_INFO` にする。
+`Util::ParseArgs` の `log_level` も `std::optional<int>&` に合わせた。
+
+ログファイルは `LoggingConfig::AddSink` に移さず `LogMessage::AddLogToStream` を
+維持し、`InstalledFileLogSink` に実効値を渡すようにした。`AddSink` には重大度を
+指定する手段が無く、シンクの既定が `LS_INFO` 固定になるためである。
+
+`test/test_log_level.py` を追加し、`none` / `error` / 未指定 / `verbose` の絞り込みと
+ログの形式を検証するようにした。`test/test_main_resource.py` の
+`test_valid_config_is_converted_to_arguments` は設定ファイルの `log-level` を `info` に
+変更し、`LS_INFO` の同期点と合わせた。
+
+検証したこと (実バイナリ `_build/macos_arm64/release/zakuro/zakuro` で実測):
+
+- `--log-level none`: stderr はログ 0 行 (`failed to tcgetattr` などログ機構を経由しない
+  出力のみ)、`webrtc_logs_0` は 0 バイトになる
+- `--log-level error`: stderr とログファイルに `LS_ERROR` のみが出る
+- `--log-level verbose`: stderr は 76 行になり、`LS_VERBOSE` のログ (AEC3 の設定) が出る
+- `--log-level` 未指定: stderr は 64 行で、`--log-level info` と一致する (差分は
+  タイムスタンプとスレッド ID のみ)
+- ログの形式は `[タイムスタンプ][スレッド ID] (ファイル:行):` のまま変わらない
+- `python3 run.py build macos_arm64` が成功する
+- `uv run pytest -q` が 119 passed / 1 skipped (実 Sora 接続テストのみ skip) で通る

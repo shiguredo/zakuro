@@ -39,9 +39,11 @@ class Util {
  public:
   // 引数を解析して config などへ設定する
   // 解析の結果、続行するか・終了するかを戻り値で返す
+  // log_level は「--log-level 未指定」と「none (= LS_NONE) の指定」を区別するため
+  // optional で受ける (未指定なら nullopt のまま)
   static ParseArgsResult ParseArgs(const std::vector<std::string>& args,
                                    std::string& config_file,
-                                   int& log_level,
+                                   std::optional<int>& log_level,
                                    std::optional<std::string>& http_host,
                                    std::optional<int>& http_port,
                                    std::string& connection_id_stats_file,

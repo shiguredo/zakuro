@@ -117,7 +117,7 @@ def test_valid_config_is_converted_to_arguments(free_port: int, tmp_path: Path) 
     真偽値・数値・文字列を複数含めて検証する。
     """
     config = {
-        "log-level": "error",
+        "log-level": "info",
         "http-port": free_port,
         "http-host": "127.0.0.1",
         "instance-hatch-rate": 2,
@@ -181,7 +181,7 @@ def test_valid_config_is_converted_to_arguments(free_port: int, tmp_path: Path) 
     command_line = stdout.splitlines()[0] if stdout.splitlines() else ""
     tokens = shlex.split(command_line)
     expected_arguments = [
-        "--log-level error",
+        "--log-level info",
         f"--http-port {free_port}",
         "--http-host 127.0.0.1",
         "--instance-hatch-rate 2",

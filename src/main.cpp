@@ -27,6 +27,7 @@
 
 // WebRTC
 #include <rtc_base/log_sinks.h>
+#include <rtc_base/logging.h>
 #include <rtc_base/string_utils.h>
 
 #include <blend2d/blend2d.h>
@@ -51,11 +52,13 @@ namespace {
 class InstalledFileLogSink {
  public:
   // sink は Init() に成功した非 null である前提。null は受け取らない。
+  // severity はログファイルへ書き出すしきい値であり、--log-level の実効値を渡す
   explicit InstalledFileLogSink(
-      std::unique_ptr<webrtc::FileRotatingLogSink> sink)
+      std::unique_ptr<webrtc::FileRotatingLogSink> sink,
+      webrtc::LoggingSeverity severity)
       : sink_(std::move(sink)) {
     assert(sink_ != nullptr);
-    webrtc::LogMessage::AddLogToStream(sink_.get(), webrtc::LS_INFO);
+    webrtc::LogMessage::AddLogToStream(sink_.get(), severity);
   }
 
   ~InstalledFileLogSink() {
@@ -224,7 +227,9 @@ int main(int argc, char* argv[]) {
   std::vector<ZakuroConfig> configs;
 
   std::string config_file;
-  int log_level = webrtc::LS_NONE;
+  // 「--log-level 未指定」と「--log-level none (= LS_NONE)」を区別するため、
+  // 未指定なら nullopt のままにする
+  std::optional<int> log_level;
   std::optional<std::string> http_host;
   std::optional<int> http_port;
   std::string connection_id_stats_file;
@@ -345,9 +350,29 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  webrtc::LogMessage::LogToDebug((webrtc::LoggingSeverity)log_level);
-  webrtc::LogMessage::LogTimestamps();
-  webrtc::LogMessage::LogThreads();
+  // --log-level の実効値。未指定の場合は現行と同じ LS_INFO にする。
+  // LS_NONE は LoggingConfig のしきい値としては「すべて抑止する」を意味するため、
+  // 未指定 (LS_INFO にする) と none (LS_NONE のまま) を区別する必要がある
+  webrtc::LoggingSeverity log_severity =
+      log_level.has_value() ? static_cast<webrtc::LoggingSeverity>(*log_level)
+                            : webrtc::LS_INFO;
+
+  // LogToDebug は stderr へ出すかどうかの判定に使う debug_severity を更新しないため、
+  // LoggingConfig をまとめて設定する InitializeLogging を使う。
+  // 設定が反映されるのはログ機構の初期化 1 回だけであり、LogToDebug / LogThreads /
+  // 最初の RTC_LOG のどれかが先に走ると無視されるため、ここで一度だけ呼ぶ
+  webrtc::LoggingConfig logging_config;
+  logging_config.set_min_severity(log_severity);
+  logging_config.set_debug_severity(log_severity);
+  // 現行と同じ [タイムスタンプ][スレッド ID] (ファイル:行): の形式を保つ
+  logging_config.set_log_timestamp(true);
+  logging_config.set_log_thread(true);
+  if (!webrtc::InitializeLogging(std::move(logging_config))) {
+    // ここが最初の初期化になるため通常は到達しない。到達した場合は
+    // --log-level が反映されず既定の設定で動き続ける
+    std::cerr << "logging is already initialized; --log-level is ignored"
+              << std::endl;
+  }
 
   std::unique_ptr<webrtc::FileRotatingLogSink> log_sink(
       new webrtc::FileRotatingLogSink("./", "webrtc_logs",
@@ -358,7 +383,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   // 以降の return では、デストラクタが RemoveLogToStream してからシンクを破棄する。
-  [[maybe_unused]] InstalledFileLogSink installed_log_sink(std::move(log_sink));
+  // シンクのしきい値にも --log-level の実効値を渡し、ログファイルにも同じ値で絞り込む
+  [[maybe_unused]] InstalledFileLogSink installed_log_sink(std::move(log_sink),
+                                                           log_severity);
 
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();
