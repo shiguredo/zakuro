@@ -3,7 +3,7 @@
 - Created: 2026-09-10
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-content-hint
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
@@ -12,7 +12,7 @@ Content Hint はトラックの内容 (映像なら動き / 詳細 / テキス�
 ヒントとして伝えるもので、劣化制御や音声処理をコンテンツに適した挙動へ切り替えるために使う。
 現状は映像の Content Hint を `--fixed-resolution` で `kText` に固定する手段しかない。
 
-momo と同じ引数を用意する。
+引数と値の定義は W3C MediaStreamTrack Content Hints (mst-content-hint) に従う。
 `--fixed-resolution` を廃止する破壊的変更を含む。
 
 ## 現状
@@ -33,16 +33,18 @@ momo と同じ引数を用意する。
 
 ## 設計方針
 
-momo と同じ引数を追加する。
+`--video-content-hint` / `--audio-content-hint` は W3C MediaStreamTrack Content Hints の値定義に従う。
 
 - `--video-content-hint` を追加する。値は `none` / `motion` / `detail` / `text` とし、
   `webrtc::VideoTrackInterface::ContentHint` の `kNone` / `kFluid` / `kDetailed` / `kText` に対応させる。
   指定が無い場合は `kNone` (現状と同じ) とする。
 - `--audio-content-hint` を追加する。値は `speech` / `speech-recognition` / `music` とする。
   ネイティブ libwebrtc には audio の Content Hint API が無いため、`webrtc::AudioOptions` など
-  Zakuro の音声処理で有効な設定にマッピングしてブラウザ相当の挙動を実現する。どの設定で
-  ブラウザ相当になるか (エコーキャンセラ / ノイズサプレッション / 自動利得制御の切り替え等) は
-  実装時に確認する。指定が無い場合は現状と同じ音声処理とする。
+  Zakuro の音声処理で有効な設定にマッピングしてブラウザ相当の挙動を実現する。ブラウザ相当の
+  挙動は W3C MediaStreamTrack Content Hints の 4.1 節が定めている (audio `music` /
+  `speech-recognition` はエコーキャンセラ・自動利得制御・ノイズサプレッションを無効化し、
+  audio `speech` はエコーキャンセラと自動利得制御を有効化する)。指定が無い場合は現状と同じ
+  音声処理とする。
 - `--fixed-resolution` を廃止する。このフラグは映像 Content Hint を `kText` に固定するだけなので、
   `--video-content-hint text` で代替できる。
 - 上記に合わせて `ZakuroConfig` / `VirtualClientConfig` と JSONC 設定 (`fixed-resolution`) も変更する。

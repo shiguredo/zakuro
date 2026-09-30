@@ -3,7 +3,7 @@
 - Created: 2026-09-26
 - Completed: {YYYY-MM-DD}
 - Branch: feature/add-client-cert-key-mixed-source-warning
-- Polished: {YYYY-MM-DD}
+- Polished: 2026-09-30
 
 ## 目的
 
@@ -21,6 +21,7 @@
 ## 設計方針
 
 - `src/main.cpp` の設定ファイル処理で、コマンドライン引数に `--client-cert` / `--client-key` の片方だけがあり、かつインスタンス設定に他方がある場合に `std::cerr` に警告を出力する
+  - 判定は `post_args` の文字列で行う。`--client-cert=<path>` のように `=` 区切りで指定された場合も `--client-cert` として扱う
 - 警告は英語にし、ペアが別のソースから構成されることを伝える (例: `client cert and client key are specified in different places (command line and config file)`)
 - 既存の上書き挙動は維持し、エラーにはしない
 - 設定ファイルのみ・コマンドラインのみ・同じソースで完結する場合は警告しない
