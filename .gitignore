@@ -31,17 +31,24 @@
 *.out
 *.app
 
-zakuro
+# バイナリはルートに生成されるため、任意の深さの zakuro を除外しない
+/zakuro
 core
 *.tar.gz
-webrtc_logs_0
+# FileRotatingLogSink は 10 ファイルまでローテートする
+webrtc_logs_*
 .DS_Store
 *.swp
 
+# test/conftest.py の load_dotenv() が読むシークレット
+.env
+
+# 設定ファイル (JSONC)。.markdownlint.jsonc は追跡するため除外する
 *.jsonc
+!.markdownlint.jsonc
 
 /_package
 /_source
 /_build
 /_install
-/__pycache__
+__pycache__/
