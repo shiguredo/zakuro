@@ -184,6 +184,12 @@
   - フォントのロード失敗時の `printf` を `RTC_LOG(LS_ERROR)` に置き換え、無出力だったエラーパスに原因を残す
   - `ParseDataChannels` の型名だけを書いた冗長なコメントを削除する
   - @voluntas
+- [UPDATE] `.gitignore` の除外パターンを直す
+  - `webrtc_logs_0` を `webrtc_logs_*` にしてローテートで生成される `webrtc_logs_1` 以降も除外する
+  - ルートの `.env` を除外してシークレットの誤コミットを防ぐ
+  - `zakuro` を `/zakuro` にしてルートのバイナリだけを除外する
+  - `/__pycache__` を `__pycache__/` にして任意の深さの生成物を除外する
+  - @voluntas
 - [ADD] pytest を使った E2E テストを追加する
   - テスト基盤の共通部分を `test/conftest.py` に集約する
   - @voluntas
