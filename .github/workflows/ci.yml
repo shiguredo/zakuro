@@ -1,0 +1,178 @@
+name: ci
+
+on:
+  push:
+    # tags-ignore だけを指定するとブランチへの push が未定義の ref 扱いになり
+    # ワークフローが実行されないため、全ブランチを対象にする branches も指定する
+    branches:
+      - '**'
+    # タグ push は release.yml が担当するため ci.yml ではビルドしない
+    tags-ignore:
+      - '*'
+    paths-ignore:
+      - 'doc/**'
+      - '**.md'
+      - 'THANKS'
+      - 'LICENSE'
+      - 'NOTICE'
+  pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - '**.md'
+      - 'THANKS'
+      - 'LICENSE'
+      - 'NOTICE'
+
+# 検証のみを行うため読み取り権限だけを付与する
+permissions:
+  contents: read
+
+jobs:
+  build_linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu-22.04_x86_64
+            runner: ubuntu-22.04
+          - name: ubuntu-24.04_x86_64
+            runner: ubuntu-24.04
+          - name: ubuntu-26.04_x86_64
+            runner: ubuntu-26.04
+          # armv8 は x86_64 の runner から sysroot を使ってクロスコンパイルする
+          - name: ubuntu-26.04_armv8
+            runner: ubuntu-26.04
+    name: Build zakuro for ${{ matrix.name }}
+    # ビルドは apt と数 GB のダウンロードを伴うため ubuntu-slim は使わない
+    runs-on: ${{ matrix.runner }}
+    # 通常は 2〜3 分で完了するため、ハングを検出できるよう余裕を持たせて 30 分で打ち切る
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install deps
+        run: |
+          # runner のパッケージリストが古いことがあるため先に更新する
+          sudo apt-get update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libx11-dev libxext-dev
+          # armv8 向けのクロスコンパイルでは aarch64 のリンカが必要になる
+          if [ "${{ matrix.name }}" = "ubuntu-26.04_armv8" ]; then
+            DEBIAN_FRONTEND=noninteractive sudo apt-get -y install binutils-aarch64-linux-gnu
+          fi
+      - name: Build zakuro
+        run: python3 run.py build ${{ matrix.name }}
+      # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
+      - name: Upload zakuro for pytest
+        # pytest を実行するターゲットのみアップロードする
+        if: matrix.name != 'ubuntu-22.04_x86_64'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zakuro-${{ matrix.name }}
+          path: _build/${{ matrix.name }}/release/zakuro/zakuro
+          # 同一ワークフロー内の pytest ジョブでしか使わないため保持期間を短くする
+          retention-days: 1
+
+  build_macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS 15 以降の arm64 向けバイナリを作る
+          - name: macos_arm64
+            runner: macos-15
+    name: Build zakuro for ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    # 通常は 3 分程度で完了するため、ハングを検出できるよう余裕を持たせて 30 分で打ち切る
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build zakuro
+        run: python3 run.py build ${{ matrix.name }}
+      # pytest はビルド済みの実バイナリを起動するため、テスト対象の実行ファイルを artifact で渡す
+      - name: Upload zakuro for pytest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zakuro-${{ matrix.name }}
+          path: _build/${{ matrix.name }}/release/zakuro/zakuro
+          # 同一ワークフロー内の pytest ジョブでしか使わないため保持期間を短くする
+          retention-days: 1
+
+  pytest:
+    strategy:
+      fail-fast: false
+      matrix:
+        # ビルドしたターゲットと同じ runner で実行する
+        # ubuntu-26.04_armv8 は arm64 の runner で実行する
+        # macos-15 の runner の openssl 1.1.1 が生成する鍵では TLS ハンドシェイクが
+        # 完了しないため、macos_arm64 の検証は macos-26 の runner で実行する
+        include:
+          - name: ubuntu-24.04_x86_64
+            runner: ubuntu-24.04
+          - name: ubuntu-26.04_x86_64
+            runner: ubuntu-26.04
+          - name: ubuntu-26.04_armv8
+            runner: ubuntu-26.04-arm
+          - name: macos_arm64
+            runner: macos-26
+    name: Run pytest for ${{ matrix.name }}
+    needs:
+      - build_linux
+      - build_macos
+    # ubuntu-slim は最小構成のイメージで libX11 などの実行時ライブラリが保証されず、
+    # 実バイナリを 21 回起動する E2E の実行先としても不適切なため、ビルド対象と同じ runner を使う
+    runs-on: ${{ matrix.runner }}
+    # ローカルでは 1 分弱で完了するため、ハングを検出できるよう余裕を持たせて 15 分で打ち切る
+    timeout-minutes: 15
+    env:
+      # 実 Sora に接続するテストは組織シークレットから環境変数を受け取る
+      # fork からの PR などシークレットが無い環境では conftest.py の sora_config が skip する
+      TEST_SIGNALING_URLS: ${{ secrets.TEST_SIGNALING_URLS }}
+      TEST_CHANNEL_ID_PREFIX: ${{ secrets.TEST_CHANNEL_ID_PREFIX }}
+      TEST_SECRET_KEY: ${{ secrets.TEST_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install runtime deps
+        # macOS ではパッケージの導入は不要
+        if: runner.os == 'Linux'
+        run: |
+          # runner のパッケージリストが古いことがあるため先に更新する
+          sudo apt-get update
+          # ビルド済みの zakuro は実行時に libX11.so.6 を必要とする
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -y install libx11-6
+      - name: Download zakuro
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: zakuro-${{ matrix.name }}
+          path: _build/${{ matrix.name }}/release/zakuro
+      - name: Set up zakuro
+        # upload-artifact はファイルの実行権限を保持しないため付与する
+        run: chmod +x _build/${{ matrix.name }}/release/zakuro/zakuro
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Install test dependencies
+        # test/pyproject.toml の dev グループと test/.python-version の Python を uv が用意する
+        working-directory: test
+        run: uv sync
+      - name: Run pytest
+        # 失敗しても全件の結果を確認できるよう -x は付けない
+        working-directory: test
+        run: uv run pytest -v
+
+  prek:
+    name: Run prek hooks
+    # ファイル単位の検査のみを行うため、apt とビルドを伴う他のジョブとは分ける
+    runs-on: ubuntu-slim
+    # prek の hook 環境の準備 (初回や cache miss) と Python のダウンロードを見込んで余裕を持たせる
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # ローカルフックが uv を呼ぶため uv を先に用意する
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Install test dependencies
+        # ty は pyproject.toml の依存を解決してから型検査するため、先に同期しておく
+        working-directory: test
+        run: uv sync
+      # prek.toml と test/prek.toml の hook をすべて実行する
+      # pytest はビルド済みの実バイナリを必要とするため、ここでは除外する
+      # (pytest は各ターゲットのジョブで実行する)
+      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        with:
+          extra-args: --all-files --skip pytest

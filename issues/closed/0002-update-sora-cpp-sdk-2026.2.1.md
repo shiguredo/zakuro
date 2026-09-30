@@ -1,0 +1,103 @@
+# Sora C++ SDK を 2026.2.1 に上げる
+
+- Created: 2026-08-20
+- Completed: 2026-09-30
+- Branch: feature/update-sora-cpp-sdk-2026.2.1
+- Polished: 2026-08-26
+
+## 目的
+
+zakuro が利用する Sora C++ SDK を `2026.2.0-canary.19` から正式リリースの `2026.2.1` に更新する。
+
+`2026.2.1` は `2026.2.0` のホットフィックスリリースであり、DataChannel シグナリング利用時の切断で解放済みの WebSocket に対して `Cancel()` を呼び SIGSEGV でクラッシュする問題を修正している。zakuro は `sora::SoraSignaling` を利用しており、`--sora-data-channel-signaling` 指定時は DataChannel シグナリングの切断経路を通るため、この修正の対象となる。
+
+あわせて `2026.2.0` で導入された以下の変更も取り込まれる。
+
+- `WEBRTC_BUILD_VERSION` (libwebrtc) を `m150.7871.3.1` に更新する
+- `BOOST_VERSION` (Boost) を `1.92.0` に更新する
+- `CMAKE_VERSION` (CMAKE) を `4.4.2` に更新する
+
+## 現状
+
+- `DEPS` の `SORA_CPP_SDK_VERSION` は `2026.2.0-canary.19`
+- 依存バージョンは `WEBRTC_BUILD_VERSION=m150.7871.3.0`、`BOOST_VERSION=1.91.0`、`CMAKE_VERSION=4.3.2`
+- `CHANGES.md` の develop に「Sora C++ SDK を `2026.2.0-canary.19` に上げる」のエントリが記載済み
+
+## 設計方針
+
+SDK 関連の依存バージョンを sora-cpp-sdk 2026.2.1 の `DEPS` に合わせて、以下の 4 項目を更新する。`CLI11_VERSION` / `BLEND2D_VERSION` / `OPENH264_VERSION` は zakuro 固有の依存のため変更しない。
+
+- `SORA_CPP_SDK_VERSION` を `2026.2.1` に変更する
+- `WEBRTC_BUILD_VERSION` を `m150.7871.3.1` に変更する
+- `BOOST_VERSION` を `1.92.0` に変更する
+- `CMAKE_VERSION` を `4.4.2` に変更する
+
+`BOOST_VERSION` は buildbase.py の `install_boost` が sora-cpp-sdk のリリース資産名 (`boost-{BOOST_VERSION}_sora-cpp-sdk-{SORA_CPP_SDK_VERSION}_{platform}`) からダウンロード URL を組み立てるため、SDK がバンドルする Boost のバージョン (`1.92.0`) と必ず一致させる必要がある。
+
+`WEBRTC_BUILD_VERSION` は zakuro のコードが libwebrtc のヘッダとライブラリへ直接リンクするため、SDK がビルドされた libwebrtc と ABI を合わせる必要があり、SDK の `DEPS` の値 (`m150.7871.3.1`) と一致させる。
+
+`include/sora` 配下の公開ヘッダ差分は `dyn.h` / `renderer/base_renderer.h` / `ssl_verifier.h` のみで、zakuro はこれらを直接利用していない。zakuro が利用する `SoraSignalingConfig` / `SoraClientContext` / `VideoCodecImplementation` のヘッダは変更されていないため、ソースコードの修正は想定しない。ただしビルドと動作で必ず検証すること。
+
+`CHANGES.md` の `## develop` セクションに `[UPDATE]` エントリを追加する。形式は過去の SDK アップデートのエントリに合わせ、変更した各バージョンを列挙する。
+
+追加するエントリのサンプル:
+
+```markdown
+- [UPDATE] Sora C++ SDK を `2026.2.1` に上げる
+  - WEBRTC_BUILD_VERSION を `m150.7871.3.1` に上げる
+  - CMAKE_VERSION を `4.4.2` に上げる
+  - BOOST_VERSION を `1.92.0` に上げる
+  - @<GitHub ユーザー名>
+```
+
+`@<GitHub ユーザー名>` は対応者の GitHub ユーザー名に置き換えること。
+
+### 影響を受ける SDK の変更
+
+`2026.2.0` で導入された変更のうち、zakuro に影響しうるもの。
+
+- TLS 検証の信頼ストアが OS のシステム CA に切り替わる
+  - zakuro は `SoraSignalingConfig::ca_cert` を指定する手段を持たないため、接続先はシステム CA に信頼される証明書を使う必要がある。独自 CA を使う Sora サーバーへは、TLS 検証を無効化する `--insecure` 以外で接続できない
+- NVIDIA Pascal 世代以前 (sm_50 〜 sm_70) の GPU サポートが廃止される
+  - 該当 GPU では NVIDIA ハードウェアエンコーダー / デコーダーが利用できなくなる
+- `SoraClientContext` の ABI が変更される (`ConnectionContext::MediaEngineReference` の保持)
+  - この変更は 2026.2.0-canary 系の途中で導入済みであり、zakuro が現に利用する `2026.2.0-canary.19` に既に含まれる。プリビルド SDK は同一タグのヘッダとバイナリがリリース資産として提供されるため、zakuro 側の対応は不要
+
+## 完了条件
+
+以下のプラットフォームで `python run.py build <target>` がエラーなく完了すること。
+
+- `macos_arm64`
+- `ubuntu-22.04_x86_64`
+- `ubuntu-24.04_x86_64`
+
+また、`test/test_zakuro.py` の `test_version` が `DEPS` 更新後の値 (`sora_cpp_sdk` / `libwebrtc` / `boost`) で通ること。
+
+### 検証の内訳
+
+実 Sora サーバーに接続する検証は完了条件に含めない。必要になった場合は実バイナリを起動する
+pytest の E2E として追加する。
+
+## 解決方法
+
+Sora C++ SDK の `2026.2.1` への更新は `2026.2.2` の更新に取り込まれており、
+`DEPS` の `SORA_CPP_SDK_VERSION` は `2026.2.2` になっている。`CHANGES.md` の
+`## develop` には `2026.2.1` と `2026.2.2` の両方のエントリがある。
+
+検証したこと:
+
+- `python3 run.py build macos_arm64` が成功する
+- `ubuntu-22.04_x86_64` / `ubuntu-24.04_x86_64` / `ubuntu-26.04_x86_64` /
+  `ubuntu-26.04_armv8` / `macos_arm64` / `macos-26_arm64` のビルドは CI の
+  Build zakuro (12 チェック) が毎回検証している
+- `test/test_zakuro.py` の `test_version` が実 Sora に接続して pass している。
+  CI の成功ラン (`739930e`) で ubuntu-24.04_x86_64 / ubuntu-26.04_x86_64 /
+  ubuntu-26.04_armv8 / macos-26_arm64 のすべてで `PASSED` になっていることを確認した。
+  このテストは `DEPS` の `SORA_CPP_SDK_VERSION` / `WEBRTC_BUILD_VERSION` /
+  `BOOST_VERSION` と `GetVersion` の結果を突き合わせるため、`2026.2.2` に上がった
+  現在の `DEPS` でも通っている
+
+実 Sora に接続する検証は完了条件に含めない方針にしたため、当初 `## 完了条件` の
+「検証の内訳」に書いていた手動検証 (WebSocket / DataChannel シグナリングでの切断、
+`role` 3 種、`vcs` 1/2/3、`--duration` での切断) は実施していない。必要になった場合は
+実バイナリを起動する pytest の E2E として追加する。

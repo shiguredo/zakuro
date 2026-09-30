@@ -43,6 +43,8 @@ struct ZakuroConfig {
   std::string fake_audio_capture = "";
   std::string openh264 = "";
   std::string scenario;
+  // client_cert / client_key は SoraSignalingConfig に設定する際に
+  // PEM ファイルの内容へ変換する
   std::string client_cert;
   std::string client_key;
   bool initial_mute_video = false;

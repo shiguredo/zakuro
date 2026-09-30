@@ -4,7 +4,6 @@
 // WebRTC
 #include <api/video_codecs/video_codec.h>
 #include <api/video_codecs/video_decoder.h>
-#include <api/video_codecs/video_decoder_factory.h>
 
 class NopVideoDecoder : public webrtc::VideoDecoder {
  public:
@@ -21,14 +20,6 @@ class NopVideoDecoder : public webrtc::VideoDecoder {
 
  private:
   webrtc::DecodedImageCallback* callback_ = nullptr;
-};
-
-class NopVideoDecoderFactory : public webrtc::VideoDecoderFactory {
- public:
-  std::vector<webrtc::SdpVideoFormat> GetSupportedFormats() const override;
-  std::unique_ptr<webrtc::VideoDecoder> Create(
-      const webrtc::Environment& environment,
-      const webrtc::SdpVideoFormat& format) override;
 };
 
 #endif

@@ -7,6 +7,21 @@ cmake_policy(SET CMP0091 NEW)
 
 project(zakuro C CXX)
 
+# macOS 向けのビルド対象
+# run.py の MACOS_PLATFORMS と揃える
+set(ZAKURO_MACOS_PLATFORMS
+  macos_arm64
+)
+
+# Linux 向けのビルド対象
+# run.py の LINUX_X86_64_PLATFORMS / LINUX_ARMV8_PLATFORMS と揃える
+set(ZAKURO_LINUX_PLATFORMS
+  ubuntu-22.04_x86_64
+  ubuntu-24.04_x86_64
+  ubuntu-26.04_x86_64
+  ubuntu-26.04_armv8
+)
+
 list(APPEND CMAKE_PREFIX_PATH ${SORA_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${SORA_DIR}/share/cmake)
 
@@ -22,7 +37,7 @@ find_package(CLI11 REQUIRED)
 
 add_executable(zakuro)
 
-set_target_properties(zakuro PROPERTIES CXX_STANDARD 17 C_STANDARD 17)
+set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)
 set_target_properties(zakuro PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 string(SUBSTRING "${ZAKURO_COMMIT}" 0 8 ZAKURO_COMMIT_SHORT)
@@ -36,6 +51,8 @@ target_sources(zakuro
   PRIVATE
     src/embedded_binary.cpp
     src/fake_video_capturer.cpp
+    src/http_server.cpp
+    src/json_rpc.cpp
     src/main.cpp
     src/nop_video_decoder.cpp
     src/util.cpp
@@ -52,6 +69,7 @@ target_sources(zakuro
 target_link_libraries(zakuro
   PRIVATE
     Sora::sora
+    Boost::json
     Boost::filesystem
     CLI11::CLI11
     Blend2D::Blend2D
@@ -60,7 +78,7 @@ target_link_libraries(zakuro
 target_compile_definitions(zakuro
   PRIVATE
     # CLI11 は C++17 でのビルドにおいて std::filesystem を利用するが、これを clang で解決するには c++fs のリンクが必要になる。
-    # しかし、 libwebrtc の libc++ では std::filesystem が提供されていないため下記のオプションを追加して利用しないようにする。 
+    # しかし、 libwebrtc の libc++ では std::filesystem が提供されていないため下記のオプションを追加して利用しないようにする。
     CLI11_HAS_FILESYSTEM=0
     OPENSSL_IS_BORINGSSL
     # https://github.com/boostorg/container_hash/issues/22 と同じ問題が clang-15 でも起きるので、これを手動で定義して回避する
@@ -117,6 +135,17 @@ list(APPEND RESOURCE_FILES
 )
 list(LENGTH RESOURCE_FILES RESOURCE_FILES_LENGTH)
 math(EXPR RESOURCE_FILES_LENGTH_MINUS_ONE "${RESOURCE_FILES_LENGTH} - 1")
+
+# リソースの埋め込みに使うリンカ
+# クロスコンパイル時はホストの ld ではなくターゲット用の ld を使う
+if (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
+  if (CMAKE_CXX_COMPILER_TARGET)
+    find_program(ZAKURO_EMBED_LD NAMES ${CMAKE_CXX_COMPILER_TARGET}-ld REQUIRED)
+  else ()
+    set(ZAKURO_EMBED_LD ld)
+  endif ()
+endif ()
+
 foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   list(GET RESOURCE_FILES ${n} file)
 
@@ -138,12 +167,12 @@ foreach(n RANGE ${RESOURCE_FILES_LENGTH_MINUS_ONE})
   string(REGEX REPLACE "[-.]" "_" file_name_linux "${file}")
 
   # バイナリの組み込み
-  if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
+  if (ZAKURO_PLATFORM IN_LIST ZAKURO_MACOS_PLATFORMS)
     target_link_options(zakuro PRIVATE "SHELL:-sectcreate __DATA ${file_name_macos} ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file}")
-  elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+  elseif (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
     set(objfile ${file}.o)
     add_custom_command(OUTPUT ${objfile}
-      COMMAND ld
+      COMMAND ${ZAKURO_EMBED_LD}
       ARGS -r -b binary -z noexecstack -o ${CMAKE_CURRENT_BINARY_DIR}/${objfile} ${file}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
       MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/resource/${file})
@@ -172,10 +201,10 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/embedded_binary.generated.priv.h
   @ONLY)
 
-if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
+if (ZAKURO_PLATFORM IN_LIST ZAKURO_MACOS_PLATFORMS)
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
   set_target_properties(zakuro PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
-elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
+elseif (ZAKURO_PLATFORM IN_LIST ZAKURO_LINUX_PLATFORMS)
 endif()

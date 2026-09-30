@@ -1,7 +1,11 @@
 #include "virtual_client.h"
 
+#include <cassert>
 #include <chrono>
 #include <iostream>
+
+// Boost
+#include <boost/json.hpp>
 
 // Sora C++ SDK
 #include <sora/sora_video_encoder_factory.h>
@@ -20,6 +24,10 @@
 
 std::shared_ptr<VirtualClient> VirtualClient::Create(
     VirtualClientConfig config) {
+  // context が nullptr のまま Connect すると、config_.context の dereference で
+  // クラッシュする。デバッグビルドで呼び出し側の渡し漏れに気付けるようにする。
+  // NDEBUG ビルドでは無効になるため、呼び出し側での検査は別途必要になる。
+  assert(config.context != nullptr);
   return std::shared_ptr<VirtualClient>(new VirtualClient(config));
 }
 VirtualClient::VirtualClient(const VirtualClientConfig& config)
@@ -84,10 +92,12 @@ void VirtualClient::Connect() {
 }
 
 void VirtualClient::Close(std::function<void(std::string)> on_close) {
+  // on_close は既定で nullptr であり、切断だけを指示して結果を受け取らない呼び出し
+  // (シナリオの Disconnect) があるため、渡されたときだけ呼ぶ
   if (closing_) {
     if (on_close_ == nullptr) {
       on_close_ = on_close;
-    } else {
+    } else if (on_close != nullptr) {
       on_close("already closing");
     }
     return;
@@ -96,7 +106,7 @@ void VirtualClient::Close(std::function<void(std::string)> on_close) {
     closing_ = true;
     on_close_ = on_close;
     signaling_->Disconnect();
-  } else {
+  } else if (on_close != nullptr) {
     on_close("already closed");
   }
 }
@@ -172,8 +182,8 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
     // この場合は、設定次第で再接続を試みる
     if (retry_count_ < config_.max_retry) {
       retry_count_ += 1;
-      retry_timer_.expires_after(std::chrono::milliseconds(
-          (int)(config_.retry_interval * 1000)));
+      retry_timer_.expires_after(
+          std::chrono::milliseconds((int)(config_.retry_interval * 1000)));
       retry_timer_.async_wait([this](boost::system::error_code ec) {
         if (ec) {
           return;
@@ -200,11 +210,27 @@ void VirtualClient::OnDisconnect(sora::SoraSignalingErrorCode ec,
   }
 }
 void VirtualClient::OnNotify(std::string text) {
-  auto json = boost::json::parse(text);
-  if (json.at("event_type").as_string() == "connection.created") {
-    // 接続できたらリトライ数をリセットする
-    // 他人が接続された時もリセットされることになるけど、
-    // その時は 0 のままになってるはずなので問題ない
-    retry_count_ = 0;
+  // Sora から届く notify が常に想定どおりの形式とは限らない。
+  // parse の失敗と型の不一致で例外が伝播するとスレッドが飛ぶため、ここで全て受け止める
+  try {
+    auto json = boost::json::parse(text);
+    if (!json.is_object()) {
+      RTC_LOG(LS_WARNING) << "OnNotify: notify must be a JSON object";
+      return;
+    }
+    const auto& obj = json.as_object();
+    if (!obj.contains("event_type") || !obj.at("event_type").is_string()) {
+      RTC_LOG(LS_WARNING)
+          << "OnNotify: event_type is missing or is not a string";
+      return;
+    }
+    if (obj.at("event_type").as_string() == "connection.created") {
+      // 接続できたらリトライ数をリセットする
+      // 他人が接続された時もリセットされることになるけど、
+      // その時は 0 のままになってるはずなので問題ない
+      retry_count_ = 0;
+    }
+  } catch (const std::exception& e) {
+    RTC_LOG(LS_WARNING) << "OnNotify: failed to parse notify: " << e.what();
   }
 }

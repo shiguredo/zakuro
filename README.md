@@ -1,6 +1,6 @@
 # WebRTC Load Testing Tool Zakuro
 
-[![libwebrtc](https://img.shields.io/badge/libwebrtc-m139.7258-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7258)
+[![libwebrtc](https://img.shields.io/badge/libwebrtc-m150.7871-blue.svg)](https://chromium.googlesource.com/external/webrtc/+/branch-heads/7871)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/shiguredo/zakuro.svg)](https://github.com/shiguredo/zakuro)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -38,8 +38,10 @@ WebRTC Load Testing Tool Zakuro は [libwebrtc](https://webrtc.googlesource.com/
 ## 動作環境
 
 - macOS 15 arm64
-- Ubuntu 22.04 x86_64
+- Ubuntu 26.04 x86_64
+- Ubuntu 26.04 arm64
 - Ubuntu 24.04 x86_64
+- Ubuntu 22.04 x86_64
 
 ## 使ってみる
 
@@ -53,124 +55,155 @@ Zakuro のビルドしたい人は [BUILD.md](doc/BUILD.md) をお読みくだ�
 
 [FAQ.md](doc/FAQ.md) をお読みください。
 
+## サポート
+
+[SUPPORT.md](doc/SUPPORT.md) をお読みください。
+
+## HTTP RPC
+
+Zakuro の HTTP サーバーが提供する JSON-RPC API は [RPC.md](doc/RPC.md) をお読みください。
+
 ## ヘルプ
 
 ```console
 $ ./zakuro --help
 Zakuro - WebRTC Load Testing Tool
+
+
 Usage: [OPTIONS]
 
-Options:
-  -h,--help                   Print this help message and exit
-  --version                   Show version information
-  --show-video-codec-capability
+
+OPTIONS:
+  -h,     --help              Print this help message and exit
+          --version           Show version information
+          --show-video-codec-capability
                               Show available video codec capability
-  --config TEXT:FILE          JSONC config file path
-  --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
+          --config TEXT:FILE  JSONC config file path
+          --log-level INT:value in {verbose->0,info->1,warning->2,error->3,none->4} OR {0,1,2,3,4}
                               Log severity level threshold
-  --port INT:INT in [-1 - 65535]
-                              Port number (default: -1)
-  --output-file-connection-id TEXT
+          --http-host TEXT    HTTP host address to bind
+          --http-port INT:INT in [1 - 65535]
+                              HTTP port number
+          --output-file-connection-id TEXT
                               Output to specified file with connection IDs
-  --instance-hatch-rate FLOAT:FLOAT in [0.1 - 100]
+          --instance-hatch-rate FLOAT:FLOAT in [0.1 - 100]
                               Spawned instance per seconds (default: 1.0)
-  --name TEXT                 Client Name
-  --vcs INT:INT in [1 - 1000] Virtual Clients (default: 1)
-  --vcs-hatch-rate FLOAT:FLOAT in [0.1 - 100]
+          --name TEXT         Client Name
+          --vcs INT:INT in [1 - 1000]
+                              Virtual Clients (default: 1)
+          --vcs-hatch-rate FLOAT:FLOAT in [0.1 - 100]
                               Spawned virtual clients per seconds (default: 1.0)
-  --duration FLOAT            (Experimental) Duration of virtual client running in seconds (if not zero) (default: 0.0)
-  --repeat-interval FLOAT     (Experimental) (If duration is set) Interval to reconnect after disconnection (default: 0.0)
-  --max-retry INT             (Experimental) Max retries when a connection fails (default: 0)
-  --retry-interval FLOAT      (Experimental) (If max-retry is set) Interval to reconnect after connection fails (default: 60)
-  --no-video-device           Do not use video device (default: false)
-  --no-audio-device           Do not use audio device (default: false)
-  --fake-capture-device       Fake Capture Device (default: true)
-  --fake-video-capture TEXT:FILE
+          --duration FLOAT    (Experimental) Duration of virtual client running in seconds (if
+                              not zero) (default: 0.0)
+          --repeat-interval FLOAT
+                              (Experimental) (If duration is set) Interval to reconnect after
+                              disconnection (default: 0.0)
+          --max-retry INT     (Experimental) Max retries when a connection fails (default: 0)
+          --retry-interval FLOAT
+                              (Experimental) (If max-retry is set) Interval to reconnect after
+                              connection fails (default: 60)
+          --no-video-device   Do not use video device (default: false)
+          --no-audio-device   Do not use audio device (default: false)
+          --fake-capture-device
+                              Fake Capture Device (default: true)
+          --fake-video-capture TEXT:FILE
                               Fake Video from File
-  --fake-audio-capture TEXT:FILE
+          --fake-audio-capture TEXT:FILE
                               Fake Audio from File
-  --sandstorm                 Fake Sandstorm Video (default: false)
-  --video-device TEXT         Use the video device specified by an index or a name (use the first one if not specified)
-  --resolution TEXT           Video resolution (one of QVGA, VGA, HD, FHD, 4K, or [WIDTH]x[HEIGHT]) (default: VGA)
-  --framerate INT:INT in [1 - 60]
+          --sandstorm         Fake Sandstorm Video (default: false)
+          --video-device TEXT Use the video device specified by an index or a name (use the
+                              first one if not specified)
+          --resolution TEXT   Video resolution (one of QVGA, VGA, HD, FHD, 4K, or
+                              [WIDTH]x[HEIGHT]) (default: VGA)
+          --framerate INT:INT in [1 - 60]
                               Video framerate (default: 30)
-  --fixed-resolution          Maintain video resolution in degradation (default: false)
-  --priority TEXT:{BALANCE,FRAMERATE,RESOLUTION}
+          --fixed-resolution  Maintain video resolution in degradation (default: false)
+          --priority TEXT:{BALANCE,FRAMERATE,RESOLUTION}
                               (Experimental) Preference in video degradation (default: BALANCE)
-  --insecure                  Allow insecure server connections when using SSL (default: false)
-  --openh264 TEXT:FILE        OpenH264 dynamic library path. "OpenH264 Video Codec provided by Cisco Systems, Inc."
-  --scenario TEXT:{reconnect} Scenario type
-  --client-cert TEXT:FILE     Cert file path for client certification (PEM format)
-  --client-key TEXT:FILE      Private key file path for client certification (PEM format)
-  --initial-mute-video BOOLEAN:value in {false->0,true->1} OR {0,1}
+          --insecure          Allow insecure server connections when using SSL (default: false)
+          --openh264 TEXT:FILE
+                              OpenH264 dynamic library path. "OpenH264 Video Codec provided by
+                              Cisco Systems, Inc."
+          --scenario TEXT:{reconnect}
+                              Scenario type
+          --client-cert TEXT:FILE
+                              Cert file path for client certification (PEM format)
+          --client-key TEXT:FILE
+                              Private key file path for client certification (PEM format)
+          --initial-mute-video BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Mute video initialy (default: false)
-  --initial-mute-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
+          --initial-mute-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Mute audio initialy (default: false)
-  --degradation-preference ENUM:value in {disabled->0,maintain_framerate->1,maintain_resolution->2,balanced->3} OR {0,1,2,3}
+          --degradation-preference ENUM:value in {disabled->0,maintain_framerate->1,maintain_resolution->2,balanced->3} OR {0,1,2,3}
                               Degradation preference
-  --sora-signaling-url TEXT ...
+          --sora-signaling-url TEXT ...
                               Signaling URLs
-  --sora-disable-signaling-url-randomization
+          --sora-disable-signaling-url-randomization
                               Disable random connections to signaling URLs (default: false)
-  --sora-channel-id TEXT      Channel ID
-  --sora-client-id TEXT       Client ID
-  --sora-bundle-id TEXT       Bundle ID
-  --sora-role TEXT:{sendonly,recvonly,sendrecv}
+          --sora-channel-id TEXT
+                              Channel ID
+          --sora-client-id TEXT
+                              Client ID
+          --sora-bundle-id TEXT
+                              Bundle ID
+          --sora-role TEXT:{sendonly,recvonly,sendrecv}
                               Role
-  --sora-video BOOLEAN:value in {false->0,true->1} OR {0,1}
+          --sora-video BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send video to sora (default: true)
-  --sora-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
+          --sora-audio BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Send audio to sora (default: true)
-  --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264,H265}
+          --sora-video-codec-type TEXT:{VP8,VP9,AV1,H264,H265}
                               Video codec for send (default: none)
-  --sora-audio-codec-type TEXT:{OPUS}
+          --sora-audio-codec-type TEXT:{OPUS}
                               Audio codec for send (default: none)
-  --sora-video-bit-rate INT:INT in [0 - 30000]
+          --sora-video-bit-rate INT:INT in [0 - 30000]
                               Video bit rate (default: none)
-  --sora-audio-bit-rate INT:INT in [0 - 510]
+          --sora-audio-bit-rate INT:INT in [0 - 510]
                               Audio bit rate (default: none)
-  --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
+          --sora-simulcast BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use simulcast (default: false)
-  --sora-simulcast-rid TEXT   Simulcast rid (default: none)
-  --sora-spotlight BOOLEAN:value in {false->0,true->1} OR {0,1}
+          --sora-simulcast-rid TEXT
+                              Simulcast rid (default: none)
+          --sora-spotlight BOOLEAN:value in {false->0,true->1} OR {0,1}
                               Use spotlight (default: none)
-  --sora-spotlight-number INT:INT in [0 - 8]
+          --sora-spotlight-number INT:INT in [0 - 8]
                               Number of spotlight (default: none)
-  --sora-spotlight-focus-rid TEXT
+          --sora-spotlight-focus-rid TEXT
                               Spotlight focus rid (default: none)
-  --sora-spotlight-unfocus-rid TEXT
+          --sora-spotlight-unfocus-rid TEXT
                               Spotlight unfocus rid (default: none)
-  --sora-data-channel-signaling TEXT:value in {false->,true->,none->} OR {}
+          --sora-data-channel-signaling TEXT:value in {false->,true->,none->} OR {}
                               Use DataChannel for Sora signaling (default: none)
-  --sora-data-channel-signaling-timeout INT:POSITIVE
+          --sora-data-channel-signaling-timeout INT:POSITIVE
                               Timeout for Data Channel in seconds (default: 180)
-  --sora-ignore-disconnect-websocket TEXT:value in {false->,true->,none->} OR {}
-                              Ignore WebSocket disconnection if using Data Channel (default: none)
-  --sora-disconnect-wait-timeout INT:POSITIVE
+          --sora-ignore-disconnect-websocket TEXT:value in {false->,true->,none->} OR {}
+                              Ignore WebSocket disconnection if using Data Channel (default:
+                              none)
+          --sora-disconnect-wait-timeout INT:POSITIVE
                               Disconnecting timeout for Data Channel in seconds (default: 5)
-  --sora-metadata TEXT:JSON Value
+          --sora-metadata TEXT:JSON Value
                               Signaling metadata used in connect message (default: none)
-  --sora-signaling-notify-metadata TEXT:JSON Value
+          --sora-signaling-notify-metadata TEXT:JSON Value
                               Signaling metadata (default: none)
-  --sora-data-channels TEXT:JSON Value
+          --sora-data-channels TEXT:JSON Value
                               DataChannels (default: none)
-  --sora-video-vp9-params TEXT:JSON Value
+          --sora-video-vp9-params TEXT:JSON Value
                               Parameters for VP9 video codec (default: none)
-  --sora-video-av1-params TEXT:JSON Value
+          --sora-video-av1-params TEXT:JSON Value
                               Parameters for AV1 video codec (default: none)
-  --sora-video-h264-params TEXT:JSON Value
+          --sora-video-h264-params TEXT:JSON Value
                               Parameters for H.264 video codec (default: none)
-  --sora-video-h265-params TEXT:JSON Value
+          --sora-video-h265-params TEXT:JSON Value
                               Parameters for H.265 video codec (default: none)
-  --vp8-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+          --vp8-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               VP8 encoder implementation
-  --vp9-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+          --vp9-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               VP9 encoder implementation
-  --av1-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+          --av1-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               AV1 encoder implementation
-  --h264-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+          --h264-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               H.264 encoder implementation
-  --h265-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec_sdk,amd_amf)
+          --h265-encoder ENUM:(internal,cisco_openh264,intel_vpl,nvidia_video_codec,amd_amf)
                               H.265 encoder implementation
 ```
 
@@ -179,8 +212,8 @@ Options:
 Apache License 2.0
 
 ```text
-Copyright 2020-2025, Wandbox LLC (Original Author)
-Copyright 2020-2025, Shiguredo Inc.
+Copyright 2020, Wandbox LLC (Original Author)
+Copyright 2020, Shiguredo Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

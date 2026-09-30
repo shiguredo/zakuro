@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <thread>
+#include <vector>
 
 // Sora C++ SDK
 #include <sora/scalable_track_source.h>
@@ -12,7 +13,7 @@
 #include <rtc_base/ref_counted_object.h>
 
 // Blend2D
-#include <blend2d.h>
+#include <blend2d/blend2d.h>
 
 #include "xorshift.h"
 #include "y4m_reader.h"
@@ -59,6 +60,9 @@ class FakeVideoCapturer : public sora::ScalableVideoTrackSource {
   void DrawBoxes(BLContext& ctx,
                  std::chrono::high_resolution_clock::time_point now);
 
+  // Y4M の 1 フレームを I420Buffer のプレーン別 stride を考慮して行単位でコピーする
+  void CopyY4MFrameToI420Buffer();
+
  private:
   std::unique_ptr<std::thread> thread_;
   FakeVideoCapturerConfig config_;
@@ -70,10 +74,11 @@ class FakeVideoCapturer : public sora::ScalableVideoTrackSource {
   BLFont bipbop_font_;
   BLFont stats_font_;
   uint32_t frame_;
-  //Random<uint32_t> random_{0, 256 * 256 * 256 - 1};
   Xorshift random_;
   Y4MReader y4m_reader_;
   webrtc::scoped_refptr<webrtc::I420Buffer> y4m_buffer_;
+  // Y4M の 1 フレーム分 (Y/U/V が連続) を読み出す一時バッファ
+  std::vector<uint8_t> y4m_frame_buffer_;
 };
 
 #endif

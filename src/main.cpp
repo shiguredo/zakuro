@@ -1,23 +1,39 @@
+#include <algorithm>
 #include <atomic>
+#include <cassert>
+#include <cerrno>
 #include <condition_variable>
 #include <csignal>
+#include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
+#include <sstream>
 #include <string>
+#include <system_error>
 #include <thread>
+#include <utility>
 #include <vector>
 
-// Linux
+// Boost
+#include <boost/json.hpp>
+
+// POSIX
+#include <fcntl.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 // WebRTC
 #include <rtc_base/log_sinks.h>
 #include <rtc_base/string_utils.h>
 
-#include <blend2d.h>
+#include <blend2d/blend2d.h>
 
 #include "fake_audio_key_trigger.h"
 #include "fake_video_capturer.h"
+#include "http_server.h"
 #include "scenario_player.h"
 #include "util.h"
 #include "virtual_client.h"
@@ -26,6 +42,34 @@
 #include "zakuro_stats.h"
 
 const size_t kDefaultMaxLogFileSize = 10 * 1024 * 1024;
+
+namespace {
+
+// AddLogToStream で登録したシンクを、破棄する前に RemoveLogToStream する。
+// 解除せずに破棄すると、LogMessage の静的リストが破棄済みシンクを指したまま残る。
+// main の return 後に RTC_LOG が走ると、そのシンクへ書き込む。
+class InstalledFileLogSink {
+ public:
+  // sink は Init() に成功した非 null である前提。null は受け取らない。
+  explicit InstalledFileLogSink(
+      std::unique_ptr<webrtc::FileRotatingLogSink> sink)
+      : sink_(std::move(sink)) {
+    assert(sink_ != nullptr);
+    webrtc::LogMessage::AddLogToStream(sink_.get(), webrtc::LS_INFO);
+  }
+
+  ~InstalledFileLogSink() {
+    webrtc::LogMessage::RemoveLogToStream(sink_.get());
+  }
+
+  InstalledFileLogSink(const InstalledFileLogSink&) = delete;
+  InstalledFileLogSink& operator=(const InstalledFileLogSink&) = delete;
+
+ private:
+  std::unique_ptr<webrtc::FileRotatingLogSink> sink_;
+};
+
+}  // namespace
 
 // 雑なエスケープ処理
 // 文字列中に \ や " が含まれてたら全体をエスケープする
@@ -48,21 +92,130 @@ std::string escape_if_needed(std::string str) {
   return s;
 }
 
-int main(int argc, char* argv[]) {
+// 1 VC あたりに必要と見積もるファイルディスクリプタ数
+// WebSocket 用の 1 と ICE / DTLS 用の複数を保守的に見積もった値
+const rlim_t kFileDescriptorsPerVirtualClient = 5;
+
+// ファイルディスクリプタの必要数が足りないことを伝えるメッセージ
+// 他のスレッドが同じ stderr へ書き込んでも混ざらないよう、1 回の出力で出す
+static std::string FileDescriptorLimitMessage(const std::string& reason,
+                                              rlim_t required,
+                                              rlim_t soft,
+                                              rlim_t hard) {
+  std::ostringstream oss;
+  oss << reason << ": required=" << required << " soft=" << soft
+      << " hard=" << hard;
+  return oss.str();
+}
+
+// 必要 FD 数を満たすように soft limit を昇格する
+// 昇格しても足りない場合は false を返す
+static bool EnsureFileDescriptorLimit(rlim_t required) {
   rlimit lim;
   if (::getrlimit(RLIMIT_NOFILE, &lim) != 0) {
-    std::cerr << "getrlimit 失敗" << std::endl;
-    return -1;
+    std::cerr << "failed to get the file descriptor limit" << std::endl;
+    return false;
   }
-  if (lim.rlim_cur < 1024) {
-    std::cerr << "ファイルディスクリプタの数が足りません。"
-                 "最低でも 1024 以上にして下さい。"
-              << std::endl;
-    std::cerr << "  soft=" << lim.rlim_cur << ", hard=" << lim.rlim_max
-              << std::endl;
-    return -1;
+  if (lim.rlim_cur >= required) {
+    // 実際に使える soft limit を残す。FD が足りずに接続が失敗したときの切り分けに使う
+    RTC_LOG(LS_INFO) << "file descriptor limit: required=" << required
+                     << " soft=" << lim.rlim_cur << " hard=" << lim.rlim_max;
+    return true;
   }
 
+  // soft limit は hard limit を超えられないため、hard limit で頭打ちにして引き上げる
+  rlimit next = lim;
+  next.rlim_cur = std::min(required, lim.rlim_max);
+  if (::setrlimit(RLIMIT_NOFILE, &next) != 0) {
+    std::cerr << FileDescriptorLimitMessage(
+                     "failed to raise the file descriptor limit", required,
+                     lim.rlim_cur, lim.rlim_max)
+              << std::endl;
+    return false;
+  }
+
+  // soft limit は hard limit までしか上げられないため、hard limit で足りるかを判定する
+  if (lim.rlim_max < required) {
+    // soft limit は hard limit まで引き上げ済みなので、その値を出す
+    std::cerr << FileDescriptorLimitMessage(
+                     "the file descriptor limit is too low", required,
+                     next.rlim_cur, lim.rlim_max)
+              << std::endl;
+    return false;
+  }
+
+  // 昇格後の値を残す。昇格が効いているかをテストからも確認できる
+  RTC_LOG(LS_INFO) << "raised the file descriptor limit: required=" << required
+                   << " soft=" << next.rlim_cur << " hard=" << lim.rlim_max;
+  return true;
+}
+
+// 接続 ID の stats をファイルへ書き出す
+// 外部から読まれる途中の状態を見せないため、同じディレクトリのテンポラリファイルへ
+// 書き切ってから std::filesystem::rename で置き換える
+// (同一ディレクトリなので POSIX の rename(2) になりアトミックに置き換わる)
+static void WriteStatsFile(const std::string& path, const std::string& json) {
+  std::filesystem::path target(path);
+  std::filesystem::path temp =
+      target.parent_path() /
+      (target.filename().string() + ".tmp." + std::to_string(::getpid()));
+
+  // 不完全なテンポラリファイルを残さないための後始末
+  auto remove_temp = [&temp]() {
+    std::error_code remove_ec;
+    std::filesystem::remove(temp, remove_ec);
+  };
+
+  // 0600 で作り、出力先のパーミッションが分かった時点で合わせる。
+  // std::ofstream は umask に依存したモードで作るため、内容が書かれた緩い
+  // パーミッションのファイルが一瞬できる。ここでは内容を書く前にモードを確定させる
+  int fd = ::open(temp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  if (fd < 0) {
+    RTC_LOG(LS_ERROR) << "Failed to open the stats file: " << temp.string();
+    return;
+  }
+
+  // 出力先が既にある場合はそのパーミッションを引き継ぐ
+  // まだ無い場合 (初回の書き出し) は 0600 のままにする
+  struct stat target_stat;
+  if (::stat(target.c_str(), &target_stat) == 0) {
+    if (::fchmod(fd, target_stat.st_mode & 07777) != 0) {
+      RTC_LOG(LS_WARNING) << "Failed to copy the permission of the stats file: "
+                          << target.string() << ": " << std::strerror(errno);
+    }
+  }
+
+  size_t written = 0;
+  while (written < json.size()) {
+    ssize_t n = ::write(fd, json.data() + written, json.size() - written);
+    if (n < 0) {
+      RTC_LOG(LS_ERROR) << "Failed to write the stats file: " << temp.string()
+                        << ": " << std::strerror(errno);
+      ::close(fd);
+      remove_temp();
+      return;
+    }
+    written += (size_t)n;
+  }
+  // close の失敗 (書き込みの失敗を含む) を検査してから置き換える
+  if (::close(fd) != 0) {
+    RTC_LOG(LS_ERROR) << "Failed to write the stats file: " << temp.string()
+                      << ": " << std::strerror(errno);
+    remove_temp();
+    return;
+  }
+
+  std::error_code rename_ec;
+  std::filesystem::rename(temp, target, rename_ec);
+  if (rename_ec) {
+    RTC_LOG(LS_ERROR) << "Failed to replace the stats file: " << path << ": "
+                      << rename_ec.message();
+    remove_temp();
+    return;
+  }
+}
+
+int main(int argc, char* argv[]) {
   std::vector<std::string> args;
   for (int i = 1; i < argc; i++) {
     args.push_back(argv[i]);
@@ -72,42 +225,64 @@ int main(int argc, char* argv[]) {
 
   std::string config_file;
   int log_level = webrtc::LS_NONE;
-  int port = -1;
+  std::optional<std::string> http_host;
+  std::optional<int> http_port;
   std::string connection_id_stats_file;
   double instance_hatch_rate = 1.0;
   ZakuroConfig config;
-  Util::ParseArgs(args, config_file, log_level, port, connection_id_stats_file,
-                  instance_hatch_rate, config, false);
+  auto parse_result = Util::ParseArgs(args, config_file, log_level, http_host,
+                                      http_port, connection_id_stats_file,
+                                      instance_hatch_rate, config, false);
+  if (parse_result.code == ParseArgsResult::Code::ExitSuccess) {
+    return 0;
+  }
+  if (parse_result.code == ParseArgsResult::Code::ErrorExit) {
+    return parse_result.exit_code;
+  }
 
   if (config_file.empty()) {
     // 設定ファイルが無ければそのまま ZakuroConfig を利用する
     configs.push_back(config);
   } else {
     // 設定ファイルがある場合は設定ファイルから引数を構築し直して再度パースする
-    boost::json::value zakuro_value = Util::LoadJsoncFile(config_file);
+    boost::json::value zakuro_value;
+    try {
+      zakuro_value = Util::LoadJsoncFile(config_file);
+    } catch (const std::exception& e) {
+      // 拡張子不正・ファイルオープン失敗・JSON パース失敗はここに来る
+      std::cerr << "failed to load config file: " << e.what() << std::endl;
+      return 1;
+    }
+
+    // 設定ファイルのルートと instances は型が確定していないので先に型を検査する
+    if (!zakuro_value.is_object()) {
+      std::cerr << "config file must be a JSON object" << std::endl;
+      return 1;
+    }
     const auto& zakuro_obj = zakuro_value.as_object();
+
     std::vector<std::string> common_args;
     common_args.clear();
 
-    if (zakuro_obj.contains("log-level")) {
-      common_args.push_back("--log-level");
-      common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("log-level")));
-    }
-    if (zakuro_obj.contains("port")) {
-      common_args.push_back("--port");
-      common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("port")));
-    }
-    if (zakuro_obj.contains("output-file-connection-id")) {
-      common_args.push_back("--output-file-connection-id");
-      common_args.push_back(Util::PrimitiveValueToString(
-          zakuro_obj.at("output-file-connection-id")));
-    }
-    if (zakuro_obj.contains("instance-hatch-rate")) {
-      common_args.push_back("--instance-hatch-rate");
-      common_args.push_back(
-          Util::PrimitiveValueToString(zakuro_obj.at("instance-hatch-rate")));
+    // トップレベルの共通オプションの値を CLI 引数へ変換する。
+    // 値が空文字列に潰れると CLI11 の検証をすり抜けて無言で通るものがあるため、
+    // オブジェクトと配列は設定ミスとして扱う
+    for (const auto& key :
+         {"log-level", "http-port", "http-host", "output-file-connection-id",
+          "instance-hatch-rate"}) {
+      auto it = zakuro_obj.find(key);
+      if (it == zakuro_obj.end()) {
+        continue;
+      }
+      if (it->value().is_object() || it->value().is_array()) {
+        // null は CLI 引数にすると "null" という文字列になり設定ミスに気付けないため、
+        // ここで型として説明せず、実際に受け付ける型だけを挙げる
+        std::cerr << key << " must be a string, a number, or a boolean"
+                  << std::endl;
+        return 1;
+      }
+      common_args.push_back("--" + std::string(key));
+      common_args.push_back(Util::PrimitiveValueToString(it->value()));
     }
 
     std::vector<std::string> post_args;
@@ -124,18 +299,27 @@ int main(int argc, char* argv[]) {
       post_args.push_back(*it);
     }
 
-    if (!zakuro_obj.contains("instances")) {
+    auto instances_it = zakuro_obj.find("instances");
+    if (instances_it == zakuro_obj.end()) {
       std::cerr << "instances キーがありません。" << std::endl;
       return 1;
     }
-    const auto& instances_array = zakuro_obj.at("instances").as_array();
+    if (!instances_it->value().is_array()) {
+      std::cerr << "instances must be an array" << std::endl;
+      return 1;
+    }
+    const auto& instances_array = instances_it->value().as_array();
     if (instances_array.size() == 0) {
       std::cerr << "instances の下に設定がありません。" << std::endl;
       return 1;
     }
     for (const auto& instance : instances_array) {
       auto argss = Util::ParseInstanceToArgs(instance);
-      for (auto args : argss) {
+      if (!argss) {
+        std::cerr << "failed to parse instance settings" << std::endl;
+        return 1;
+      }
+      for (auto& args : *argss) {
         args.insert(args.begin(), common_args.begin(), common_args.end());
         args.insert(args.end(), post_args.begin(), post_args.end());
 
@@ -147,9 +331,15 @@ int main(int argc, char* argv[]) {
 
         config_file = "";
         config = ZakuroConfig();
-        Util::ParseArgs(args, config_file, log_level, port,
-                        connection_id_stats_file, instance_hatch_rate, config,
-                        true);
+        auto instance_result = Util::ParseArgs(
+            args, config_file, log_level, http_host, http_port,
+            connection_id_stats_file, instance_hatch_rate, config, true);
+        if (instance_result.code == ParseArgsResult::Code::ExitSuccess) {
+          return 0;
+        }
+        if (instance_result.code == ParseArgsResult::Code::ErrorExit) {
+          return instance_result.exit_code;
+        }
         configs.push_back(config);
       }
     }
@@ -167,17 +357,8 @@ int main(int argc, char* argv[]) {
     log_sink.reset();
     return 1;
   }
-  webrtc::LogMessage::AddLogToStream(log_sink.get(), webrtc::LS_INFO);
-
-  // TODO: サーバの起動については別途考える
-  //if (config_.sora_port >= 0) {
-  //  SoraServerConfig config;
-  //  const boost::asio::ip::tcp::endpoint endpoint{
-  //      boost::asio::ip::make_address("127.0.0.1"),
-  //      static_cast<unsigned short>(config_.sora_port)};
-  //  // TODO: vcs をスレッドセーフにする（VC 生成スレッドと競合するので）
-  //  SoraServer::Create(ioc, endpoint, &vcs, std::move(config))->Run();
-  //}
+  // 以降の return では、デストラクタが RemoveLogToStream してからシンクを破棄する。
+  [[maybe_unused]] InstalledFileLogSink installed_log_sink(std::move(log_sink));
 
   std::shared_ptr<GameKeyCore> key_core(new GameKeyCore());
   key_core->Init();
@@ -195,6 +376,35 @@ int main(int argc, char* argv[]) {
   // ユニークな番号を設定
   for (int i = 0; i < configs.size(); i++) {
     configs[i].id = i;
+  }
+
+  // ファイルディスクリプタの必要数を確認する
+  // インスタンスごとに --vcs を持つため、全インスタンスの合計で見積もる
+  rlim_t required_fds = 0;
+  for (const auto& config : configs) {
+    required_fds += (rlim_t)config.vcs * kFileDescriptorsPerVirtualClient;
+  }
+  if (!EnsureFileDescriptorLimit(required_fds)) {
+    return 1;
+  }
+
+  // HTTP サーバーの起動
+  std::unique_ptr<HttpServer> http_server;
+  if (http_host && http_port) {
+    http_server.reset(new HttpServer(*http_host, *http_port));
+    if (!http_server->Start()) {
+      // HTTP サーバーの起動に失敗している。起動していないサーバーを起動済みとして
+      // 扱わないよう、ここで終了する
+      std::cerr << "failed to start HTTP server on " << *http_host << ":"
+                << *http_port << std::endl;
+      return 1;
+    }
+    RTC_LOG(LS_INFO) << "HTTP server started on " << *http_host << ":"
+                     << *http_port;
+  } else if (http_host || http_port) {
+    std::cerr << "--http-host と --http-port は両方指定する必要があります"
+              << std::endl;
+    return 1;
   }
 
   // 集めた stats を定期的にファイルに出力する
@@ -216,8 +426,6 @@ int main(int argc, char* argv[]) {
         if (countzero) {
           break;
         }
-        // ファイルに書き込む
-        auto m = stats->Get();
         /*
         {
           "wss://hoge1.jp/signaling": {
@@ -236,6 +444,7 @@ int main(int argc, char* argv[]) {
           }
         }
         */
+        auto m = stats->Get();
         std::map<std::string, std::map<std::string, std::vector<std::string>>>
             d;
         for (const auto& p : m) {
@@ -255,23 +464,29 @@ int main(int argc, char* argv[]) {
           obj[p.first] = obj2;
         }
         std::string jstr = boost::json::serialize(obj);
-        // ファイルに出力
-        std::ofstream ofs(connection_id_stats_file);
-        ofs << jstr;
+        // ファイルの書き出しはロックを保持したまま行わない
+        lock.unlock();
+        WriteStatsFile(connection_id_stats_file, jstr);
       }
     }));
   }
+
+  // 各インスタンスの Run の戻り値を集約する
+  // Run は別スレッドで動くため、複数スレッドから書いても競合しない型にする
+  std::atomic<bool> has_error(false);
 
   std::vector<std::unique_ptr<std::thread>> ths;
   for (int i = 0; i < configs.size(); i++) {
     const auto& config = configs[i];
     ths.push_back(std::unique_ptr<std::thread>(
         new std::thread([i, config, &stats_cv, &stats_mut, &stats_countdown,
-                         instance_hatch_rate]() {
+                         &has_error, instance_hatch_rate]() {
           int wait_ms = (int)(1000 * i / instance_hatch_rate);
           std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
           Zakuro zakuro(config);
-          zakuro.Run();
+          if (zakuro.Run() != 0) {
+            has_error = true;
+          }
           std::lock_guard<std::mutex> guard(stats_mut);
           if (--stats_countdown == 0) {
             stats_cv.notify_all();
@@ -285,5 +500,5 @@ int main(int argc, char* argv[]) {
     stats_th->join();
   }
 
-  return 0;
+  return has_error ? 1 : 0;
 }

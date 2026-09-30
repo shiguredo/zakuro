@@ -55,8 +55,9 @@ def write_version_file(filename: str, updated_content: list[str], dry_run: bool)
             print(line)
     else:
         with open(filename, "w", encoding="utf-8") as file:
-            # 改行なしで単一のバージョン番号のみを書き込む
-            file.write(updated_content[0])
+            # 末尾に改行を 1 つ入れる。prek の end-of-file-fixer が末尾の改行を
+            # 補うためにファイルを書き換えると、そのコミットが失敗するため
+            file.write(updated_content[0] + "\n")
         print(f"{filename} has been updated.")
 
 

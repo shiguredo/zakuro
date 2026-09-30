@@ -5,6 +5,7 @@
 #include <csignal>
 #include <functional>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -14,6 +15,7 @@
 #include <api/enable_media.h>
 #include <api/environment/environment_factory.h>
 #include <api/video_codecs/video_codec.h>
+#include <rtc_base/logging.h>
 
 // Sora C++ SDK
 #include <sora/camera_device_capturer.h>
@@ -47,33 +49,32 @@ struct DataChannels {
   std::vector<sora::SoraSignalingConfig::DataChannel> schannels;
 };
 
-static bool ParseDataChannels(boost::json::value data_channels,
+static bool ParseDataChannels(const boost::json::value& data_channels,
                               DataChannels& m) {
   m = DataChannels();
-  boost::json::value& dcs = data_channels;
-  if (!dcs.is_array()) {
-    std::cout << __LINE__ << std::endl;
+  if (!data_channels.is_array()) {
+    RTC_LOG(LS_ERROR) << "ParseDataChannels: data channels must be an array";
     return false;
   }
-  for (auto& j : dcs.as_array()) {
+  for (const auto& j : data_channels.as_array()) {
     DataChannels::Channel ch;
     sora::SoraSignalingConfig::DataChannel sch;
 
     if (!j.is_object()) {
-      std::cout << __LINE__ << std::endl;
+      RTC_LOG(LS_ERROR) << "ParseDataChannels: data channel must be an object";
       return false;
     }
-    auto& obj = j.as_object();
+    const auto& obj = j.as_object();
 
     // label
     {
       auto it = obj.find("label");
       if (it == obj.end()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: label is missing";
         return false;
       }
       if (!it->value().is_string()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: label must be a string";
         return false;
       }
       ch.label = boost::json::value_to<std::string>(it->value());
@@ -85,11 +86,11 @@ static bool ParseDataChannels(boost::json::value data_channels,
     {
       auto it = obj.find("direction");
       if (it == obj.end()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: direction is missing";
         return false;
       }
       if (!it->value().is_string()) {
-        std::cout << __LINE__ << std::endl;
+        RTC_LOG(LS_ERROR) << "ParseDataChannels: direction must be a string";
         return false;
       }
       direction = boost::json::value_to<std::string>(it->value());
@@ -101,14 +102,19 @@ static bool ParseDataChannels(boost::json::value data_channels,
       auto it = obj.find("interval");
       if (it != obj.end()) {
         if (!it->value().is_number()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: interval must be a number";
           return false;
         }
-        ch.interval = boost::json::value_to<int>(it->value());
-        if (ch.interval <= 0) {
-          std::cout << __LINE__ << std::endl;
+        auto interval = boost::json::try_value_to<int>(it->value());
+        if (interval.has_error()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: interval must be an integer";
           return false;
-          obj.erase(it);
+        }
+        ch.interval = *interval;
+        if (ch.interval <= 0) {
+          // 0 以下の値は送信間隔として成立しないため、このインスタンスの設定を拒否する
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: interval must be positive";
+          return false;
         }
       }
     }
@@ -121,15 +127,20 @@ static bool ParseDataChannels(boost::json::value data_channels,
       }
       if (it != obj.end()) {
         if (!it->value().is_number()) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-min must be a number";
           return false;
         }
-        ch.size_min = boost::json::value_to<int>(it->value());
+        auto size_min = boost::json::try_value_to<int>(it->value());
+        if (size_min.has_error()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-min must be an integer";
+          return false;
+        }
+        ch.size_min = *size_min;
         if (ch.size_min < MESSAGE_SIZE_MIN || ch.size_min > MESSAGE_SIZE_MAX) {
-          std::cout << __LINE__ << std::endl;
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: size-min out of range: " << ch.size_min;
           return false;
         }
-        obj.erase(it);
       }
     }
 
@@ -141,13 +152,20 @@ static bool ParseDataChannels(boost::json::value data_channels,
       }
       if (it != obj.end()) {
         if (!it->value().is_number()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-max must be a number";
           return false;
         }
-        ch.size_max = boost::json::value_to<int>(it->value());
+        auto size_max = boost::json::try_value_to<int>(it->value());
+        if (size_max.has_error()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: size-max must be an integer";
+          return false;
+        }
+        ch.size_max = *size_max;
         if (ch.size_max < MESSAGE_SIZE_MIN || ch.size_max > MESSAGE_SIZE_MAX) {
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: size-max out of range: " << ch.size_max;
           return false;
         }
-        obj.erase(it);
       }
     }
 
@@ -155,42 +173,79 @@ static bool ParseDataChannels(boost::json::value data_channels,
       ch.size_max = ch.size_min;
     }
 
-    // boost::optional<bool> ordered;
     {
       auto it = obj.find("ordered");
       if (it != obj.end()) {
+        // value_to<bool> は真偽値以外で例外を投げるため、先に型を検査する
+        if (!it->value().is_bool()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: ordered must be a boolean";
+          return false;
+        }
         sch.ordered = boost::json::value_to<bool>(it->value());
       }
     }
 
-    // boost::optional<int32_t> max_packet_life_time;
     {
       auto it = obj.find("max_packet_life_time");
       if (it != obj.end()) {
-        sch.max_packet_life_time = boost::json::value_to<int32_t>(it->value());
+        // value_to<int32_t> は数値以外に加えて、整数でない値と int32_t の
+        // 範囲外の値でも例外を投げるため、例外を投げない try_value_to で受ける
+        if (!it->value().is_number()) {
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_packet_life_time must be a number";
+          return false;
+        }
+        auto max_packet_life_time =
+            boost::json::try_value_to<int32_t>(it->value());
+        if (max_packet_life_time.has_error()) {
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_packet_life_time must be an integer";
+          return false;
+        }
+        sch.max_packet_life_time = *max_packet_life_time;
       }
     }
 
-    // boost::optional<int32_t> max_retransmits;
     {
       auto it = obj.find("max_retransmits");
       if (it != obj.end()) {
-        sch.max_retransmits = boost::json::value_to<int32_t>(it->value());
+        // value_to<int32_t> は数値以外に加えて、整数でない値と int32_t の
+        // 範囲外の値でも例外を投げるため、例外を投げない try_value_to で受ける
+        if (!it->value().is_number()) {
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_retransmits must be a number";
+          return false;
+        }
+        auto max_retransmits = boost::json::try_value_to<int32_t>(it->value());
+        if (max_retransmits.has_error()) {
+          RTC_LOG(LS_ERROR)
+              << "ParseDataChannels: max_retransmits must be an integer";
+          return false;
+        }
+        sch.max_retransmits = *max_retransmits;
       }
     }
 
-    // boost::optional<std::string> protocol;
     {
       auto it = obj.find("protocol");
       if (it != obj.end()) {
+        // value_to<std::string> は文字列以外で例外を投げるため、先に型を検査する
+        if (!it->value().is_string()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: protocol must be a string";
+          return false;
+        }
         sch.protocol = boost::json::value_to<std::string>(it->value());
       }
     }
 
-    // boost::optional<bool> compress;
     {
       auto it = obj.find("compress");
       if (it != obj.end()) {
+        // value_to<bool> は真偽値以外で例外を投げるため、先に型を検査する
+        if (!it->value().is_bool()) {
+          RTC_LOG(LS_ERROR) << "ParseDataChannels: compress must be a boolean";
+          return false;
+        }
         sch.compress = boost::json::value_to<bool>(it->value());
       }
     }
@@ -205,11 +260,25 @@ static bool ParseDataChannels(boost::json::value data_channels,
   return true;
 }
 
+// PEM 形式のクライアント証明書かどうかを確認する
+// 証明書チェーンと TRUSTED CERTIFICATE を許可する
+static bool IsPemCertificate(const std::string& contents) {
+  return contents.find("-----BEGIN CERTIFICATE-----") != std::string::npos ||
+         contents.find("-----BEGIN TRUSTED CERTIFICATE-----") !=
+             std::string::npos;
+}
+
+// PEM 形式の秘密鍵かどうかを確認する
+// BEGIN * PRIVATE KEY 形式のラベル (RSA / EC / PKCS#8 / 暗号化など) を許可する
+static bool IsPemPrivateKey(const std::string& contents) {
+  return contents.find("-----BEGIN ") != std::string::npos &&
+         contents.find("PRIVATE KEY-----") != std::string::npos;
+}
+
 int Zakuro::Run() {
   std::unique_ptr<GameAudioManager> gam;
 
   bool fake_audio_key_trigger = config_.fake_audio_capture.empty();
-  std::unique_ptr<FakeAudioKeyTrigger> trigger;
   if (fake_audio_key_trigger) {
     gam.reset(new GameAudioManager());
   }
@@ -415,7 +484,11 @@ int Zakuro::Run() {
               capability, sora::VideoCodecImplementation::kCiscoOpenH264));
         }
 
-        // デコーダーは常に NopVideoDecoder を使用する
+        // デコーダーは常に NopVideoDecoder を使用する。
+        // get_custom_engines が全てのコーデックを kCustom_1 のデコーダーとして登録し、
+        // ここで preference のデコーダーを全て kCustom_1 に上書きする。
+        // Sora C++ SDK は preference のデコーダーをそのまま create_video_decoder に
+        // 渡すため、kCustom_1 以外の分岐には到達しない
         preference->Merge(sora::CreateVideoCodecPreferenceFromImplementation(
             capability, sora::VideoCodecImplementation::kCustom_1));
 
@@ -428,11 +501,25 @@ int Zakuro::Run() {
         if (implementation == sora::VideoCodecImplementation::kCustom_1) {
           return std::make_unique<NopVideoDecoder>();
         } else {
-          throw "Invalid implementation";
+          // この分岐は現状到達しない。到達した場合は捕捉する catch が経路上に無いため
+          // 未捕捉例外で終了するが、`std::runtime_error` なら終了時のメッセージに
+          // what() が残る。`const char*` は `std::exception` を継承した型ではないため
+          // `catch (const std::exception&)` では捕捉できない
+          throw std::runtime_error(
+              "Invalid implementation: " +
+              boost::json::serialize(boost::json::value_from(implementation)));
         }
       };
 
   vc_config.context = sora::SoraClientContext::Create(context_config);
+  // 利用できないビデオコーデック実装を指定した場合など、環境によって nullptr が返る。
+  // ここで検査しないと、VirtualClient::Connect が config_.context を無条件に
+  // dereference してクラッシュする。
+  if (vc_config.context == nullptr) {
+    std::cerr << "[" << config_.name << "] failed to create Sora client context"
+              << std::endl;
+    return 1;
+  }
 
   // signaling URL のバリデーション
   for (const auto& url : config_.sora_signaling_urls) {
@@ -447,8 +534,47 @@ int Zakuro::Run() {
 
   sora_config.sora_client = ZakuroVersion::GetClientName();
   sora_config.insecure = config_.insecure;
-  sora_config.client_cert = config_.client_cert;
-  sora_config.client_key = config_.client_key;
+  // client_cert / client_key は SoraSignalingConfig 側では PEM の内容を要求する。
+  // パスが空の場合は std::optional を engaged にしない。
+  // この関数は std::thread 上で実行されるため、読み込みに失敗しても例外は投げず、
+  // エラーメッセージを出力してこのインスタンスの処理を終了する。
+  auto load_pem_file = [this](const std::string& path, const std::string& label,
+                              auto is_valid_pem) -> std::optional<std::string> {
+    auto contents = Util::LoadFileContents(path);
+    if (!contents) {
+      std::cerr << "[" << config_.name << "] failed to load " << label << ": "
+                << path << std::endl;
+      return std::nullopt;
+    }
+    if (contents->empty()) {
+      std::cerr << "[" << config_.name << "] " << label << " is empty: " << path
+                << std::endl;
+      return std::nullopt;
+    }
+    // PEM として解釈できない内容は SDK に渡さない
+    if (!is_valid_pem(*contents)) {
+      std::cerr << "[" << config_.name << "] " << label
+                << " is not PEM format: " << path << std::endl;
+      return std::nullopt;
+    }
+    return contents;
+  };
+  if (!config_.client_cert.empty()) {
+    auto client_cert =
+        load_pem_file(config_.client_cert, "client cert", IsPemCertificate);
+    if (!client_cert) {
+      return 1;
+    }
+    sora_config.client_cert = std::move(*client_cert);
+  }
+  if (!config_.client_key.empty()) {
+    auto client_key =
+        load_pem_file(config_.client_key, "client key", IsPemPrivateKey);
+    if (!client_key) {
+      return 1;
+    }
+    sora_config.client_key = std::move(*client_key);
+  }
   sora_config.signaling_urls = config_.sora_signaling_urls;
   sora_config.channel_id = config_.sora_channel_id;
   sora_config.client_id = config_.sora_client_id;
@@ -487,6 +613,16 @@ int Zakuro::Run() {
   std::vector<VirtualClientConfig> vc_configs;
   for (int i = 0; i < config_.vcs; i++) {
     vc_configs.push_back(vc_config);
+  }
+
+  // 想定外の scenario は VirtualClient を作る前に検証する。VirtualClient の
+  // retry_timer_ は io_context に紐づくため、生成後に早期 return すると
+  // vcs.clear() を飛ばして io_context より後に破棄される。
+  if (fake_audio_key_trigger && config_.scenario != "" &&
+      config_.scenario != "reconnect") {
+    std::cerr << "[" << config_.name
+              << "] unsupported scenario: " << config_.scenario << std::endl;
+    return 1;
   }
 
   std::vector<std::shared_ptr<VirtualClient>> vcs;
@@ -552,7 +688,9 @@ int Zakuro::Run() {
 
     ScenarioPlayer scenario_player(spc);
     ScenarioData data;
-    int loop_index;
+    // 想定外の scenario はここへ来る前に弾かれているため、scenario が取り得る値は
+    // "" か "reconnect" だけになる。分岐を取りこぼさないよう、"" の分岐を最後の else にする。
+    int loop_index = 0;
     if (!fake_audio_key_trigger) {
       data.Reconnect();
       for (const auto& d : dcs_data) {
@@ -560,17 +698,6 @@ int Zakuro::Run() {
       }
       add_reconnect_scenario(data, true);
       loop_index = 1 + dcs_data.size();
-    } else if (config_.scenario == "") {
-      data.Reconnect();
-      for (const auto& d : dcs_data) {
-        data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
-      }
-      ScenarioData sd;
-      sd.Sleep(1000, 5000);
-      sd.PlayVoiceNumberClient();
-      data.PlaySubScenario("scenario-voice-number-client", sd, 0);
-      add_reconnect_scenario(data, true);
-      loop_index = 1 + dcs_data.size() + 1;
     } else if (config_.scenario == "reconnect") {
       data.Reconnect();
       data.Sleep(1000, 5000);
@@ -591,6 +718,18 @@ int Zakuro::Run() {
       data.PlayVoiceNumberClient();
       data.Sleep(1000, 5000);
       loop_index = 0;
+    } else {
+      // 検証により、キー入力トリガー利用時にここへ来る scenario は "" だけになる
+      data.Reconnect();
+      for (const auto& d : dcs_data) {
+        data.PlaySubScenario(std::get<0>(d), std::get<1>(d), 0);
+      }
+      ScenarioData sd;
+      sd.Sleep(1000, 5000);
+      sd.PlayVoiceNumberClient();
+      data.PlaySubScenario("scenario-voice-number-client", sd, 0);
+      add_reconnect_scenario(data, true);
+      loop_index = 1 + dcs_data.size() + 1;
     }
 
     for (int i = 0; i < config_.vcs; i++) {
@@ -603,6 +742,11 @@ int Zakuro::Run() {
       scenario_player.Play(i, std::move(cdata), li);
     }
 
+    // ブロック終了時は、宣言と逆順で破棄される。
+    // FakeAudioKeyTrigger をここに置くと、io_context と ScenarioPlayer より先にデストラクタが走る。
+    // デストラクタがバックグラウンドスレッドを join してから、それらを破棄する。
+    // join 前に破棄すると、終了時のキー入力が破棄済みオブジェクトへ post する。
+    std::unique_ptr<FakeAudioKeyTrigger> trigger;
     if (fake_audio_key_trigger) {
       trigger.reset(new FakeAudioKeyTrigger(ioc, config_.key_core, gam.get(),
                                             &scenario_player, vcs));
@@ -631,9 +775,13 @@ int Zakuro::Run() {
     for (auto& vc : vcs) {
       vc->Clear();
     }
-  }
 
-  vcs.clear();
+    // キースレッドは vcs を参照する。join してから要素を破棄する。
+    // VirtualClient::retry_timer_ は io_context に紐づく。
+    // io_context より後に破棄すると、破棄済み service のメンバ関数を呼ぶ。
+    trigger.reset();
+    vcs.clear();
+  }
 
   return 0;
 }

@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import shlex
 import shutil
+import sys
 import tarfile
 from typing import List, Optional
 
@@ -35,12 +36,45 @@ from buildbase import (
 
 logging.basicConfig(level=logging.DEBUG)
 
+# Linux (x86_64) 向けのビルド対象
+LINUX_X86_64_PLATFORMS = (
+    "ubuntu-22.04_x86_64",
+    "ubuntu-24.04_x86_64",
+    "ubuntu-26.04_x86_64",
+)
+# Linux (armv8) 向けのビルド対象
+# x86_64 のホストからは sysroot を使ってクロスコンパイルする
+LINUX_ARMV8_PLATFORMS = ("ubuntu-26.04_armv8",)
+LINUX_PLATFORMS = LINUX_X86_64_PLATFORMS + LINUX_ARMV8_PLATFORMS
+# macOS 向けのビルド対象
+MACOS_PLATFORMS = ("macos_arm64",)
+# macOS 向けバイナリが対応する最小の macOS
+# 依存パッケージ (sora-cpp-sdk / webrtc-build) はこれより古い macOS 向けに
+# ビルドされているが、対応範囲はこの値で揃える
+MACOS_DEPLOYMENT_TARGET = "15"
+
+
+def get_deps_platform(platform: str) -> str:
+    """依存パッケージが公開されているプラットフォーム名を返す
+
+    依存パッケージは sora-cpp-sdk と webrtc-build が公開している `macos_arm64` を
+    使う (ビルド対象の名前と一致する)。
+    """
+    if platform in MACOS_PLATFORMS:
+        return "macos_arm64"
+    return platform
+
+
+def is_cross_build(platform: str) -> bool:
+    """x86_64 のホストから armv8 向けにビルドするかどうかを返す"""
+    return platform in LINUX_ARMV8_PLATFORMS and os.uname().machine != "aarch64"
+
 
 def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
     # クロスコンパイルの設定。
     # 本来は toolchain ファイルに書く内容
-    if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
-        return [
+    if platform in LINUX_PLATFORMS:
+        cmake_args = [
             f"-DCMAKE_C_COMPILER={webrtc_info.clang_dir}/bin/clang",
             f"-DCMAKE_CXX_COMPILER={webrtc_info.clang_dir}/bin/clang++",
             "-DCMAKE_CXX_FLAGS="
@@ -55,22 +89,72 @@ def get_common_cmake_args(install_dir, platform, webrtc_info: WebrtcInfo):
                 ]
             ),
         ]
-    elif platform == "macos_arm64":
+        if is_cross_build(platform):
+            sysroot = os.path.join(install_dir, "rootfs")
+            cmake_args += [
+                "-DCMAKE_SYSTEM_NAME=Linux",
+                "-DCMAKE_SYSTEM_PROCESSOR=aarch64",
+                "-DCMAKE_C_COMPILER_TARGET=aarch64-linux-gnu",
+                "-DCMAKE_CXX_COMPILER_TARGET=aarch64-linux-gnu",
+                f"-DCMAKE_SYSROOT={sysroot}",
+                f"-DCMAKE_FIND_ROOT_PATH={sysroot}",
+                "-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER",
+            ]
+        return cmake_args
+    elif platform in MACOS_PLATFORMS:
         sysroot = cmdcap(["xcrun", "--sdk", "macosx", "--show-sdk-path"])
+        clang_bin = os.path.join(webrtc_info.clang_dir, "bin")
+        clang = os.path.join(clang_bin, "clang")
+        clangxx = os.path.join(clang_bin, "clang++")
+        libcxx_include = os.path.join(webrtc_info.libcxx_dir, "include")
+        libcxxabi_include = os.path.join(webrtc_info.libcxxabi_dir, "include")
+        cxx_flags = [
+            "-D_LIBCPP_ABI_NAMESPACE=Cr",
+            "-D_LIBCPP_ABI_VERSION=2",
+            "-D_LIBCPP_DISABLE_AVAILABILITY",
+            "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+            "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+            "-D_LIBCPP_ENABLE_NODISCARD",
+            "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE",
+            "-nostdinc++",
+            f"-isystem{libcxx_include}",
+            f"-isystem{libcxxabi_include}",
+        ]
         return [
             "-DCMAKE_SYSTEM_PROCESSOR=arm64",
             "-DCMAKE_OSX_ARCHITECTURES=arm64",
-            "-DCMAKE_C_COMPILER=clang",
-            "-DCMAKE_C_COMPILER_TARGET=aarch64-apple-darwin",
-            "-DCMAKE_CXX_COMPILER=clang++",
-            "-DCMAKE_CXX_COMPILER_TARGET=aarch64-apple-darwin",
+            f"-DCMAKE_C_COMPILER={clang}",
+            "-DCMAKE_C_COMPILER_TARGET=arm64-apple-darwin",
+            f"-DCMAKE_CXX_COMPILER={clangxx}",
+            "-DCMAKE_CXX_COMPILER_TARGET=arm64-apple-darwin",
             f"-DCMAKE_SYSROOT={sysroot}",
+            f"-DCMAKE_OSX_SYSROOT={sysroot}",
+            f"-DCMAKE_CXX_FLAGS={' '.join(cxx_flags)}",
         ]
     else:
         raise Exception(f"Unsupported platform: {platform}")
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def install_sysroot(config_path: str, install_dir: str) -> None:
+    """クロスコンパイル用の sysroot を sysroot_builder.py で構築する
+
+    buildbase の install_rootfs は multistrap 前提であるため使わず、
+    署名検証付きの sysroot_builder.py に一本化する。
+    再構築の要否は builder 側が設定と署名鍵の fingerprint で判断する。
+    """
+    cmd(
+        [
+            sys.executable,
+            os.path.join(BASE_DIR, "sysroot_builder.py"),
+            "--config",
+            config_path,
+            "--dest",
+            os.path.join(install_dir, "rootfs"),
+        ]
+    )
 
 
 def install_deps(
@@ -87,6 +171,14 @@ def install_deps(
     with cd(BASE_DIR):
         deps = read_version_file("DEPS")
 
+        # クロスコンパイル (x86_64 のホスト → armv8) のときだけ sysroot を構築する
+        # arm64 のホストでは CMake が cross build の分岐に入らないため sysroot は不要
+        if is_cross_build(platform):
+            install_sysroot(
+                config_path=os.path.join(BASE_DIR, "sysroot", f"{platform}.json"),
+                install_dir=install_dir,
+            )
+
         # WebRTC
         if local_webrtc_build_dir is None:
             install_webrtc_args = {
@@ -94,7 +186,7 @@ def install_deps(
                 "version_file": os.path.join(install_dir, "webrtc.version"),
                 "source_dir": source_dir,
                 "install_dir": install_dir,
-                "platform": platform,
+                "platform": get_deps_platform(platform),
             }
 
             install_webrtc(**install_webrtc_args)
@@ -111,7 +203,7 @@ def install_deps(
         webrtc_info = get_webrtc_info(platform, local_webrtc_build_dir, install_dir, debug)
 
         if (
-            platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64")
+            platform in (*LINUX_PLATFORMS, *MACOS_PLATFORMS)
             and local_webrtc_build_dir is None
         ):
             webrtc_version = read_version_file(webrtc_info.version_file)
@@ -147,12 +239,15 @@ def install_deps(
             "platform": "",
             "ext": "tar.gz",
         }
-        if platform in ("ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"):
-            install_cmake_args["platform"] = "linux-x86_64"
-        elif platform == "macos_arm64":
+        if platform in LINUX_PLATFORMS:
+            # CMake はビルドするホストで動かすため、ホストの arch に合わせる
+            install_cmake_args["platform"] = (
+                "linux-aarch64" if os.uname().machine == "aarch64" else "linux-x86_64"
+            )
+        elif platform in MACOS_PLATFORMS:
             install_cmake_args["platform"] = "macos-universal"
         install_cmake(**install_cmake_args)
-        if platform == "macos_arm64":
+        if platform in MACOS_PLATFORMS:
             add_path(os.path.join(install_dir, "cmake", "CMake.app", "Contents", "bin"))
         else:
             add_path(os.path.join(install_dir, "cmake", "bin"))
@@ -162,7 +257,7 @@ def install_deps(
             install_sora_and_deps(
                 deps["SORA_CPP_SDK_VERSION"],
                 deps["BOOST_VERSION"],
-                platform,
+                get_deps_platform(platform),
                 source_dir,
                 install_dir,
             )
@@ -193,7 +288,6 @@ def install_deps(
             "source_dir": source_dir,
             "build_dir": build_dir,
             "install_dir": install_dir,
-            "ios": False,
             "cmake_args": cmake_args,
             "expected_sha256": deps["BLEND2D_SHA256_HASH"],
         }
@@ -240,7 +334,6 @@ def _format(
 
 
 def _build(args):
-
     target = args.target
     platform = target
     configuration_dir = "debug" if args.debug else "release"
@@ -285,6 +378,12 @@ def _build(args):
         cmake_args = []
         cmake_args.append(f"-DCMAKE_BUILD_TYPE={configuration}")
         cmake_args.append(f"-DZAKURO_PLATFORM={args.target}")
+        if platform in MACOS_PLATFORMS:
+            # 指定しないとビルドに使った SDK のバージョンが最小要件になり、
+            # 古い macOS で動かないバイナリができる
+            cmake_args.append(
+                f"-DCMAKE_OSX_DEPLOYMENT_TARGET={MACOS_DEPLOYMENT_TARGET}"
+            )
         cmake_args.append(f"-DZAKURO_VERSION={zakuro_version}")
         cmake_args.append(f"-DZAKURO_COMMIT={zakuro_commit}")
         cmake_args.append(f"-DWEBRTC_BUILD_VERSION={webrtc_version['WEBRTC_BUILD_VERSION']}")
@@ -346,9 +445,7 @@ def main():
 
     # build コマンド
     bp = sp.add_parser("build")
-    bp.add_argument(
-        "target", choices=["macos_arm64", "ubuntu-22.04_x86_64", "ubuntu-24.04_x86_64"]
-    )
+    bp.add_argument("target", choices=[*MACOS_PLATFORMS, *LINUX_PLATFORMS])
     bp.add_argument("--debug", action="store_true")
     bp.add_argument("--relwithdebinfo", action="store_true")
     bp.add_argument("--local-webrtc-build-dir", type=os.path.abspath)

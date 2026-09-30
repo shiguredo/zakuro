@@ -1,5 +1,7 @@
 #include "fake_video_capturer.h"
 
+#include <cstring>
+
 // WebRTC
 #include <modules/video_capture/video_capture_defines.h>
 #include <rtc_base/logging.h>
@@ -32,7 +34,9 @@ void FakeVideoCapturer::StartCapture() {
 
       // We must handle a possible error returned by the loader.
       if (err) {
-        //printf("Failed to load a font-face (err=%u)\n", err);
+        // フォントが読めないとキャプチャスレッドが終了して映像が出なくなるため、
+        // 原因を確認できるようエラーを残す
+        RTC_LOG(LS_ERROR) << "Failed to load a font-face: err=" << err;
         return;
       }
 
@@ -43,10 +47,16 @@ void FakeVideoCapturer::StartCapture() {
     if (config_.type == FakeVideoCapturerConfig::Type::Y4MFile) {
       int r = y4m_reader_.Open(config_.y4m_path);
       if (r != 0) {
+        // 失敗を黙って捨てると、映像が出ない理由がログから分からない
+        RTC_LOG(LS_ERROR) << "Failed to Y4MReader::Open: path="
+                          << config_.y4m_path << " result=" << r;
         return;
       }
       y4m_buffer_ = webrtc::I420Buffer::Create(y4m_reader_.GetWidth(),
                                                y4m_reader_.GetHeight());
+      // GetFrame は Y/U/V が連続した 1 フレーム分を一括で書き込むため、
+      // I420Buffer のプレーン別 stride を前提にしない一時バッファを用意する
+      y4m_frame_buffer_.resize(y4m_reader_.GetSize());
     }
 
     while (!stopped_) {
@@ -77,10 +87,15 @@ void FakeVideoCapturer::StartCapture() {
         int r = y4m_reader_.GetFrame(
             std::chrono::duration_cast<std::chrono::milliseconds>(now -
                                                                   started_at_),
-            y4m_buffer_->MutableDataY(), &updated);
+            y4m_frame_buffer_.data(), &updated);
         if (r != 0) {
           RTC_LOG(LS_ERROR) << "Failed to Y4MReader::GetFrame: result=" << r;
           return;
+        }
+        // GetFrame は同一フレームの再要求ではバッファに書き込まない。
+        // その場合は前回の内容をそのまま使う
+        if (updated) {
+          CopyY4MFrameToI420Buffer();
         }
         buffer = webrtc::I420Buffer::Create(config_.width, config_.height);
         buffer->ScaleFrom(*y4m_buffer_);
@@ -117,6 +132,33 @@ void FakeVideoCapturer::StopCapture() {
   }
 }
 
+void FakeVideoCapturer::CopyY4MFrameToI420Buffer() {
+  // Y4M のフレームは Y プレーン (width * height) → U プレーン → V プレーン
+  // (各 chroma_width * chroma_height) の順に連続して格納されている
+  const int width = y4m_reader_.GetWidth();
+  const int height = y4m_reader_.GetHeight();
+  const int chroma_width = y4m_reader_.GetChromaWidth();
+  const int chroma_height = y4m_reader_.GetChromaHeight();
+
+  const uint8_t* src = y4m_frame_buffer_.data();
+  const size_t y_size = (size_t)width * height;
+  const size_t chroma_size = (size_t)chroma_width * chroma_height;
+
+  // コピー元の行幅とコピー先の stride が違うため、プレーンごとに行単位でコピーする
+  for (int y = 0; y < height; y++) {
+    memcpy(y4m_buffer_->MutableDataY() + (size_t)y * y4m_buffer_->StrideY(),
+           src + (size_t)y * width, width);
+  }
+  for (int y = 0; y < chroma_height; y++) {
+    memcpy(y4m_buffer_->MutableDataU() + (size_t)y * y4m_buffer_->StrideU(),
+           src + y_size + (size_t)y * chroma_width, chroma_width);
+  }
+  for (int y = 0; y < chroma_height; y++) {
+    memcpy(y4m_buffer_->MutableDataV() + (size_t)y * y4m_buffer_->StrideV(),
+           src + y_size + chroma_size + (size_t)y * chroma_width, chroma_width);
+  }
+}
+
 void FakeVideoCapturer::UpdateImage(
     std::chrono::high_resolution_clock::time_point now) {
   if (config_.type == FakeVideoCapturerConfig::Type::Safari) {
@@ -139,8 +181,6 @@ void FakeVideoCapturer::UpdateImage(
 
     ctx.end();
   } else if (config_.type == FakeVideoCapturerConfig::Type::Sandstorm) {
-    //auto now = std::chrono::high_resolution_clock::now();
-
     // ランダムピクセル
     BLImageData data;
     image_.get_data(&data);
@@ -150,13 +190,6 @@ void FakeVideoCapturer::UpdateImage(
         p[x] = 0xff000000 | random_.Get();
       }
     }
-
-    //auto now2 = std::chrono::high_resolution_clock::now();
-    //RTC_LOG(LS_INFO) << "sandstorm "
-    //                 << std::chrono::duration_cast<std::chrono::milliseconds>(
-    //                        now2 - now)
-    //                        .count()
-    //                 << " ms";
   } else if (config_.type == FakeVideoCapturerConfig::Type::External) {
     BLContext ctx(image_);
 
@@ -213,18 +246,21 @@ void FakeVideoCapturer::DrawTexts(
   {
     std::string text =
         "Size: " + std::to_string(width) + " x " + std::to_string(height);
-    ctx.fill_utf8_text(BLPoint(width * 0.45, height * 0.75 + stats_font_.size()),
-                       stats_font_, text.c_str());
+    ctx.fill_utf8_text(
+        BLPoint(width * 0.45, height * 0.75 + stats_font_.size()), stats_font_,
+        text.c_str());
   }
 
   {
     int m = frame_ % 60;
     if (m < 15) {
       ctx.set_fill_style(BLRgba32(0, 255, 255));
-      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bip");
+      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_,
+                         "Bip");
     } else if (m >= 30 && m < 45) {
       ctx.set_fill_style(BLRgba32(255, 255, 0));
-      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_, "Bop");
+      ctx.fill_utf8_text(BLPoint(width * 0.6, height * 0.6), bipbop_font_,
+                         "Bop");
     }
   }
 }
@@ -242,7 +278,8 @@ void FakeVideoCapturer::DrawAnimations(
   ctx.fill_pie(0, 0, width * 0.09, 0, 2 * pi);
 
   ctx.set_fill_style(BLRgba32(160, 160, 160));
-  ctx.fill_pie(0, 0, width * 0.09, 0, (frame_ % fps) / (float)fps * 2 * 3.14159);
+  ctx.fill_pie(0, 0, width * 0.09, 0,
+               (frame_ % fps) / (float)fps * 2 * 3.14159);
 }
 
 void FakeVideoCapturer::DrawBoxes(

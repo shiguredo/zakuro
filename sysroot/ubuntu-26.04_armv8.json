@@ -1,0 +1,20 @@
+{
+    "name": "ubuntu-26.04_armv8",
+    "arch": "arm64",
+    "triplet": "aarch64-linux-gnu",
+    "packages": [
+        "libstdc++-15-dev",
+        "libc6-dev",
+        "libx11-dev",
+        "libxext-dev",
+        "libdbus-1-dev"
+    ],
+    "repositories": [
+        {
+            "url": "https://ports.ubuntu.com/ubuntu-ports",
+            "suite": "resolute",
+            "components": ["main", "universe"],
+            "signed_by": "/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+        }
+    ]
+}

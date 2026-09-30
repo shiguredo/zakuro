@@ -1,4 +1,4 @@
-find_path(Blend2D_INCLUDE_DIR NAMES blend2d.h PATHS "${BLEND2D_ROOT_DIR}/include")
+find_path(Blend2D_INCLUDE_DIR NAMES blend2d/blend2d.h PATHS "${BLEND2D_ROOT_DIR}/include")
 find_library(Blend2D_LIBRARY NAMES blend2d PATHS "${BLEND2D_ROOT_DIR}/lib")
 
 include(FindPackageHandleStandardArgs)
