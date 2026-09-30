@@ -24,7 +24,7 @@ pytest の `conftest.py` はフィクスチャを定義するためのファイ�
 `test/conftest.py` の内容は次のとおり。
 
 | 定義 | 内容 | 種類 |
-|---|---|---|
+| --- | --- | --- |
 | `SoraConfig` / `get_zakuro_version` / `get_deps_versions` | 実 Sora 接続用の設定 | クラスと関数 |
 | `free_port` / `sora_config` | フィクスチャ | フィクスチャ |
 | `MtlsCertificates` / `MtlsCertificateVariants` / `ServerCertificates` / `CLIENT_CERT_COMMON_NAME` | テスト用証明書の dataclass と定数 | クラスと定数 |

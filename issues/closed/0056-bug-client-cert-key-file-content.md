@@ -20,7 +20,7 @@ zakuro はこの変更に追従しておらず、パス文字列をそのまま 
 
 このため PEM ファイルのパスが PEM データとして解釈され、以下のログが出てクライアント証明書なしでハンドシェイクし、mTLS 必須のサーバーから拒否される。
 
-```
+```text
 client_cert is set, but use_certificate failed: NO_START_LINE (PEM routines, OPENSSL_internal)
 client_key is set, but use_private_key failed: NO_START_LINE (PEM routines, OPENSSL_internal)
 Failed to Disconnect: message=Failed Websocket handshake: last_ec=TLSV1_ALERT_CERTIFICATE_REQUIRED (SSL routines, OPENSSL_internal) last_url=...
@@ -47,7 +47,10 @@ Sora C++ SDK の sumomo (`examples/sumomo/src/sumomo.cpp`) の読み込み方式
 - 空の場合は代入しない (`std::nullopt` のままにする)。SDK 側で証明書が設定済みとして扱われることを防ぐ
 - ファイル読み込みは `Util::LoadJsoncFile` と同様に `std::ifstream` で行う。ただし `Util::LoadJsoncFile` は失敗時に例外を投げるのに対し、`Zakuro::Run` は `std::thread` 上で実行されるため未捕捉例外が `std::terminate` になる。例外は投げず、`src/zakuro.cpp` の既存パターンに合わせる
 - ファイルのオープンに失敗した場合、または内容が空の場合は、`std::cerr` にエラーメッセージを出力してそのインスタンスの `Zakuro::Run` を `return 1` で終了する。`src/main.cpp` は `zakuro.Run()` の戻り値を捨てているため終了コードには反映されないが、stderr で判別できる
-- pytest の E2E テストを追加する。openssl でテスト用 CA・サーバー証明書・クライアント証明書を一時生成し、クライアント証明書必須のローカル TLS サーバーへ zakuro 実バイナリを接続させ、サーバー側でクライアント証明書が送信されたことを確認する。`--client-cert` / `--client-key` / `--insecure` は設定ファイルのインスタンス設定 (`Util::ParseInstanceToArgs`) 経由で渡し、`test/zakuro.py` には stderr を取得する手段を追加する。テスト全体の拡充は issues/0043 が扱う
+- pytest の E2E テストを追加する。openssl でテスト用 CA・サーバー証明書・クライアント証明書を一時生成し、
+  クライアント証明書必須のローカル TLS サーバーへ zakuro 実バイナリを接続させ、サーバー側でクライアント証明書が送信されたことを確認する。
+  `--client-cert` / `--client-key` / `--insecure` は設定ファイルのインスタンス設定 (`Util::ParseInstanceToArgs`) 経由で渡し、
+  `test/zakuro.py` には stderr を取得する手段を追加する。テスト全体の拡充は issues/0043 が扱う
 - `CHANGES.md` の `## develop` に `[FIX]` を追記する
 
 ## 完了条件

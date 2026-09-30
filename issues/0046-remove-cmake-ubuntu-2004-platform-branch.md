@@ -17,7 +17,7 @@ CI (`.github/workflows/build.yml`) のビルド対象にも Ubuntu 20.04 は存�
 `CMakeLists.txt` のリソース組み込み部分の `ZAKURO_PLATFORM` 判定は次のとおりで、
 削除済みのはずの `ubuntu-20.04_x86_64` が残っている。
 
-```
+```cmake
 elseif (ZAKURO_PLATFORM STREQUAL "ubuntu-20.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-22.04_x86_64" OR ZAKURO_PLATFORM STREQUAL "ubuntu-24.04_x86_64")
 ```
 

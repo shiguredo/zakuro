@@ -21,7 +21,7 @@
 `CMakeLists.txt` の末尾のプラットフォーム判定で、`ZAKURO_PLATFORM` が
 `ubuntu-20.04_x86_64` / `ubuntu-22.04_x86_64` / `ubuntu-24.04_x86_64` のときの `elseif` の body が空。
 
-```
+```cmake
 if (ZAKURO_PLATFORM STREQUAL "macos_arm64")
   target_compile_options(zakuro PRIVATE -fconstant-string-class=NSConstantString)
   target_link_options(zakuro PRIVATE -ObjC)
@@ -40,7 +40,7 @@ endif()
 
 `CMakeLists.txt` の該当コメント:
 
-```
+```cmake
 # https://github.com/boostorg/container_hash/issues/22 と同じ問題が clang-15 でも起きるので、これを手動で定義して回避する
 ```
 

@@ -63,7 +63,7 @@
 ### 状態遷移表
 
 | 遷移元 | イベント | 遷移先 | 補足 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Idle | `Connect()` | Connecting | `SoraSignaling` を作成して接続を開始する |
 | Connecting | `OnSetOffer` | Connected | offer の受信をもって接続確立とする |
 | Connecting / Connected | `Close(callback)` | Closing | `on_close_` を登録して `Disconnect()` する |

@@ -26,7 +26,10 @@
 上記の問題が確認できる。直近リリースである 2025.3.1 との差分 (`git diff 2025.3.1..develop`) で照合した結果を記す。
 
 - 現状の並びは `[ADD] HTTP サーバー機能を追加する` → `[CHANGE] VideoCodecImplementation の NvidiaVideoCodecSdk を NvidiaVideoCodec に変更する` → `[UPDATE] Sora C++ SDK ...` → `[UPDATE] AudioDeviceBuffer ...` → `[UPDATE] run.py ...` → `[UPDATE] CLI11 ...` → `[UPDATE] CMakeLists.txt ...` → `[ADD] 6 件` の順で凡例違反
-- `[CHANGE] VideoCodecImplementation ...` のサブ項目には「Sora C++ SDK のアップデートに伴う対応」しか無く、CLI の受付値が `nvidia_video_codec_sdk` → `nvidia_video_codec` に変わったことが読み取れない。変更コミット 18f2ac6 で `--vp8-encoder` / `--vp9-encoder` / `--av1-encoder` / `--h264-encoder` / `--h265-encoder` の受付値と src/util.cpp のエンコーダー種別マップが変更されており、現行の src/util.cpp のヘルプ文字列も `nvidia_video_codec` のみ
+- `[CHANGE] VideoCodecImplementation ...` のサブ項目には「Sora C++ SDK のアップデートに伴う対応」しか無く、CLI の受付値が
+  `nvidia_video_codec_sdk` → `nvidia_video_codec` に変わったことが読み取れない。変更コミット 18f2ac6 で
+  `--vp8-encoder` / `--vp9-encoder` / `--av1-encoder` / `--h264-encoder` / `--h265-encoder` の受付値と
+  src/util.cpp のエンコーダー種別マップが変更されており、現行の src/util.cpp のヘルプ文字列も `nvidia_video_codec` のみ
 - `DEPS` の `BLEND2D_VERSION=0.21.2` は 2025.3.0 / 2025.3.1 の `0.20.0` から上がっているが (コミット 0f8e283)、`## develop` に blend2d 関連の記述が無い。同コミットでは include が `<blend2d.h>` → `<blend2d/blend2d.h>` に変わっている
 - `[ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する` には「Notification の場合は 204 No Content を返す」と記載済みで、src/json_rpc.cpp / src/http_server.cpp の実装とも一致するため、本 issue では対応不要 (再確認しただけ)
 - `[UPDATE] CMakeLists.txt の \`CMAKE_CXX_STANDARD\` と \`CMAKE_C_STANDARD\` を 17 から 20 に上げる` はユーザーへの影響が無い純粋なビルド内部変更で `### misc` に入れるべき。また実際の変更 (コミット 856abc6) は `set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)` であり、エントリの `CMAKE_CXX_STANDARD` / `CMAKE_C_STANDARD` の表記は実コードと不一致
@@ -41,8 +44,8 @@
   - 順序の基準は `CHANGES.md` 冒頭の凡例と過去リリース (2025.1.0 / 2025.3.0) の記載順とする
   - shiguredo-changelog スキルには CHANGE → ADD → UPDATE → FIX とあるが、本リポジトリの凡例と過去リリース (ならびに同系列の sora / sora-cpp-sdk) は CHANGE → UPDATE → ADD → FIX で統一されているため、本 issue では凡例を正とする
 - `[CHANGE] VideoCodecImplementation ...` のサブ項目に「`--vp8-encoder` などの受付値 `nvidia_video_codec_sdk` は `nvidia_video_codec` に変更」を追加する
-- `[UPDATE] blend2d のバージョンを \`0.21.2\` に上げる` を追加し、サブ項目で include (`<blend2d.h>` → `<blend2d/blend2d.h>`) の変更を記す
-- `[UPDATE] CMakeLists.txt の \`CMAKE_CXX_STANDARD\` ...` を `### misc` に移動し、実際の変更 (`set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`) に合わせてシンボル名を修正する
+- `` `[UPDATE] blend2d のバージョンを `0.21.2` に上げる` `` を追加し、サブ項目で include (`<blend2d.h>` → `<blend2d/blend2d.h>`) の変更を記す
+- `` `[UPDATE] CMakeLists.txt の `CMAKE_CXX_STANDARD` ...` `` を `### misc` に移動し、実際の変更 (`set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`) に合わせてシンボル名を修正する
 - `### misc` に以下のエントリを追加する (削除は後方互換のない変更なので `[CHANGE]` を使う。`[REMOVE]` という種別は存在しない)
   - `[CHANGE] .github/copilot-instructions.md を削除する`
   - `[CHANGE] .github/workflows/claude.yml を削除する`
@@ -80,19 +83,19 @@ CHANGE → ADD → UPDATE → FIX としており食い違うが、本 issue の
 - `[CHANGE] VideoCodecImplementation ...` の子項目に、`--vp8-encoder` などの受付値を
   `nvidia_video_codec_sdk` から `nvidia_video_codec` に変更したことを追記した
   (設定ファイルの `vp8-encoder` なども同様)
-- `[UPDATE] blend2d のバージョンを `0.21.2` に上げる` を追加し、include の変更
+- `` `[UPDATE] blend2d のバージョンを `0.21.2` に上げる` `` を追加し、include の変更
   (`<blend2d.h>` → `<blend2d/blend2d.h>`) を子項目に記した
 - CMakeLists.txt の C / C++ 標準を上げるエントリを `### misc` へ移した。見出しから
   実コードに無い `CMAKE_CXX_STANDARD` / `CMAKE_C_STANDARD` の表記をなくし、
   実際の設定 (`set_target_properties(zakuro PROPERTIES CXX_STANDARD 20 C_STANDARD 20)`)
   を子項目にした
 - `### misc` に次のエントリを追加した
-  - `[CHANGE] `.github/copilot-instructions.md` を削除する`
-  - `[CHANGE] `.github/workflows/claude.yml` を削除する`
+  - `` `[CHANGE] `.github/copilot-instructions.md` を削除する` ``
+  - `` `[CHANGE] `.github/workflows/claude.yml` を削除する` ``
   - `[UPDATE] GitHub Actions の公式アクションを SHA ピンで更新する`
   - `[UPDATE] buildbase.py と run.py を上流の buildbase に追随させる`
 - `[UPDATE] AudioDeviceBuffer ...` と `[UPDATE] run.py ...` を独立エントリから
-  `[UPDATE] Sora C++ SDK を `2026.2.1` に上げる` の子項目へ統合した。子項目だった理由の行も
+  `` `[UPDATE] Sora C++ SDK を `2026.2.1` に上げる` `` の子項目へ統合した。子項目だった理由の行も
   入れ子の子項目として残した
 - `[ADD] JSON-RPC 2.0 の Notification（id なしリクエスト）に対応する` は記載済みのため
   変更していない

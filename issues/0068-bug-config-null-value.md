@@ -24,7 +24,7 @@ CLI11 のエラーになる。`null` は「未設定」を意味する値であ�
 `null` を指定したときの実際の挙動は次のとおり（`zakuro --config <file>` で確認）。
 
 | 指定箇所 | 実際の挙動 |
-|---|---|
+| --- | --- |
 | トップレベル `http-host` | 文字列 `"null"` として受理され、`HTTP server started on null:<port>` を出力して起動が継続する |
 | トップレベル `output-file-connection-id` | 文字列 `"null"` として受理され、ファイル名 `null` に接続 ID が書き出される |
 | トップレベル `log-level` / `http-port` / `instance-hatch-rate` | 文字列 `"null"` が CLI11 の検証で弾かれ、終了コード 105 になる |

@@ -21,7 +21,7 @@
 
 - `IsPemCertificate` / `IsPemPrivateKey` の判定を「行頭に PEM の開始行がある」ことに変更する
 - 開始行の位置がファイル先頭、または直前が改行 (`\n`) であることを確認する (`\r\n` の場合は `\n` の直後になるため同じ判定で扱える)
-- `--client-key` は `-----BEGIN ` で始まる行に `PRIVATE KEY-----` が続くことを確認する
+- `--client-key` は開始行が `-----BEGIN` と半角空白で始まり、`PRIVATE KEY-----` が続くことを確認する
 - 既存のエラーメッセージと `return 1` の扱いは変えない
 - `test/test_client_cert.py` に BOM 付き PEM と行頭以外の `-----BEGIN` のケースを追加する
 

@@ -39,7 +39,7 @@ Asio 本体の inline namespace 内の定義（candidate B）が衝突し、
 
 代表的なエラー（注釈は実際のコンパイラ出力に追記）:
 
-```
+```text
 error: reference to 'ssl' is ambiguous
   boost::asio::ssl::detail::openssl_init<> init_;
   ~~~~~~~~~~~~~^
@@ -106,7 +106,7 @@ version namespace が有効な環境では inline namespace 内に宣言が入�
 以下のコマンドで `basic_stream.hpp` 内に
 `BOOST_ASIO_INLINE_NAMESPACE_BEGIN` が含まれていることを確認する:
 
-```
+```console
 grep -c "BOOST_ASIO_INLINE_NAMESPACE_BEGIN" \
   _install/<platform>/<config>/boost/include/boost/beast/core/basic_stream.hpp
 ```
@@ -126,6 +126,7 @@ zakuro は canary.18 から canary.19 にアップデートすることで対応
 sora-cpp-sdk の buildbase.py で行うこととし、
 zakuro 側のパッチ追加は revert した。
 sora-cpp-sdk PR #341 で以下の対応を行った:
+
 - buildbase.py の `build_and_install_boost()` 内で basic_stream.hpp の
   前方宣言を `BOOST_ASIO_INLINE_NAMESPACE_BEGIN` / `END` でラップする
   パッチを追加

@@ -41,7 +41,7 @@ UBSan (`-fsanitize=undefined,alignment`) / ASan も type-punning を検知しな
 検出できるのは静的解析のみ。Clang の `-Wcast-align` (GCC は `-Wcast-align=strict`) は
 本コードに次の警告を出す (clang 18 で実測)。
 
-```
+```text
 cast from 'uint8_t *' (aka 'unsigned char *') to 'uint64_t *'
     (aka 'unsigned long *') increases required alignment from 1 to 8
 ```

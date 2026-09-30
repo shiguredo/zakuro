@@ -7,14 +7,23 @@
 
 ## 目的
 
-libwebrtc の issue 558821261「Deprecate and remove PeerConnectionFactoryDependencies::worker_thread」で worker thread が廃止される。CL 501620「Default worker thread to network thread」と CL 502480「Warn when a distinct worker thread is configured」に加えて、削除系の CL 499302 / 502580 / 502600 / 502860 / 502940 もマージ済みであり、残る削除系の CL (501640 / 501720 / 502000 / 502500 / 502960 / 503300 / 503320 / 505340) はレビュー中である。webrtc の main では `pc/peer_connection_factory_dependencies.h` と `PeerConnectionFactoryInterface::worker_thread()` が既に削除されており、worker thread が残っているのは各ブランチ (sora-cpp-sdk が使う m154 など) のみである。したがって最終的には sora-cpp-sdk 側が libwebrtc のブランチ更新に追随し、worker_thread を削除したリリースが来るのを待つことになる。
+libwebrtc の issue 558821261「Deprecate and remove PeerConnectionFactoryDependencies::worker_thread」で worker thread が廃止される。
+CL 501620「Default worker thread to network thread」と CL 502480「Warn when a distinct worker thread is configured」に加えて、
+削除系の CL 499302 / 502580 / 502600 / 502860 / 502940 もマージ済みであり、残る削除系の CL
+(501640 / 501720 / 502000 / 502500 / 502960 / 503300 / 503320 / 505340) はレビュー中である。
+webrtc の main では `pc/peer_connection_factory_dependencies.h` と `PeerConnectionFactoryInterface::worker_thread()` が既に削除されており、
+worker thread が残っているのは各ブランチ (sora-cpp-sdk が使う m154 など) のみである。
+したがって最終的には sora-cpp-sdk 側が libwebrtc のブランチ更新に追随し、worker_thread を削除したリリースが来るのを待つことになる。
 
 対応は 2 段階に分ける。
 
 - 方針 1 (いますぐ実施): 専用の worker thread をやめて network thread を使う
 - 方針 2 (558821261 を実装した libwebrtc をマージした後に実施): worker_thread の利用箇所と API を全て無くす
 
-本リポジトリは worker thread を独自生成しておらず、sora-cpp-sdk の `SoraClientContext` が作った `PeerConnectionFactoryDependencies` を `configure_dependencies` コールバックで借りて `dependencies.worker_thread` を参照しているだけである。したがって方針 2 が該当する。方針 1 は sora-cpp-sdk 2026.3.0-canary.7 (2026-09-17) で適用済みであり、`dependencies.worker_thread` に network thread が渡されるようになった。この時点では本リポジトリは変更不要で、worker_thread が削除された sora-cpp-sdk のリリースを待って方針 2 を実施すればよい。
+本リポジトリは worker thread を独自生成しておらず、sora-cpp-sdk の `SoraClientContext` が作った `PeerConnectionFactoryDependencies` を
+`configure_dependencies` コールバックで借りて `dependencies.worker_thread` を参照しているだけである。したがって方針 2 が該当する。
+方針 1 は sora-cpp-sdk 2026.3.0-canary.7 (2026-09-17) で適用済みであり、`dependencies.worker_thread` に network thread が渡されるようになった。
+この時点では本リポジトリは変更不要で、worker_thread が削除された sora-cpp-sdk のリリースを待って方針 2 を実施すればよい。
 
 ## 現状
 

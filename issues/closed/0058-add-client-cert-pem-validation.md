@@ -22,7 +22,7 @@
 ## 設計方針
 
 - `src/zakuro.cpp` の `Zakuro::Run` にある `load_pem_file` ラムダで内容を検査し、PEM の開始行を含まない場合はエラーにする
-- `--client-cert` は `-----BEGIN CERTIFICATE-----` または `-----BEGIN TRUSTED CERTIFICATE-----` を含むこと、`--client-key` は `-----BEGIN ` と `PRIVATE KEY-----` を含むことを確認する。SDK は `PEM_read_bio_X509_AUX` で証明書を読み込むため、`TRUSTED CERTIFICATE` も受理される
+- `--client-cert` は `-----BEGIN CERTIFICATE-----` または `-----BEGIN TRUSTED CERTIFICATE-----` を含むこと、`--client-key` は開始行が `-----BEGIN` と半角空白で始まり、`PRIVATE KEY-----` を含むことを確認する。SDK は `PEM_read_bio_X509_AUX` で証明書を読み込むため、`TRUSTED CERTIFICATE` も受理される
 - 暗号化された秘密鍵 (`ENCRYPTED PRIVATE KEY`) や証明書チェーン、`RSA PRIVATE KEY` / `EC PRIVATE KEY` / `PRIVATE KEY` を弾かないこと
 - 厳密な PEM パースは行わず、SDK に渡す前の明らかな誤りを弾くことに留める
 - 不正な場合は `std::cerr` にエラーを出力してそのインスタンスを `return 1` で終了する (既存の読み込み失敗と同じ扱い)
@@ -40,7 +40,9 @@
 
 ## 解決方法
 
-`src/zakuro.cpp` の `Zakuro::Run` で、`load_pem_file` ラムダに PEM の開始行を確認する検証を追加した。`--client-cert` は `-----BEGIN CERTIFICATE-----` または `-----BEGIN TRUSTED CERTIFICATE-----`、`--client-key` は `-----BEGIN ` と `PRIVATE KEY-----` を含むことを確認し、含まない場合は `[<name>] <label> is not PEM format: <path>` を出力してそのインスタンスを `return 1` で終了する。
+`src/zakuro.cpp` の `Zakuro::Run` で、`load_pem_file` ラムダに PEM の開始行を確認する検証を追加した。
+`--client-cert` は `-----BEGIN CERTIFICATE-----` または `-----BEGIN TRUSTED CERTIFICATE-----` を含むこと、`--client-key` は開始行が `-----BEGIN` と半角空白で始まり、`PRIVATE KEY-----` を含むことを確認し、
+含まない場合は `[<name>] <label> is not PEM format: <path>` を出力してそのインスタンスを `return 1` で終了する。
 
 - `IsPemCertificate` / `IsPemPrivateKey` を追加し、`load_pem_file` に判定関数を渡す形にした
 - 厳密な PEM パースは行わず、SDK に渡す前の明らかな誤りを弾くことに留めた

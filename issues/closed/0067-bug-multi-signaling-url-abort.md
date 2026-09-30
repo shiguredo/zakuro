@@ -19,7 +19,7 @@ zakuro は `--sora-signaling-url` を複数指定でき (`src/util.cpp` の `app
   `RuntimeError: zakuro process exited unexpectedly with code -6` で失敗する。再実行でも同じ箇所で失敗し、2 回とも再現する
 - zakuro の stderr の末尾は次のとおり (`<...>` は伏字)
 
-  ```
+  ```text
   [000:551] (sora_signaling.cpp:857): OnConnect url=wss://<1 本目の signaling URL>
   [000:566] (sora_signaling.cpp:896): Connected: url=wss://<1 本目の signaling URL>
   [000:566] (sora_signaling.cpp:478): Send type=connect: {"type":"connect","role":"sendrecv",...}

@@ -52,7 +52,7 @@ Y4M 経路 (`Y4MReader` の 2 件と `FakeVideoCapturer` の 1 件) に以下 3 
 
 ### I420Buffer stride 前提
 
-Y4M フレームは Y プレーン (width*height) → U プレーン → V プレーン (各 (width+1)/2 * (height+1)/2) の順に
+Y4M フレームは Y プレーン (`width*height`) → U プレーン → V プレーン (各 `(width+1)/2 * (height+1)/2`) の順に
 連続格納されるため、読み出し側 (`Y4MReader`) は一括読み出しのままとする。stride 前提の解消は
 書き込み先である `FakeVideoCapturer` 側で行う。
 

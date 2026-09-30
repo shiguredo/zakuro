@@ -13,7 +13,8 @@ zakuro は BoringSSL を直接利用しているが、`NOTICE` に BoringSSL の
 ## 現状
 
 - `src/http_proxy.cpp` が `<openssl/ssl.h>` を include し、`SSL_CTX_new` / `SSL_set_tlsext_host_name` などを直接呼ぶ
-- `CMakeLists.txt` は `OPENSSL_IS_BORINGSSL` を定義しており、`<openssl/ssl.h>` は `run.py` が shiguredo-webrtc-build からダウンロードする prebuilt libwebrtc に同梱された BoringSSL (`webrtc/include/third_party/boringssl/src/include`、`.vscode/c_cpp_properties.json` 参照) から解決されるため、実際に使われるのは OpenSSL ではなく BoringSSL である (issues/0009 参照)
+- `CMakeLists.txt` は `OPENSSL_IS_BORINGSSL` を定義しており、`<openssl/ssl.h>` は `run.py` が shiguredo-webrtc-build からダウンロードする prebuilt libwebrtc に同梱された BoringSSL (`webrtc/include/third_party/boringssl/src/include`、`.vscode/c_cpp_properties.json` 参照) から解決されるため、
+  実際に使われるのは OpenSSL ではなく BoringSSL である (issues/0009 参照)
 - `src/http_proxy.cpp` は `boost/asio/ssl.hpp` も使い、Boost.Asio の SSL も同じく BoringSSL をリンクする
 - `NOTICE` には Sora C++ SDK / Blend2D / CLI11 / Boost / Kosugi / OpenH264 の各ライセンス表記があるが、BoringSSL の表記が無い
 
