@@ -2,11 +2,6 @@
 
 // WebRTC
 #include <api/video/i420_buffer.h>
-#include <media/base/media_constants.h>
-#include <modules/video_coding/codecs/av1/libaom_av1_encoder.h>
-#include <modules/video_coding/codecs/h264/include/h264.h>
-#include <modules/video_coding/codecs/vp8/include/vp8.h>
-#include <modules/video_coding/codecs/vp9/include/vp9.h>
 #include <modules/video_coding/include/video_error_codes.h>
 
 bool NopVideoDecoder::Configure(const Settings& settings) {
@@ -45,35 +40,4 @@ int32_t NopVideoDecoder::Release() {
 }
 const char* NopVideoDecoder::ImplementationName() const {
   return "NOP Decoder";
-}
-
-std::vector<webrtc::SdpVideoFormat>
-NopVideoDecoderFactory::GetSupportedFormats() const {
-  std::vector<webrtc::SdpVideoFormat> supported_codecs;
-  supported_codecs.push_back(webrtc::SdpVideoFormat(webrtc::kVp8CodecName));
-  for (const webrtc::SdpVideoFormat& format : webrtc::SupportedVP9Codecs()) {
-    supported_codecs.push_back(format);
-  }
-  supported_codecs.push_back(webrtc::SdpVideoFormat(webrtc::kAv1CodecName));
-  std::vector<webrtc::SdpVideoFormat> h264_codecs = {
-      CreateH264Format(webrtc::H264Profile::kProfileBaseline,
-                       webrtc::H264Level::kLevel3_1, "1"),
-      CreateH264Format(webrtc::H264Profile::kProfileBaseline,
-                       webrtc::H264Level::kLevel3_1, "0"),
-      CreateH264Format(webrtc::H264Profile::kProfileConstrainedBaseline,
-                       webrtc::H264Level::kLevel3_1, "1"),
-      CreateH264Format(webrtc::H264Profile::kProfileConstrainedBaseline,
-                       webrtc::H264Level::kLevel3_1, "0")};
-  for (const webrtc::SdpVideoFormat& format : h264_codecs) {
-    supported_codecs.push_back(format);
-  }
-  supported_codecs.push_back(webrtc::SdpVideoFormat(webrtc::kH265CodecName));
-  return supported_codecs;
-}
-
-std::unique_ptr<webrtc::VideoDecoder> NopVideoDecoderFactory::Create(
-    const webrtc::Environment& env,
-    const webrtc::SdpVideoFormat& format) {
-  return std::unique_ptr<webrtc::VideoDecoder>(
-      absl::make_unique<NopVideoDecoder>());
 }
