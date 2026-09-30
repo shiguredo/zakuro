@@ -125,6 +125,9 @@
 - [FIX] `--duration` を指定したプロセスの正常終了が SIGABRT になる問題を修正する
   - 接続が切れている状態でシナリオの Disconnect を実行すると、空の `std::function` を呼んで `std::bad_function_call` で落ちていた
   - @voluntas
+- [FIX] `canary.py` が `VERSION` を末尾改行なしで書くため prek のフックでコミットに失敗する問題を修正する
+  - `end-of-file-fixer` が末尾の改行を補うためにファイルを書き換えると、そのコミットが失敗してタグ付けと push まで到達しなかった
+  - @voluntas
 
 ### misc
 
